@@ -1,0 +1,35 @@
+# Video templates configuration
+
+shorts:
+  bg_color: [0, 0, 0]
+  text_elements:
+    - text: ""
+      position: "center"
+      fontsize: 60
+      color: "white"
+      font: "Arial-Bold"
+      bg_color: null
+      stroke_color: "black"
+      stroke_width: 3
+  thumbnail_size: [1080, 1920]
+  title_fontsize: 100
+  title_color: [255, 255, 255]
+  outline_width: 4
+  outline_color: [0, 0, 0]
+
+long_form:
+  bg_color: [0, 0, 0]
+  text_elements:
+    - text: ""
+      position: "center"
+      fontsize: 50
+      color: "white"
+      font: "Arial-Bold"
+      bg_color: null
+      stroke_color: "black"
+      stroke_width: 2
+  thumbnail_size: [1920, 1080]
+  title_fontsize: 80
+  title_color: [255, 255, 255]
+  outline_width: 3
+  outline_color: [0, 0, 0]

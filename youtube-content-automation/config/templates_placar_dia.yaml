@@ -1,0 +1,27 @@
+# Placar do Dia specific templates
+
+shorts:
+  bg_color: [0, 50, 100]
+  text_elements:
+    - text: ""
+      position: "center"
+      fontsize: 70
+      color: "white"
+      font: "Arial-Bold"
+      bg_color: [0, 0, 0, 180]
+      stroke_color: "yellow"
+      stroke_width: 3
+  thumbnail_size: [1080, 1920]
+
+long_form:
+  bg_color: [0, 50, 100]
+  text_elements:
+    - text: ""
+      position: "center"
+      fontsize: 55
+      color: "white"
+      font: "Arial-Bold"
+      bg_color: [0, 0, 0, 180]
+      stroke_color: "yellow"
+      stroke_width: 2
+  thumbnail_size: [1920, 1080]

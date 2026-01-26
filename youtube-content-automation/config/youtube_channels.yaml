@@ -1,0 +1,33 @@
+# Configuração dos Canais do YouTube
+# Cada canal tem um ID único do YouTube
+
+channels:
+  placar_dia:
+    name: "Placar do Dia"
+    channel_id: null  # Deixe null para usar canal padrão, ou especifique o ID
+    category_id: "17"  # Sports
+    default_tags: ["futebol", "placar", "resumo", "brasileirão", "campeonato"]
+    
+  bets_dia:
+    name: "Bets do Dia"
+    channel_id: null
+    category_id: "22"  # People & Blogs
+    default_tags: ["apostas", "bets", "futebol", "análise", "18+", "jogo responsável"]
+    
+  explicado_shorts:
+    name: "Explicado em Shorts"
+    channel_id: null
+    category_id: "27"  # Education
+    default_tags: ["educação", "explicação", "shorts", "aprendizado", "conhecimento"]
+    
+  quanto_rende:
+    name: "Quanto rende?"
+    channel_id: null
+    category_id: "26"  # Howto & Style
+    default_tags: ["investimento", "rendimento", "simulação", "finanças", "dinheiro"]
+    
+  series_explicadas:
+    name: "Series Explicadas"
+    channel_id: null
+    category_id: "24"  # Entertainment
+    default_tags: ["séries", "tv", "explicação", "sem spoilers", "resumo"]
