@@ -43,10 +43,15 @@ def test_imports():
     print("\n3. Testing channel processors...")
     try:
         from channels.placar_dia.channel_processor import PlacarDiaProcessor
-        from channels.bets_dia.channel_processor import BetsDiaProcessor
         from channels.explicado_shorts.channel_processor import ExplicadoShortsProcessor
         from channels.quanto_rende.channel_processor import QuantoRendeProcessor
         from channels.series_explicadas.channel_processor import SeriesExplicadasProcessor
+        from channels.salmo_dia.channel_processor import SalmoDiaProcessor
+        from channels.receita_dia.channel_processor import ReceitaDiaProcessor
+        from channels.exercicio_dia.channel_processor import ExercicioDiaProcessor
+        from channels.motivacao_dia.channel_processor import MotivacaoDiaProcessor
+        from channels.curiosidade_dia.channel_processor import CuriosidadeDiaProcessor
+        from channels.dica_carreira_dia.channel_processor import DicaCarreiraDiaProcessor
         print("   ✅ Channel processors imported successfully")
     except Exception as e:
         print(f"   ❌ Error importing channel processors: {e}")
@@ -57,7 +62,7 @@ def test_imports():
     config_files = {
         'api_keys.env': project_root / 'config' / 'api_keys.env',
         'client_secrets.json': project_root / 'config' / 'client_secrets.json',
-        'channels.yaml': project_root / 'config' / 'channels.yaml',
+        'youtube_channels.yaml': project_root / 'config' / 'youtube_channels.yaml',
         'templates.yaml': project_root / 'config' / 'templates.yaml'
     }
     

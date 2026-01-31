@@ -23,12 +23,24 @@ wheels/
 .installed.cfg
 *.egg
 
-# Environment variables
+# Environment variables and secrets
 .env
 *.env
 config/api_keys.env
-config/client_secrets.json
-config/credentials.pickle
+config/client_secrets*.json
+config/credentials*.pickle
+
+# OAuth credentials por canal (arquivos sem extensão em config/)
+config/placar_do_dia
+config/quanto_rende
+config/series_explicadas
+config/explicado_em_shorts
+config/exercicio_do_dia
+config/motivacao_do_dia
+config/curiosidade_do_dia
+config/dica_carreira_dia
+config/receita_do_dia
+config/salmo_do_dia
 
 # Outputs
 outputs/

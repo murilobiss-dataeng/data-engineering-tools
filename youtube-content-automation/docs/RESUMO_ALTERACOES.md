@@ -8,7 +8,6 @@
 - `main.py` - Função `upload_video()`
 - `core/youtube_uploader.py` - Parâmetro padrão
 - `dags/placar_dia_dag.py`
-- `dags/bets_dia_dag.py`
 - `dags/content_scheduler_dag.py`
 
 **Antes:** `privacy_status='private'`
@@ -20,7 +19,6 @@
 - `core/text_to_speech.py` - Adicionado parâmetro `tld='com.br'`
 - Todos os 5 canais atualizados:
   - `channels/placar_dia/channel_processor.py`
-  - `channels/bets_dia/channel_processor.py`
   - `channels/explicado_shorts/channel_processor.py`
   - `channels/quanto_rende/channel_processor.py`
   - `channels/series_explicadas/channel_processor.py`

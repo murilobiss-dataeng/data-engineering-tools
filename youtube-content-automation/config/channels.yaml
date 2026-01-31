@@ -7,14 +7,6 @@ placar_dia:
   generate_shorts: true
   generate_long_form: true
 
-bets_dia:
-  name: "Bets do Dia"
-  schedule: "daily"
-  generate_shorts: true
-  generate_long_form: true
-  adult_content: true
-  age_restriction: 18
-
 explicado_shorts:
   name: "Explicado em Shorts"
   schedule: "3x_per_week"

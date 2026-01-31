@@ -1,14 +1,19 @@
 # 🎬 Automação de Conteúdo para YouTube
 
-Sistema profissional automatizado para criação e upload de conteúdo para 5 canais do YouTube.
+Sistema profissional automatizado para criação e upload de conteúdo para 10 canais do YouTube.
 
 ## 📺 Canais
 
 1. **Placar do Dia** - Resumos de jogos da rodada
-2. **Bets do Dia** - Análises estatísticas e sugestões de apostas (18+)
-3. **Explicado em Shorts** - Vídeos educacionais curtos
-4. **Quanto rende?** - Simulações de rendimento financeiro
-5. **Series Explicadas** - Resumos de séries sem spoilers
+2. **Explicado em Shorts** - Vídeos educacionais curtos
+3. **Quanto rende?** - Simulações de rendimento financeiro
+4. **Series Explicadas** - Resumos de séries sem spoilers
+5. **Salmo do Dia** - Reflexão diária com salmos
+6. **Receita do Dia** - Culinária e receitas
+7. **Exercício do Dia** - Fitness e bem-estar
+8. **Motivação do Dia** - Desenvolvimento pessoal
+9. **Curiosidade do Dia** - Top 10 e curiosidades
+10. **Dica de Carreira do Dia** - Dicas profissionais
 
 ## ✨ Características
 
@@ -46,9 +51,14 @@ python main.py --channel explicado_shorts --upload
 python main.py --channel placar_dia --upload
 
 # Outros canais
-python main.py --channel bets_dia --upload
 python main.py --channel quanto_rende --upload
 python main.py --channel series_explicadas --upload
+python main.py --channel salmo_dia --upload
+python main.py --channel receita_dia --upload
+python main.py --channel exercicio_dia --upload
+python main.py --channel motivacao_dia --upload
+python main.py --channel curiosidade_dia --upload
+python main.py --channel dica_carreira_dia --upload
 ```
 
 ### Apenas Gerar (sem upload)
@@ -96,6 +106,11 @@ Toda documentação está em `docs/`:
 
 - `docs/guides/YOUTUBE_SETUP.md` - Configuração do YouTube
 - `docs/guides/FIX_403_ERROR.md` - Resolver erro 403
+- `docs/guides/CANAIS_INDIVIDUAIS.md` - Upload em canais separados
+- `docs/guides/TTS_CLIPCHAMP_AZURE.md` - Voz Azure (estilo Clipchamp)
+- `docs/guides/LEONARDO_IMAGENS.md` - Imagens com Leonardo AI
+- `docs/guides/CAPCUT_EDICAO.md` - Edição com CapCut
+- `docs/MULTI_PLATFORM_TIKTOK_IG.md` - TikTok e Instagram (futuro)
 - `docs/INSTALLATION.md` - Guia de instalação
 - `docs/USAGE.md` - Guia de uso
 - `docs/IMPROVEMENTS.md` - Melhorias implementadas

@@ -13,18 +13,7 @@ for result in results:
     print(f"Caminho: {result.get('video_path', 'N/A')}")
 ```
 
-## Exemplo 2: Gerar vídeo de Bets do Dia
-
-```python
-from channels.bets_dia.channel_processor import BetsDiaProcessor
-
-processor = BetsDiaProcessor()
-result = processor.process_match_bet(fixture_id=12345)
-
-print(f"Vídeo gerado: {result['title']}")
-```
-
-## Exemplo 3: Gerar vídeo educacional
+## Exemplo 2: Gerar vídeo educacional
 
 ```python
 from channels.explicado_shorts.channel_processor import ExplicadoShortsProcessor
@@ -52,7 +41,7 @@ result = processor.process_investment(
 print(f"Vídeo gerado: {result['title']}")
 ```
 
-## Exemplo 5: Gerar vídeo sobre série
+## Exemplo 4: Gerar vídeo sobre série
 
 ```python
 from channels.series_explicadas.channel_processor import SeriesExplicadasProcessor
@@ -63,7 +52,7 @@ result = processor.process_series(series_id=1396)  # Game of Thrones
 print(f"Vídeo gerado: {result['title']}")
 ```
 
-## Exemplo 6: Upload manual para YouTube
+## Exemplo 5: Upload manual para YouTube
 
 ```python
 from core.youtube_uploader import YouTubeUploader
@@ -81,7 +70,7 @@ print(f"Vídeo ID: {result['video_id']}")
 print(f"URL: {result['url']}")
 ```
 
-## Exemplo 7: Pipeline completo (gerar + upload)
+## Exemplo 6: Pipeline completo (gerar + upload)
 
 ```python
 from channels.placar_dia.channel_processor import PlacarDiaProcessor

@@ -39,9 +39,6 @@ python main.py --channel explicado_shorts --upload
 # Placar do Dia - Resumos de jogos
 python main.py --channel placar_dia --upload
 
-# Bets do Dia - Análises de apostas
-python main.py --channel bets_dia --upload
-
 # Explicado em Shorts - Vídeos educacionais
 python main.py --channel explicado_shorts --upload
 

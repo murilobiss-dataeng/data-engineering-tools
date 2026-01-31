@@ -1,33 +1,74 @@
 # Configuração dos Canais do YouTube
-# Cada canal tem um ID único do YouTube
+# Para uploads em canais separados: configure credentials_path por canal
+# Veja docs/guides/CANAIS_INDIVIDUAIS.md
 
 channels:
   placar_dia:
     name: "Placar do Dia"
-    channel_id: null  # Deixe null para usar canal padrão, ou especifique o ID
+    channel_id: null
+    credentials_path: null  # config/client_secrets_placar_dia.json
     category_id: "17"  # Sports
     default_tags: ["futebol", "placar", "resumo", "brasileirão", "campeonato"]
-    
-  bets_dia:
-    name: "Bets do Dia"
-    channel_id: null
-    category_id: "22"  # People & Blogs
-    default_tags: ["apostas", "bets", "futebol", "análise", "18+", "jogo responsável"]
     
   explicado_shorts:
     name: "Explicado em Shorts"
     channel_id: null
+    credentials_path: null
     category_id: "27"  # Education
     default_tags: ["educação", "explicação", "shorts", "aprendizado", "conhecimento"]
     
   quanto_rende:
     name: "Quanto rende?"
     channel_id: null
+    credentials_path: null
     category_id: "26"  # Howto & Style
     default_tags: ["investimento", "rendimento", "simulação", "finanças", "dinheiro"]
     
   series_explicadas:
     name: "Series Explicadas"
     channel_id: null
+    credentials_path: null
     category_id: "24"  # Entertainment
     default_tags: ["séries", "tv", "explicação", "sem spoilers", "resumo"]
+    
+  salmo_dia:
+    name: "Salmo do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "28"  # Nonprofits & Activism
+    default_tags: ["salmo", "bíblia", "reflexão", "palavra", "fé"]
+    
+  receita_dia:
+    name: "Receita do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "26"  # Howto & Style
+    default_tags: ["receita", "culinária", "comida", "chef", "tutorial"]
+    
+  exercicio_dia:
+    name: "Exercício do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "17"  # Sports
+    default_tags: ["fitness", "exercício", "treino", "bem estar", "saúde"]
+    
+  motivacao_dia:
+    name: "Motivação do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "22"  # People & Blogs
+    default_tags: ["motivação", "desenvolvimento pessoal", "inspiração", "mindset"]
+    
+  curiosidade_dia:
+    name: "Curiosidade do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "28"  # Science & Technology
+    default_tags: ["curiosidade", "top 10", "conhecimento", "interessante"]
+    
+  dica_carreira_dia:
+    name: "Dica de Carreira do Dia"
+    channel_id: null
+    credentials_path: null
+    category_id: "22"  # People & Blogs
+    default_tags: ["carreira", "trabalho", "dicas", "profissional", "emprego"]

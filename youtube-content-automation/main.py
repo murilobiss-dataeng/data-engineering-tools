@@ -3,17 +3,31 @@
 import argparse
 import sys
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv('config/api_keys.env')
+# Configs em config/ (relativo ao projeto)
+PROJECT_ROOT = Path(__file__).parent.resolve()
+load_dotenv(PROJECT_ROOT / 'config' / 'api_keys.env')
 
 # Import channel processors
 from channels.placar_dia.channel_processor import PlacarDiaProcessor
-from channels.bets_dia.channel_processor import BetsDiaProcessor
 from channels.explicado_shorts.channel_processor import ExplicadoShortsProcessor
 from channels.quanto_rende.channel_processor import QuantoRendeProcessor
 from channels.series_explicadas.channel_processor import SeriesExplicadasProcessor
+from channels.salmo_dia.channel_processor import SalmoDiaProcessor
+from channels.receita_dia.channel_processor import ReceitaDiaProcessor
+from channels.exercicio_dia.channel_processor import ExercicioDiaProcessor
+from channels.motivacao_dia.channel_processor import MotivacaoDiaProcessor
+from channels.curiosidade_dia.channel_processor import CuriosidadeDiaProcessor
+from channels.dica_carreira_dia.channel_processor import DicaCarreiraDiaProcessor
 from core.youtube_uploader import YouTubeUploader
+
+CHANNELS = [
+    'placar_dia', 'explicado_shorts', 'quanto_rende', 'series_explicadas',
+    'salmo_dia', 'receita_dia', 'exercicio_dia', 'motivacao_dia',
+    'curiosidade_dia', 'dica_carreira_dia'
+]
 
 
 def process_channel(channel_name: str, upload: bool = False):
@@ -49,23 +63,6 @@ def process_channel(channel_name: str, upload: bool = False):
                         'description': result['description'],
                         'tags': result['tags']
                     }, channel_name='placar_dia')
-    
-    elif channel_name == 'bets_dia':
-        processor = BetsDiaProcessor()
-        # Get a fixture ID (in production, get from API)
-        # For demo, using a placeholder
-        result = processor.process_match_bet(fixture_id=12345)  # Replace with actual ID
-        print(f"Generated: {result.get('title', 'Unknown')}")
-        if upload:
-            if 'video_path' in result:
-                upload_video(result, channel_name='bets_dia')
-            if 'short_video_path' in result:
-                upload_video({
-                    'video_path': result['short_video_path'],
-                    'title': result['title'].replace(' | Bets do Dia', ' | Shorts'),
-                    'description': result['description'],
-                    'tags': result['tags']
-                }, channel_name='bets_dia')
     
     elif channel_name == 'explicado_shorts':
         processor = ExplicadoShortsProcessor()
@@ -118,27 +115,67 @@ def process_channel(channel_name: str, upload: bool = False):
         result = processor.process_series()
         print(f"Generated: {result.get('title', 'Unknown')}")
         if upload:
-            # Upload long-form video
             if 'video_path' in result:
-                upload_video({
-                    'video_path': result['video_path'],
-                    'title': result['title'],
-                    'description': result['description'],
-                    'tags': result['tags']
-                }, channel_name='series_explicadas')
-            # Upload shorts video
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='series_explicadas')
             if 'short_video_path' in result:
-                short_title = result['title'].replace(' | Series Explicadas', ' | Shorts')
-                upload_video({
-                    'video_path': result['short_video_path'],
-                    'title': short_title,
-                    'description': result['description'],
-                    'tags': result['tags']
-                }, channel_name='series_explicadas')
-    
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Series Explicadas', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='series_explicadas')
+    elif channel_name == 'salmo_dia':
+        processor = SalmoDiaProcessor()
+        result = processor.process_salmo()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='salmo_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Salmo do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='salmo_dia')
+    elif channel_name == 'receita_dia':
+        processor = ReceitaDiaProcessor()
+        result = processor.process_receita()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='receita_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Receita do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='receita_dia')
+    elif channel_name == 'exercicio_dia':
+        processor = ExercicioDiaProcessor()
+        result = processor.process_exercicio()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='exercicio_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Exercício do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='exercicio_dia')
+    elif channel_name == 'motivacao_dia':
+        processor = MotivacaoDiaProcessor()
+        result = processor.process_motivacao()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='motivacao_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Motivação do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='motivacao_dia')
+    elif channel_name == 'curiosidade_dia':
+        processor = CuriosidadeDiaProcessor()
+        result = processor.process_curiosidade()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='curiosidade_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Curiosidade do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='curiosidade_dia')
+    elif channel_name == 'dica_carreira_dia':
+        processor = DicaCarreiraDiaProcessor()
+        result = processor.process_dica()
+        print(f"Generated: {result.get('title', 'Unknown')}")
+        if upload:
+            if 'video_path' in result:
+                upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='dica_carreira_dia')
+            if 'short_video_path' in result:
+                upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Dica de Carreira do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='dica_carreira_dia')
     else:
         print(f"Unknown channel: {channel_name}")
-        print("Available channels: placar_dia, bets_dia, explicado_shorts, quanto_rende, series_explicadas")
+        print(f"Available channels: {', '.join(CHANNELS)}")
 
 
 def upload_video(result: dict, channel_name: str = None):
@@ -154,11 +191,13 @@ def upload_video(result: dict, channel_name: str = None):
         # Load channel config
         config_path = os.path.join(os.path.dirname(__file__), 'config', 'youtube_channels.yaml')
         category_id = "22"  # default
-        if os.path.exists(config_path) and channel_name:
-            with open(config_path, 'r') as f:
+        credentials_path = None
+        if config_path.exists() and channel_name:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 channel_config = config.get('channels', {}).get(channel_name, {})
                 category_id = channel_config.get('category_id', category_id)
+                credentials_path = channel_config.get('credentials_path')
                 # Merge default tags
                 default_tags = channel_config.get('default_tags', [])
                 if result.get('tags'):
@@ -166,7 +205,18 @@ def upload_video(result: dict, channel_name: str = None):
                 else:
                     result['tags'] = default_tags
         
-        uploader = YouTubeUploader()
+        # Use channel-specific credentials if configured (para uploads em canais separados)
+        creds_file = PROJECT_ROOT / "config" / "client_secrets.json"
+        creds_pickle = PROJECT_ROOT / "config" / f"credentials_{channel_name}.pickle" if channel_name else PROJECT_ROOT / "config" / "credentials.pickle"
+        if credentials_path:
+            candidate = PROJECT_ROOT / credentials_path
+            if candidate.exists():
+                creds_file = candidate
+        # YouTubeUploader aceita str
+        uploader = YouTubeUploader(
+            client_secrets_file=str(creds_file),
+            credentials_file=str(creds_pickle)
+        )
         upload_result = uploader.upload_video(
             video_path=result['video_path'],
             title=result['title'],
@@ -199,7 +249,7 @@ def main():
         '--channel',
         type=str,
         required=True,
-        choices=['placar_dia', 'bets_dia', 'explicado_shorts', 'quanto_rende', 'series_explicadas'],
+        choices=CHANNELS,
         help='Channel to process'
     )
     parser.add_argument(

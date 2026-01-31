@@ -5,7 +5,6 @@ youtube-content-automation/
 │
 ├── 📂 channels/              # Módulos específicos por canal
 │   ├── placar_dia/          # Resumos de jogos
-│   ├── bets_dia/            # Análises de apostas
 │   ├── explicado_shorts/    # Vídeos educacionais
 │   ├── quanto_rende/        # Simulações financeiras
 │   └── series_explicadas/   # Resumos de séries
@@ -42,7 +41,6 @@ youtube-content-automation/
 │
 ├── 📂 dags/                  # Airflow DAGs
 │   ├── placar_dia_dag.py
-│   ├── bets_dia_dag.py
 │   └── content_scheduler_dag.py
 │
 ├── 📂 outputs/               # Vídeos gerados
