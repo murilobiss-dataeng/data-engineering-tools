@@ -16,7 +16,7 @@ curriculum-vitae/
 │   └── ...
 ├── [outra-pessoa]/     # Criar pasta para cada novo currículo
 │   └── ...
-```
+``` 
 
 ## Como criar um novo currículo
 
