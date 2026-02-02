@@ -5,16 +5,16 @@ shorts:
   text_elements:
     - text: ""
       position: "center"
-      fontsize: 60
+      fontsize: 72
       color: "white"
       font: "Arial-Bold"
       bg_color: null
       stroke_color: "black"
-      stroke_width: 3
+      stroke_width: 4
   thumbnail_size: [1080, 1920]
-  title_fontsize: 100
+  title_fontsize: 120
   title_color: [255, 255, 255]
-  outline_width: 4
+  outline_width: 5
   outline_color: [0, 0, 0]
 
 long_form:
@@ -22,14 +22,14 @@ long_form:
   text_elements:
     - text: ""
       position: "center"
-      fontsize: 50
+      fontsize: 64
       color: "white"
       font: "Arial-Bold"
       bg_color: null
       stroke_color: "black"
-      stroke_width: 2
+      stroke_width: 4
   thumbnail_size: [1920, 1080]
-  title_fontsize: 80
+  title_fontsize: 96
   title_color: [255, 255, 255]
-  outline_width: 3
+  outline_width: 4
   outline_color: [0, 0, 0]

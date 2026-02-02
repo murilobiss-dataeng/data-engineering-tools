@@ -26,7 +26,7 @@ class ExplicadoShortsProcessor:
         self.video_generator = VideoGenerator(output_dir)
         self.template_engine = TemplateEngine()
         # Use enhanced TTS with high-quality Brazilian Portuguese voice
-        self.tts = EnhancedTextToSpeech(output_dir, voice="pt-BR-FranciscaNeural")
+        self.tts = EnhancedTextToSpeech(output_dir, voice="river")
         self.image_processor = ImageProcessor(output_dir)
     
     def process_topic(
@@ -93,27 +93,17 @@ class ExplicadoShortsProcessor:
                 long_template, long_script, 'center'
             )
             
-            # Create professional background images
+            # Background profissional: Unsplash (se API key) ou gradiente
             images = []
-            # Create multiple background variations for visual interest
-            bg_colors = [
-                ((30, 60, 120), (60, 100, 180)),  # Professional blue gradient
-                ((40, 50, 100), (80, 90, 160)),   # Darker blue
-            ]
-            
-            for i, (color1, color2) in enumerate(bg_colors):
-                bg_image = self.image_processor.create_gradient_background(
-                    (1920, 1080),
-                    color1,
-                    color2,
-                    direction='vertical',
-                    output_path=os.path.join(
-                        self.video_generator.output_dir,
-                        f"explicado_{topic.replace(' ', '_')}_bg_{i}.jpg"
-                    )
-                )
-                # Add subtle pattern or texture
-                images.append(bg_image)
+            kw = (topic or "education").replace("?", "").split()[0] if topic else "education"
+            slug = (topic or "topic").replace(" ", "_").replace("?", "")[:25]
+            bg_image = self.image_processor.create_professional_background(
+                (1920, 1080),
+                keyword=kw,
+                palette="blue_pro",
+                output_path=os.path.join(self.video_generator.output_dir, f"explicado_{slug}_bg.jpg")
+            )
+            images.append(bg_image)
             
             # Generate videos
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

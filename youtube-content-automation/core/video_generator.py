@@ -141,6 +141,8 @@ class VideoGenerator:
         
         # Export video with high quality settings
         output_path = os.path.join(self.output_dir, output_filename)
+        video_type = "Short" if is_shorts else "Long-form"
+        print(f"      → Codificando {video_type} ({output_filename})...", flush=True)
         final_clip.write_videofile(
             output_path,
             fps=30,  # Higher FPS for better quality
@@ -150,7 +152,7 @@ class VideoGenerator:
             audio_bitrate='192k',  # High audio quality
             preset='slow',  # Better quality encoding
             threads=4,
-            logger=None  # Reduce verbose output
+            logger='bar'  # Mostra barra de progresso
         )
         
         # Cleanup
@@ -181,7 +183,7 @@ class VideoGenerator:
             font_name = element.get('font', 'Arial-Bold')
             bg_color = element.get('bg_color')
             stroke_color = element.get('stroke_color', 'black')
-            stroke_width = element.get('stroke_width', 2)
+            stroke_width = element.get('stroke_width', 4)
             
             # Convert color string to RGB tuple
             if isinstance(color, str):
@@ -205,23 +207,25 @@ class VideoGenerator:
             # Create text image using PIL
             max_width = int(size[0] * 0.9)
             
-            # Try to load font
+            # Tipografia profissional - fontes maiores e legíveis
+            fontsize = max(fontsize, 48)
+            stroke_width = max(stroke_width, 3)
+            font_paths = [
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+                '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf',
+                '/System/Library/Fonts/Helvetica.ttc',
+                '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
+            ]
+            font_obj = None
             try:
-                # Try common font paths
-                font_paths = [
-                    f'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-                    f'/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-                    '/System/Library/Fonts/Helvetica.ttc',  # macOS
-                ]
-                font_obj = None
                 for path in font_paths:
                     if os.path.exists(path):
                         font_obj = ImageFont.truetype(path, fontsize)
                         break
-                
-                if font_obj is None:
-                    font_obj = ImageFont.load_default()
-            except:
+            except Exception:
+                pass
+            if font_obj is None:
                 font_obj = ImageFont.load_default()
             
             # Calculate text size with word wrapping

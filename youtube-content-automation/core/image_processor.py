@@ -1,10 +1,20 @@
 """Image processing utilities for video generation."""
 
 import os
+import random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from typing import Tuple, Optional, List
 import requests
 from io import BytesIO
+
+# Cores para overlays e gradientes profissionais
+PALETTES = {
+    "blue_pro": ((15, 32, 72), (45, 95, 180), (120, 160, 220)),
+    "warm": ((72, 32, 15), (180, 95, 45), (220, 160, 120)),
+    "nature": ((20, 60, 40), (60, 120, 80), (140, 180, 150)),
+    "elegant": ((40, 35, 55), (90, 80, 120), (160, 150, 190)),
+    "energy": ((80, 30, 50), (160, 60, 100), (220, 140, 180)),
+}
 
 
 class ImageProcessor:
@@ -192,27 +202,58 @@ class ImageProcessor:
                 
                 pixels[x, y] = (r, g, b)
         
-        # Add subtle radial gradient overlay for depth
-        draw = ImageDraw.Draw(img, 'RGBA')
-        center_x, center_y = width // 2, height // 2
-        max_radius = int((width ** 2 + height ** 2) ** 0.5)
-        
-        # Create subtle vignette effect
-        for radius in range(max_radius, 0, -10):
-            alpha = int(5 * (1 - radius / max_radius))
-            if alpha > 0:
-                overlay = Image.new('RGBA', size, (0, 0, 0, alpha))
-                mask = Image.new('L', size, 0)
-                mask_draw = ImageDraw.Draw(mask)
-                mask_draw.ellipse(
-                    [center_x - radius, center_y - radius, center_x + radius, center_y + radius],
-                    fill=255
-                )
-                overlay.putalpha(mask)
-                img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        # Vignette suave via numpy (se disponível) ou skip para performance
         
         if output_path is None:
             output_path = os.path.join(self.output_dir, "gradient_bg.jpg")
-        
+
         img.save(output_path, 'JPEG', quality=98)
         return output_path
+
+    def create_professional_background(
+        self,
+        size: Tuple[int, int],
+        keyword: Optional[str] = None,
+        palette: str = "blue_pro",
+        output_path: Optional[str] = None
+    ) -> str:
+        """
+        Cria background profissional: Leonardo.ai > Unsplash > gradiente.
+        """
+        out = output_path or os.path.join(self.output_dir, "bg_professional.jpg")
+        prompt_keyword = (keyword or "professional").replace(",", " ")
+
+        # 1. Leonardo.ai (imagens geradas por IA)
+        try:
+            from data_sources.leonardo_api import LeonardoAPI
+            api = LeonardoAPI()
+            if api.api_key:
+                prompt = f"Professional background image for video, {prompt_keyword}, high quality, cinematic lighting, 16:9 aspect ratio, no text, no watermark"
+                path = api.generate_and_save(prompt, out, size=size)
+                if path:
+                    img = Image.open(path).convert('RGB').resize(size, Image.Resampling.LANCZOS)
+                    overlay = Image.new('RGBA', size, (0, 0, 0, 90))
+                    img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+                    img.save(out, 'JPEG', quality=95)
+                    return out
+        except Exception:
+            pass
+
+        # 2. Unsplash (fotos reais)
+        if keyword:
+            try:
+                from data_sources.unsplash_api import UnsplashAPI
+                unsplash = UnsplashAPI()
+                photo_path = unsplash.search_photo(keyword, size=size, output_dir=self.output_dir)
+                if photo_path:
+                    img = Image.open(photo_path).convert('RGB').resize(size, Image.Resampling.LANCZOS)
+                    overlay = Image.new('RGBA', size, (0, 0, 0, 110))
+                    img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+                    img.save(out, 'JPEG', quality=95)
+                    return out
+            except Exception:
+                pass
+
+        # 3. Gradiente (fallback)
+        colors = PALETTES.get(palette, PALETTES["blue_pro"])
+        return self.create_gradient_background(size, colors[0], colors[-1], out)

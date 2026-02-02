@@ -1,14 +1,16 @@
 # Configuração dos Canais do YouTube
 # Para uploads em canais separados: configure credentials_path por canal
 # Veja docs/guides/CANAIS_INDIVIDUAIS.md
+# description_keywords: palavras-chave adicionadas à descrição para SEO/descoberta
 
 channels:
   placar_dia:
     name: "Placar do Dia"
     channel_id: null
-    credentials_path: null  # config/client_secrets_placar_dia.json
+    credentials_path: null
     category_id: "17"  # Sports
     default_tags: ["futebol", "placar", "resumo", "brasileirão", "campeonato"]
+    description_keywords: "futebol, placar do jogo, resumo do jogo, brasileirão, campeonato brasileiro, gol, partida, resultado, futebol ao vivo, resumo de futebol"
     
   explicado_shorts:
     name: "Explicado em Shorts"
@@ -16,6 +18,7 @@ channels:
     credentials_path: null
     category_id: "27"  # Education
     default_tags: ["educação", "explicação", "shorts", "aprendizado", "conhecimento"]
+    description_keywords: "explicado, educação, aprendizado, curiosidades, conhecimento, shorts educativo, como funciona, explicação fácil, estudo, aprender"
     
   quanto_rende:
     name: "Quanto rende?"
@@ -23,6 +26,7 @@ channels:
     credentials_path: null
     category_id: "26"  # Howto & Style
     default_tags: ["investimento", "rendimento", "simulação", "finanças", "dinheiro"]
+    description_keywords: "quanto rende, investimento, rendimento, CDB, tesouro direto, poupança, finanças, dinheiro, aplicação, simulação financeira, rentabilidade"
     
   series_explicadas:
     name: "Series Explicadas"
@@ -30,6 +34,7 @@ channels:
     credentials_path: null
     category_id: "24"  # Entertainment
     default_tags: ["séries", "tv", "explicação", "sem spoilers", "resumo"]
+    description_keywords: "séries, série de TV, resumo de série, explicando séries, sem spoiler, Netflix, HBO, streaming, o que é a série, enredo"
     
   salmo_dia:
     name: "Salmo do Dia"
@@ -37,6 +42,7 @@ channels:
     credentials_path: null
     category_id: "28"  # Nonprofits & Activism
     default_tags: ["salmo", "bíblia", "reflexão", "palavra", "fé"]
+    description_keywords: "salmo, bíblia, palavra de Deus, reflexão diária, fé, devocional, mensagem cristã, salmo do dia, versículo, meditação"
     
   receita_dia:
     name: "Receita do Dia"
@@ -44,6 +50,7 @@ channels:
     credentials_path: null
     category_id: "26"  # Howto & Style
     default_tags: ["receita", "culinária", "comida", "chef", "tutorial"]
+    description_keywords: "receita, receita fácil, culinária, como fazer, passo a passo, comida, chef, tutorial de receita, culinária brasileira, cozinha"
     
   exercicio_dia:
     name: "Exercício do Dia"
@@ -51,6 +58,7 @@ channels:
     credentials_path: null
     category_id: "17"  # Sports
     default_tags: ["fitness", "exercício", "treino", "bem estar", "saúde"]
+    description_keywords: "exercício, fitness, treino em casa, academia, exercício do dia, saúde, bem estar, musculação, alongamento, vida saudável"
     
   motivacao_dia:
     name: "Motivação do Dia"
@@ -58,6 +66,7 @@ channels:
     credentials_path: null
     category_id: "22"  # People & Blogs
     default_tags: ["motivação", "desenvolvimento pessoal", "inspiração", "mindset"]
+    description_keywords: "motivação, desenvolvimento pessoal, inspiração, mindset, autoajuda, crescimento, frases motivacionais, motivação do dia, superação"
     
   curiosidade_dia:
     name: "Curiosidade do Dia"
@@ -65,6 +74,7 @@ channels:
     credentials_path: null
     category_id: "28"  # Science & Technology
     default_tags: ["curiosidade", "top 10", "conhecimento", "interessante"]
+    description_keywords: "curiosidade, curiosidades, top 10, fatos interessantes, conhecimento, você sabia, dados curiosos, interessante, descobertas"
     
   dica_carreira_dia:
     name: "Dica de Carreira do Dia"
@@ -72,3 +82,4 @@ channels:
     credentials_path: null
     category_id: "22"  # People & Blogs
     default_tags: ["carreira", "trabalho", "dicas", "profissional", "emprego"]
+    description_keywords: "carreira, dicas de carreira, emprego, trabalho, profissional, LinkedIn, entrevista de emprego, desenvolvimento profissional, dica do dia"

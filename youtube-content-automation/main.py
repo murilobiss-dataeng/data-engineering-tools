@@ -37,7 +37,9 @@ def process_channel(channel_name: str, upload: bool = False):
         channel_name: Name of the channel to process
         upload: Whether to upload to YouTube
     """
-    print(f"Processing channel: {channel_name}")
+    print(f"\n{'='*50}")
+    print(f"Processando canal: {channel_name}")
+    print(f"{'='*50}\n", flush=True)
     
     if channel_name == 'placar_dia':
         processor = PlacarDiaProcessor()
@@ -122,11 +124,13 @@ def process_channel(channel_name: str, upload: bool = False):
     elif channel_name == 'salmo_dia':
         processor = SalmoDiaProcessor()
         result = processor.process_salmo()
-        print(f"Generated: {result.get('title', 'Unknown')}")
+        print(f"\n✓ Conteúdo gerado: {result.get('title', 'Unknown')}\n", flush=True)
         if upload:
             if 'video_path' in result:
+                print("  Fazendo upload do vídeo longo...", flush=True)
                 upload_video({'video_path': result['video_path'], 'title': result['title'], 'description': result['description'], 'tags': result['tags']}, channel_name='salmo_dia')
             if 'short_video_path' in result:
+                print("  Fazendo upload do short...", flush=True)
                 upload_video({'video_path': result['short_video_path'], 'title': result['title'].replace(' | Salmo do Dia', ' | Shorts'), 'description': result['description'], 'tags': result['tags']}, channel_name='salmo_dia')
     elif channel_name == 'receita_dia':
         processor = ReceitaDiaProcessor()
@@ -189,7 +193,7 @@ def upload_video(result: dict, channel_name: str = None):
         import yaml
         
         # Load channel config
-        config_path = os.path.join(os.path.dirname(__file__), 'config', 'youtube_channels.yaml')
+        config_path = PROJECT_ROOT / 'config' / 'youtube_channels.yaml'
         category_id = "22"  # default
         credentials_path = None
         if config_path.exists() and channel_name:
@@ -198,6 +202,10 @@ def upload_video(result: dict, channel_name: str = None):
                 channel_config = config.get('channels', {}).get(channel_name, {})
                 category_id = channel_config.get('category_id', category_id)
                 credentials_path = channel_config.get('credentials_path')
+                # Palavras-chave na descrição para SEO/descoberta
+                keywords = channel_config.get('description_keywords', '')
+                if keywords and result.get('description'):
+                    result['description'] = result['description'].rstrip() + f"\n\nPalavras-chave: {keywords}"
                 # Merge default tags
                 default_tags = channel_config.get('default_tags', [])
                 if result.get('tags'):

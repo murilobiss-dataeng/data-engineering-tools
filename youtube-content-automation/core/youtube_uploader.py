@@ -179,6 +179,8 @@ class YouTubeUploader:
         }
         
         # Create media upload object
+        file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
+        print(f"      → Enviando vídeo ({file_size_mb:.1f} MB)...", flush=True)
         media = MediaFileUpload(
             video_path,
             chunksize=-1,
