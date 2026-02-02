@@ -454,4 +454,9 @@ Thumbs.db
 *.pfx
 config.ini
 secrets.json
-credentials.json 
+credentials.json
+
+# Curriculum Vitae - allow these files
+!curriculum-vitae/**/*.json
+!curriculum-vitae/**/vercel.json
+!curriculum-vitae/**/package.json
