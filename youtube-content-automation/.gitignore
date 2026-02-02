@@ -6,54 +6,23 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Environment variables and secrets
-.env
-*.env
-config/api_keys.env
-config/client_secrets*.json
-config/credentials*.pickle
-
-# OAuth credentials por canal (arquivos sem extensão em config/)
-config/placar_do_dia
-config/quanto_rende
-config/series_explicadas
-config/explicado_em_shorts
-config/exercicio_do_dia
-config/motivacao_do_dia
-config/curiosidade_do_dia
-config/dica_carreira_dia
-config/receita_do_dia
-config/salmo_do_dia
 
 # Outputs
 outputs/
 *.mp4
 *.mp3
 *.wav
-*.png
-*.jpg
-*.jpeg
+
+# Environment
+.env
+*.env
+!.env.example
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
@@ -62,15 +31,10 @@ outputs/
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
+# Fonts (downloaded automatically)
+assets/fonts/*.ttf
 
-# Airflow
-airflow.db
-airflow.cfg
-*.pid
-
-# Test outputs
-tests/__pycache__/
-.pytest_cache/
+# Temp files
+*.tmp
+*.temp
+*TEMP*

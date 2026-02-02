@@ -1,139 +1,148 @@
-# 🎬 Automação de Conteúdo para YouTube
+# YouTube Content Automation - Múltiplos Canais
 
-Sistema profissional automatizado para criação e upload de conteúdo para 10 canais do YouTube.
+Gerador automático de shorts para YouTube com **múltiplos canais**: Salmo do Dia (150 salmos) e Passagem do Dia (passagens da Bíblia). Texto sincronizado com áudio e visual premium.
 
-## 📺 Canais
+## Canais Disponíveis
 
-1. **Placar do Dia** - Resumos de jogos da rodada
-2. **Explicado em Shorts** - Vídeos educacionais curtos
-3. **Quanto rende?** - Simulações de rendimento financeiro
-4. **Series Explicadas** - Resumos de séries sem spoilers
-5. **Salmo do Dia** - Reflexão diária com salmos
-6. **Receita do Dia** - Culinária e receitas
-7. **Exercício do Dia** - Fitness e bem-estar
-8. **Motivação do Dia** - Desenvolvimento pessoal
-9. **Curiosidade do Dia** - Top 10 e curiosidades
-10. **Dica de Carreira do Dia** - Dicas profissionais
+| Canal | Conteúdo |
+|-------|----------|
+| **Salmo do Dia** | Livro de Salmos (150 salmos – Antigo Testamento). Shorts com salmos completos. |
+| **Passagem do Dia** | Passagens da Bíblia: Evangelhos, Provérbios, Isaías, Romanos, Filipenses, etc. |
 
-## ✨ Características
+## Características
 
-- 🎙️ **Voz Profissional**: TTS neural de alta qualidade (edge-tts)
-- 🎨 **Visual Profissional**: Backgrounds com gradientes e texturas
-- 📝 **Conteúdo Robusto**: Explicações detalhadas e educativas
-- 🎯 **Canal Correto**: Cada vídeo vai para o canal apropriado
-- ✅ **Verificação de Duplicatas**: Não faz upload de vídeos repetidos
-- 🌐 **Público por Padrão**: Vídeos publicados automaticamente
+- **Múltiplos canais**: Escolha o canal com `--channel salmo_dia` ou `--channel passagem_do_dia`
+- **Salmo do Dia**: Livro de Salmos com 150 salmos (Antigo Testamento); base com texto integral dos mais usados
+- **Passagem do Dia**: Versículos e trechos de vários livros (João, Mateus, Provérbios, Isaías, etc.)
+- **Texto sincronizado**: Cada página aparece enquanto está sendo narrada
+- **Voz premium**: ElevenLabs em português
+- **Visual profissional**: Gradientes, tipografia elegante, partículas de luz
+- **Publicação multi-destino**: YouTube, Twitter/X, Kwai, Instagram, TikTok, Facebook, LinkedIn (cada um com credenciais opcionais)
 
-## 🚀 Instalação
+## Requisitos
+
+- Python 3.9+
+- FFmpeg instalado
+- API Key do ElevenLabs
+- Credenciais dos destinos desejados (YouTube, Twitter, Kwai, IG, TikTok, Facebook, LinkedIn – opcional)
+
+## Instalação
 
 ```bash
-# 1. Clone o repositório
-git clone <repo-url>
 cd youtube-content-automation
-
-# 2. Execute o script de instalação
-./scripts/install.sh
-
-# 3. Configure as APIs (ver docs/guides/)
+pip install -r requirements.txt
+cp .env.example .env
+# Edite .env com suas API keys
 ```
 
-## 📖 Uso
+## Uso
 
-### Gerar e Fazer Upload
+### Canal Salmo do Dia (padrão)
 
 ```bash
-source venv/bin/activate
+# Lista todos os salmos disponíveis
+python main.py --channel salmo_dia --list
 
-# Explicado em Shorts
-python main.py --channel explicado_shorts --upload
+# Gera um salmo aleatório
+python main.py --channel salmo_dia
+# ou simplesmente (salmo_dia é o padrão):
+python main.py
 
-# Placar do Dia
-python main.py --channel placar_dia --upload
+# Gera um salmo específico (índice 0 = Salmo 23)
+python main.py --channel salmo_dia --index 0
 
-# Outros canais
-python main.py --channel quanto_rende --upload
-python main.py --channel series_explicadas --upload
-python main.py --channel salmo_dia --upload
-python main.py --channel receita_dia --upload
-python main.py --channel exercicio_dia --upload
-python main.py --channel motivacao_dia --upload
-python main.py --channel curiosidade_dia --upload
-python main.py --channel dica_carreira_dia --upload
+# Gera e publica (todos os destinos configurados: YouTube, Twitter, Kwai, IG, etc.)
+python main.py --channel salmo_dia --index 0 --publish
+
+# Publica apenas em destinos específicos
+python main.py --channel salmo_dia --publish --publish-to youtube,twitter,kwai,instagram
+python main.py --channel salmo_dia --publish --publish-to all
+
+# Ver informações de um salmo
+python main.py --channel salmo_dia --info 3
 ```
 
-### Apenas Gerar (sem upload)
+### Canal Passagem do Dia
 
 ```bash
-python main.py --channel explicado_shorts
+# Lista todas as passagens
+python main.py --channel passagem_do_dia --list
+
+# Gera uma passagem aleatória
+python main.py --channel passagem_do_dia
+
+# Gera passagem específica
+python main.py --channel passagem_do_dia --index 0
+
+# Gera e publica em vários destinos
+python main.py --channel passagem_do_dia --publish --publish-to youtube,twitter,kwai,ig
+
+# Ver informações de uma passagem
+python main.py --channel passagem_do_dia --info 2
 ```
 
-## 🏗️ Estrutura
+### Opções gerais
+
+- `--channel`, `-c`: Canal (salmo_dia, passagem_do_dia). Padrão: salmo_dia
+- `--list`, `-l`: Lista o conteúdo do canal
+- `--index`, `-i`: Índice do item (use --list para ver índices)
+- `--publish`, `-p`: Publica no Twitter/X após gerar
+- `--output`, `-o`: Diretório de saída (padrão: outputs)
+- `--info N`: Mostra informações do item de índice N
+
+## Salmos (150 no livro)
+
+O livro de Salmos na Bíblia tem **150 salmos** (cânticos/poemas), no Antigo Testamento, em cinco partes. O projeto inclui texto integral dos salmos mais utilizados; use `python main.py --channel salmo_dia --list` para ver a lista e o total com texto.
+
+## Passagens da Bíblia
+
+O canal Passagem do Dia usa versículos e trechos de:
+
+- **Evangelhos**: João, Mateus, Lucas
+- **Epístolas**: Romanos, Filipenses, 1 Coríntios, Efésios, Gálatas, Hebreus
+- **Provérbios**, **Isaías**, **Jeremias**, **Josué**
+
+Use `python main.py --channel passagem_do_dia --list` para ver todas.
+
+## Estrutura do Projeto
 
 ```
 youtube-content-automation/
-├── channels/          # Módulos por canal
-├── core/              # Componentes core (vídeo, TTS, upload)
-├── data_sources/      # Integrações com APIs
-├── config/            # Configurações (canais, templates)
-├── tests/             # Testes automatizados
-├── docs/              # Documentação completa
-├── scripts/           # Scripts de instalação
-├── dags/              # Airflow DAGs
-└── outputs/           # Vídeos gerados
+├── main.py                    # Entrada multi-canal
+├── config/
+│   ├── channels.yaml          # Definição dos canais
+│   └── templates_salmo_dia.yaml
+├── channels/
+│   ├── salmo_dia/             # Canal Salmo do Dia
+│   └── passagem_do_dia/       # Canal Passagem do Dia
+├── core/
+│   ├── publishers/           # Publicação multi-destino
+│   │   ├── youtube_publisher.py
+│   │   ├── twitter_publisher.py
+│   │   ├── kwai_publisher.py
+│   │   ├── instagram_publisher.py
+│   │   ├── tiktok_publisher.py
+│   │   ├── facebook_publisher.py
+│   │   ├── linkedin_publisher.py
+│   │   └── dispatcher.py
+│   ├── premium_visuals.py
+│   ├── synced_video_generator.py
+│   ├── text_to_speech_enhanced.py
+│   └── twitter_publisher.py
+├── data/
+│   ├── salmos_completos.py    # 150 salmos (livro); texto integral dos principais
+│   └── passagens_biblia.py    # Passagens de vários livros
+├── outputs/
+└── assets/fonts/
 ```
 
-## ⚙️ Configuração
+## Paletas Visuais
 
-### APIs Necessárias
+- **heavenly**: Dourados celestiais (paz, amor, gratidão)
+- **sacred**: Azuis sagrados (proteção, verdade)
+- **dawn**: Amanhecer (esperança, louvor, luz)
+- **serene**: Verdes serenos (sabedoria, confiança)
 
-1. **API-Football** - Já configurada
-2. **TMDB API** - Já configurada
-3. **YouTube Data API v3** - Já configurada
-
-### Primeira Execução
-
-Na primeira vez com `--upload`:
-1. Navegador abrirá automaticamente
-2. Faça login com conta do YouTube
-3. Autorize o acesso
-4. Credenciais serão salvas automaticamente
-
-**Importante:** Adicione seu email como "Usuário de teste" no Google Cloud Console se receber erro 403.
-
-## 📚 Documentação
-
-Toda documentação está em `docs/`:
-
-- `docs/guides/YOUTUBE_SETUP.md` - Configuração do YouTube
-- `docs/guides/FIX_403_ERROR.md` - Resolver erro 403
-- `docs/guides/CANAIS_INDIVIDUAIS.md` - Upload em canais separados
-- `docs/guides/TTS_CLIPCHAMP_AZURE.md` - Voz Azure (estilo Clipchamp)
-- `docs/guides/LEONARDO_IMAGENS.md` - Imagens com Leonardo AI
-- `docs/guides/CAPCUT_EDICAO.md` - Edição com CapCut
-- `docs/MULTI_PLATFORM_TIKTOK_IG.md` - TikTok e Instagram (futuro)
-- `docs/INSTALLATION.md` - Guia de instalação
-- `docs/USAGE.md` - Guia de uso
-- `docs/IMPROVEMENTS.md` - Melhorias implementadas
-
-## 🧪 Testes
-
-```bash
-source venv/bin/activate
-
-# Testar imports
-python tests/test_imports.py
-
-# Testar APIs (requer internet)
-python tests/test_football_api.py
-python tests/test_tmdb_api.py
-```
-
-## 🔧 Requisitos
-
-- Python 3.9+
-- FFmpeg
-- Chaves de API (já configuradas)
-
-## 📝 Licença
+## Licença
 
 MIT

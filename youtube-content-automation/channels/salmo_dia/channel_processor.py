@@ -1,134 +1,256 @@
-"""Processor for Salmo do Dia channel."""
+"""
+Processor for Salmo do Dia channel – Salmos e passagens da Bíblia em um só canal.
+
+Conteúdo unificado:
+- Salmos (livro de Salmos, 150 no total – Antigo Testamento)
+- Passagens da Bíblia (Evangelhos, Provérbios, Isaías, etc.)
+
+Features:
+- Texto sincronizado com áudio
+- Sistema visual premium
+- Publicação multi-destino (YouTube, Twitter, Kwai, IG, etc.)
+"""
 
 import os
-from typing import Dict
+import random
+from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 
-from core.video_generator import VideoGenerator
-from core.template_engine import TemplateEngine
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from core.text_to_speech_enhanced import EnhancedTextToSpeech
-from core.image_processor import ImageProcessor
+from core.synced_video_generator import SyncedVideoGenerator
+from data.salmos_completos import SALMOS_COMPLETOS, MOOD_TO_PALETTE as SALMO_MOOD
+from data.passagens_biblia import PASSAGENS_BIBLIA, MOOD_TO_PALETTE as PASSAGEM_MOOD
 
+# Lista unificada: (tipo, nome, texto, mood)
+def _build_content_items() -> List[Tuple[str, str, str, str]]:
+    items = []
+    for (nome, texto, mood) in SALMOS_COMPLETOS:
+        items.append(("salmo", nome, texto, mood))
+    for (ref, texto, mood) in PASSAGENS_BIBLIA:
+        items.append(("passagem", ref, texto, mood))
+    return items
 
-# Salmos completos para conteúdo diário (nome, texto integral)
-SALMOS = [
-    (
-        "Salmo 23",
-        """O Senhor é meu pastor; nada me faltará.
-Ele me faz repousar em pastos verdejantes. Leva-me às águas tranqüilas.
-Refrigera-me a alma. Guia-me pelas veredas da justiça por amor do seu nome.
-Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo; a tua vara e o teu cajado me consolam.
-Preparas uma mesa perante mim na presença dos meus inimigos, unges a minha cabeça com óleo; o meu cálice transborda.
-Certamente que a bondade e a misericórdia me seguirão todos os dias da minha vida; e habitarei na casa do Senhor por longos dias.""",
-    ),
-    (
-        "Salmo 91",
-        """Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.
-Direi do Senhor: Ele é o meu refúgio e a minha fortaleza, o meu Deus, em quem confio.
-Porque ele te livrará do laço do passarinheiro, e da peste perniciosa.
-Cobrir-te-á com as suas penas, e debaixo das suas asas te confiarás; a sua verdade será o teu escudo e broquel.
-Não temerás espanto noturno, nem seta que voe de dia.
-Nem peste que ande na escuridão, nem mortandade que assole ao meio-dia.
-Mil cairão ao teu lado, e dez mil à tua direita; mas não chegará a ti.
-Somente com os teus olhos contemplarás, e verás a recompensa dos ímpios.
-Porque tu, ó Senhor, és o meu refúgio. No Altíssimo fizeste a tua habitação.
-Nenhum mal te sucederá, nem praga alguma chegará à tua tenda.
-Porque aos seus anjos dará ordem a teu respeito, para te guardarem em todos os teus caminhos.
-Eles te sustentarão nas suas mãos, para que não tropeces com o teu pé em pedra.
-Pisarás o leão e a cobra; calcarás aos pés o filho do leão e a serpente.
-Porquanto tão encarecidamente me amou, eu o livrarei; pô-lo-ei em retiro alto, porque conheceu o meu nome.
-Ele me invocará, e eu lhe responderei; estarei com ele na angústia; livrá-lo-ei e o glorificarei.
-Com longura de dias o fartarei, e lhe mostrarei a minha salvação.""",
-    ),
-    (
-        "Salmo 27",
-        """O Senhor é a minha luz e a minha salvação; a quem temerei? O Senhor é a fortaleza da minha vida; de quem me recearei?
-Quando os malvados, meus adversários e meus inimigos, se chegaram contra mim para comerem as minhas carnes, tropeçaram e caíram.
-Ainda que um exército se acampe contra mim, o meu coração não temerá; ainda que a guerra se levante contra mim, nisso confiarei.
-Uma coisa pedi ao Senhor, e a buscarei: que possa morar na casa do Senhor todos os dias da minha vida, para contemplar a formosura do Senhor.
-Porque no dia da adversidade me esconderá no seu pavilhão; no segredo do seu tabernáculo me esconderá.
-E agora será exaltada a minha cabeça acima dos meus inimigos.
-Portanto oferecerei no seu tabernáculo sacrifícios de júbilo; cantarei e salmodiarei ao Senhor.
-Ouve, ó Senhor, a minha voz com que clamo; tem também piedade de mim, e responde-me.
-Não escondas de mim o teu rosto. O Senhor é a minha luz e a minha salvação.""",
-    ),
-    (
-        "Salmo 46",
-        """Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.
-Pelo que não temeremos, ainda que a terra se mude, e ainda que os montes se transportem para o meio dos mares.
-Ainda que as águas rujam e se perturbem, ainda que os montes se abalem pela sua braveza.
-Há um rio cujas correntes alegram a cidade de Deus, o santuário das moradas do Altíssimo.
-Deus está no meio dela; não será abalada. Deus a ajudará ao romper da manhã.
-Os gentios se embraveceram; os reinos se moveram; ele fez ouvir a sua voz; a terra se derreteu.
-O Senhor dos Exércitos está conosco; o Deus de Jacó é o nosso refúgio.
-Vinde, contemplai as obras do Senhor. Aquietai-vos e sabei que eu sou Deus.""",
-    ),
-    (
-        "Salmo 121",
-        """Levantarei os meus olhos para os montes, de onde vem o meu socorro.
-O meu socorro vem do Senhor, que fez o céu e a terra.
-Não deixará vacilar o teu pé; aquele que te guarda não dormitará.
-Eis que não dormitará nem dormirá aquele que guarda a Israel.
-O Senhor é quem te guarda; o Senhor é a tua sombra à tua mão direita.
-O sol não te molestará de dia nem a lua de noite.
-O Senhor te guardará de todo o mal; guardará a tua alma.
-O Senhor guardará a tua entrada e a tua saída, desde agora e para sempre.""",
-    ),
-]
+CONTENT_ITEMS = _build_content_items()
 
-
-def _shorten_for_shorts(texto: str, max_versos: int = 4) -> str:
-    """Reduz o salmo para caber no short (primeiros versos)."""
-    versos = [v.strip() for v in texto.strip().split("\n") if v.strip()]
-    return "\n".join(versos[:max_versos]) if len(versos) > max_versos else texto
+def _palette(mood: str) -> str:
+    return PASSAGEM_MOOD.get(mood) or SALMO_MOOD.get(mood, "heavenly")
 
 
 class SalmoDiaProcessor:
-    """Process and generate content for Salmo do Dia channel."""
+    """
+    Processador do canal Salmo do Dia: salmos e passagens da Bíblia em um só canal.
+    Índices 0..N-1 = salmos; N..N+M-1 = passagens.
+    """
 
     def __init__(self, output_dir: str = "outputs"):
-        self.video_generator = VideoGenerator(output_dir)
-        self.template_engine = TemplateEngine()
+        self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
         self.tts = EnhancedTextToSpeech(output_dir, voice="river")
-        self.image_processor = ImageProcessor(output_dir)
+        self.video_generator = SyncedVideoGenerator(output_dir)
 
-    def process_salmo(self, generate_videos: bool = True) -> Dict:
-        """Process a psalm and generate videos."""
-        import random
-        salmo_nome, salmo_inteiro = random.choice(SALMOS)
-        short_script = f"{salmo_nome}\n\n{_shorten_for_shorts(salmo_inteiro)}"
-        long_script = f"{salmo_nome}\n\n{salmo_inteiro}"
-        title = f"{salmo_nome} | Salmo do Dia"
-        description = f"📖 {salmo_nome}\n\n{salmo_inteiro}\n\n#palavra #reflexão #fé"
-        tags = ["salmo", "bíblia", "reflexão", "palavra", "fé", salmo_nome.lower()]
+    def _get_item(self, index: Optional[int]) -> Tuple[str, str, str, str]:
+        if index is not None:
+            if index < 0 or index >= len(CONTENT_ITEMS):
+                raise ValueError(f"Índice inválido. Use 0-{len(CONTENT_ITEMS)-1}")
+            return CONTENT_ITEMS[index]
+        return random.choice(CONTENT_ITEMS)
 
-        result = {"title": title, "description": description, "tags": tags}
-        if generate_videos:
-            print("  [1/6] Gerando áudio do short...", flush=True)
-            short_audio = self.tts.generate_audio(short_script)
-            print("  [2/6] Gerando áudio do vídeo longo...", flush=True)
-            long_audio = self.tts.generate_audio(long_script)
-            print("  [3/6] Criando background (cenário bíblico)...", flush=True)
-            short_tpl = self.template_engine.get_shorts_template("salmo_dia")
-            long_tpl = self.template_engine.get_long_form_template("salmo_dia")
-            short_tpl = self.template_engine.apply_text_to_template(short_tpl, short_script, "center")
-            long_tpl = self.template_engine.apply_text_to_template(long_tpl, long_script, "center")
-            bg = self.image_processor.create_professional_background(
-                (1920, 1080),
-                keyword="biblical scene holy land Jerusalem ancient shepherd pasture sacred",
-                palette="elegant",
-                output_path=os.path.join(self.video_generator.output_dir, "salmo_bg.jpg")
-            )
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            print("  [4/6] Renderizando short (pode levar 1-2 min)...", flush=True)
-            short_path = self.video_generator.create_shorts_video(
-                short_script, [bg], short_audio, short_tpl, f"salmo_short_{ts}.mp4"
-            )
-            print("  [5/6] Renderizando vídeo longo (pode levar 2-3 min)...", flush=True)
-            long_path = self.video_generator.create_long_form_video(
-                long_script, [bg], long_audio, long_tpl, f"salmo_long_{ts}.mp4"
-            )
-            result["short_video_path"] = short_path
-            result["video_path"] = long_path
-            print("  [6/6] Vídeos gerados.", flush=True)
+    def process_salmo(
+        self,
+        generate_videos: bool = True,
+        salmo_index: Optional[int] = None,
+    ) -> Dict:
+        """
+        Processa um item (salmo ou passagem) e gera vídeos sincronizados.
+        salmo_index: índice na lista unificada (0 = primeiro salmo, depois passagens). None = aleatório.
+        """
+        tipo, nome, texto, mood = self._get_item(salmo_index)
+        palette = _palette(mood)
+        title = f"{nome} | Salmo do Dia"
+        description = self._create_description(nome, texto)
+        tags = self._create_tags(nome, mood)
+
+        result = {
+            "title": title,
+            "description": description,
+            "tags": tags,
+            "psalm_name": nome,
+            "content_type": tipo,
+            "psalm_text": texto,
+            "mood": mood,
+            "palette": palette,
+        }
+
+        if not generate_videos:
+            return result
+
+        result = self._generate_synced_videos(
+            name=nome,
+            text=texto,
+            palette=palette,
+            result=result,
+            filename_prefix=tipo,
+        )
         return result
+
+    def _generate_synced_videos(
+        self,
+        name: str,
+        text: str,
+        palette: str,
+        result: Dict,
+        filename_prefix: str = "salmo",
+    ) -> Dict:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        print(f"\n{'='*60}", flush=True)
+        print(f"  GERANDO {name} (SHORT)", flush=True)
+        print(f"  Paleta: {palette}", flush=True)
+        print(f"{'='*60}\n", flush=True)
+
+        full_script = f"{name}.\n\n{text}"
+        print("  [1/2] Gerando áudio com ElevenLabs...", flush=True)
+        audio_path = self.tts.generate_audio(full_script)
+        print("  [2/2] Gerando Short sincronizado...", flush=True)
+        short_path = self.video_generator.create_synced_video(
+            title=name,
+            full_text=text,
+            audio_path=audio_path,
+            output_filename=f"{filename_prefix}_{timestamp}.mp4",
+            is_shorts=True,
+            palette=palette,
+            max_lines_per_page=4,
+        )
+        result["short_video_path"] = short_path
+        result["video_path"] = short_path
+        result["audio_path"] = audio_path
+        print(f"\n  ✅ SHORT GERADO: {short_path}\n", flush=True)
+        return result
+
+    def _create_description(self, name: str, text: str) -> str:
+        return f"""📖 {name}
+
+{text}
+
+---
+🙏 Inscreva-se e ative o sininho. Salmos e passagens da Bíblia.
+
+#salmo #bíblia #palavradeDeus #reflexão #fé #espiritualidade #oração #cristão"""
+
+    def _create_tags(self, name: str, mood: str) -> List[str]:
+        base = [
+            "salmo", "bíblia", "palavra de deus", "reflexão", "fé",
+            "espiritualidade", "oração", "cristão", "shorts", "jesus",
+            name.lower().replace(" ", ""),
+        ]
+        mood_tags = {
+            "peace": ["paz", "descanso"], "protection": ["proteção", "refúgio"],
+            "hope": ["esperança", "luz"], "praise": ["louvor", "adoração"],
+            "trust": ["confiança", "fé"], "repentance": ["perdão", "misericórdia"],
+            "love": ["amor", "graça"], "wisdom": ["sabedoria"],
+        }
+        if mood in mood_tags:
+            base.extend(mood_tags[mood])
+        return base
+
+    def publish_to_destinations(
+        self,
+        video_path: str,
+        psalm_name: str,
+        description: str = "",
+        tags: Optional[List[str]] = None,
+        destinations: Optional[List[str]] = None,
+    ) -> Dict:
+        from core.publishers import publish_to_destinations, parse_destinations
+        dest_list = destinations if destinations is not None else parse_destinations(None)
+        for d in dest_list:
+            print(f"  📤 Publicando em {d}...", flush=True)
+        results = publish_to_destinations(
+            video_path=video_path,
+            title=f"{psalm_name} | Salmo do Dia",
+            description=description or "",
+            content_name=psalm_name,
+            channel_label="Salmo do Dia",
+            tags=tags,
+            destinations=dest_list,
+        )
+        for dest_id, r in results.items():
+            if isinstance(r, dict) and r.get("url"):
+                print(f"  ✅ {dest_id}: {r.get('url')}", flush=True)
+            elif isinstance(r, dict) and r.get("error"):
+                print(f"  ⚠️ {dest_id}: {r.get('error')}", flush=True)
+        return results
+
+    def process_and_publish(
+        self,
+        salmo_index: Optional[int] = None,
+        publish_destinations: Optional[List[str]] = None,
+    ) -> Dict:
+        result = self.process_salmo(generate_videos=True, salmo_index=salmo_index)
+        if result.get("short_video_path"):
+            dest_list = publish_destinations if publish_destinations is not None else None
+            if dest_list is not None and len(dest_list) == 0:
+                dest_list = None
+            pub = self.publish_to_destinations(
+                video_path=result["short_video_path"],
+                psalm_name=result.get("psalm_name", "Salmo do Dia"),
+                description=result.get("description", ""),
+                tags=result.get("tags"),
+                destinations=dest_list,
+            )
+            result["publish"] = pub
+            result["twitter"] = pub.get("twitter")
+        return result
+
+    @staticmethod
+    def list_available_salmos() -> None:
+        """Lista todo o conteúdo do canal: salmos e passagens."""
+        print(f"\n{'='*60}")
+        print("  SALMO DO DIA – Salmos e passagens da Bíblia")
+        print(f"{'='*60}\n")
+        n_salmos = len(SALMOS_COMPLETOS)
+        n_passagens = len(PASSAGENS_BIBLIA)
+        for i, (tipo, nome, texto, mood) in enumerate(CONTENT_ITEMS):
+            linhas = len([l for l in texto.strip().split("\n") if l.strip()])
+            pal = _palette(mood)
+            print(f"  [{i:3d}] {tipo:<8} | {nome:<18} | {linhas:2d} linhas | {mood:<10} | {pal}")
+        print(f"\n{'='*60}")
+        print(f"  Salmos: {n_salmos} | Passagens: {n_passagens} | Total: {len(CONTENT_ITEMS)}")
+        print(f"{'='*60}\n")
+
+    @staticmethod
+    def get_salmo_info(index: int) -> Optional[Dict]:
+        if index < 0 or index >= len(CONTENT_ITEMS):
+            return None
+        tipo, nome, texto, mood = CONTENT_ITEMS[index]
+        linhas = [l.strip() for l in texto.strip().split("\n") if l.strip()]
+        return {
+            "index": index,
+            "nome": nome,
+            "content_type": tipo,
+            "texto": texto,
+            "mood": mood,
+            "palette": _palette(mood),
+            "num_versos": len(linhas),
+            "versos": linhas,
+        }
+
+
+def gerar_salmo_do_dia(
+    salmo_index: Optional[int] = None,
+    publish_destinations: Optional[List[str]] = None,
+    output_dir: str = "outputs",
+) -> Dict:
+    processor = SalmoDiaProcessor(output_dir=output_dir)
+    if publish_destinations is not None:
+        return processor.process_and_publish(salmo_index=salmo_index, publish_destinations=publish_destinations)
+    return processor.process_salmo(generate_videos=True, salmo_index=salmo_index)
+
+
+if __name__ == "__main__":
+    SalmoDiaProcessor.list_available_salmos()

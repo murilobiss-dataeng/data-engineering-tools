@@ -1,4 +1,4 @@
-"""Enhanced Text-to-Speech - Voz humana: ElevenLabs > edge-tts > Piper > gTTS."""
+"""Enhanced Text-to-Speech - Prioridade: ElevenLabs (voz premium)."""
 
 import os
 import sys
@@ -27,8 +27,32 @@ try:
 except ImportError:
     GTTS_AVAILABLE = False
 
-# ElevenLabs - voz PT-BR natural
-ELEVENLABS_VOICES = {"river": "SAz9YHcvj6GT2YYXdXww", "eric": "cjVigY5qzO86Huf0OWal"}
+# ElevenLabs - Vozes premium em português brasileiro
+# Vozes recomendadas para conteúdo espiritual:
+# - river: Voz masculina calma e serena (ideal para salmos)
+# - eric: Voz masculina natural
+# - rachel: Voz feminina suave
+# - adam: Voz masculina profunda
+ELEVENLABS_VOICES = {
+    "river": "SAz9YHcvj6GT2YYXdXww",      # Masculina calma
+    "eric": "cjVigY5qzO86Huf0OWal",        # Masculina natural
+    "rachel": "21m00Tcm4TlvDq8ikWAM",      # Feminina suave
+    "adam": "pNInz6obpgDQGcFmaJgB",        # Masculina profunda
+    "josh": "TxGEqnHWrfWFTfGW9XjX",        # Masculina narrativa
+    "arnold": "VR6AewLTigWG4xSOukaG",      # Masculina forte
+    "bella": "EXAVITQu4vr4xnSDxMaL",       # Feminina expressiva
+    "domi": "AZnzlk1XvdvUeBnXmlld",        # Feminina clara
+}
+
+# Configurações de qualidade ElevenLabs
+ELEVENLABS_CONFIG = {
+    "model_id": "eleven_multilingual_v2",  # Melhor modelo multilíngue
+    "output_format": "mp3_44100_128",      # Boa qualidade: 44.1kHz, 128kbps (disponível no plano gratuito)
+    "stability": 0.5,                       # Estabilidade da voz (0.0-1.0)
+    "similarity_boost": 0.75,               # Similaridade com voz original
+    "style": 0.0,                           # Estilo expressivo (0.0-1.0)
+    "use_speaker_boost": True,              # Melhora qualidade do speaker
+}
 
 def _piper_available() -> bool:
     """Check if Piper binary is available."""
@@ -54,24 +78,51 @@ class EnhancedTextToSpeech:
         os.makedirs(output_dir, exist_ok=True)
 
     def _generate_elevenlabs(self, text: str, output_path: str) -> bool:
-        """Gera áudio com ElevenLabs (voz muito natural)."""
+        """Gera áudio com ElevenLabs (voz premium de alta qualidade)."""
         key = os.getenv("ELEVENLABS_API_KEY")
         if not key:
+            logger.warning("ELEVENLABS_API_KEY não configurada")
             return False
         try:
             from elevenlabs.client import ElevenLabs
+            from elevenlabs import VoiceSettings
+            
             client = ElevenLabs(api_key=key)
             voice_id = ELEVENLABS_VOICES.get(self.voice, ELEVENLABS_VOICES["river"])
+            
+            # Configurações de voz para qualidade premium
+            voice_settings = VoiceSettings(
+                stability=ELEVENLABS_CONFIG["stability"],
+                similarity_boost=ELEVENLABS_CONFIG["similarity_boost"],
+                style=ELEVENLABS_CONFIG["style"],
+                use_speaker_boost=ELEVENLABS_CONFIG["use_speaker_boost"],
+            )
+            
             audio = client.text_to_speech.convert(
                 voice_id=voice_id,
                 text=text,
-                model_id="eleven_multilingual_v2",
-                output_format="mp3_44100_128"
+                model_id=ELEVENLABS_CONFIG["model_id"],
+                output_format=ELEVENLABS_CONFIG["output_format"],
+                voice_settings=voice_settings,
             )
-            data = audio if isinstance(audio, bytes) else b"".join(audio) if hasattr(audio, "__iter__") else bytes(audio)
+            
+            # Converte generator/iterator para bytes
+            if isinstance(audio, bytes):
+                data = audio
+            elif hasattr(audio, "__iter__"):
+                data = b"".join(chunk for chunk in audio)
+            else:
+                data = bytes(audio)
+            
             with open(output_path, "wb") as f:
                 f.write(data)
+            
+            logger.info(f"ElevenLabs: Áudio gerado com voz '{self.voice}' ({len(data)/1024:.1f} KB)")
             return True
+            
+        except ImportError:
+            logger.warning("Pacote 'elevenlabs' não instalado. Execute: pip install elevenlabs")
+            return False
         except Exception as e:
             logger.warning(f"ElevenLabs failed: {e}")
             return False
@@ -135,35 +186,81 @@ class EnhancedTextToSpeech:
         text: str,
         output_filename: Optional[str] = None,
         rate: str = "+0%",
-        pitch: str = "+0Hz"
+        pitch: str = "+0Hz",
+        force_elevenlabs: bool = True
     ) -> str:
-        """Gera áudio com a melhor engine disponível."""
+        """Gera áudio com ElevenLabs (prioridade) ou fallbacks.
+        
+        Args:
+            text: Texto para converter em áudio
+            output_filename: Nome do arquivo de saída (opcional)
+            rate: Taxa de fala (não usado com ElevenLabs)
+            pitch: Tom da voz (não usado com ElevenLabs)
+            force_elevenlabs: Se True, falha se ElevenLabs não disponível
+            
+        Returns:
+            Caminho do arquivo de áudio gerado
+        """
         import hashlib
         if output_filename is None:
             output_filename = f"tts_{hashlib.md5(text.encode()).hexdigest()}.mp3"
         output_path = os.path.join(self.output_dir, output_filename)
 
-        # 1. ElevenLabs (voz natural - requer ELEVENLABS_API_KEY em api_keys.env)
+        # 1. ElevenLabs (PRIORIDADE - voz premium)
         if self._generate_elevenlabs(text, output_path):
-            print("  ✓ Voz: ElevenLabs", flush=True)
+            print(f"  ✓ Voz: ElevenLabs ({self.voice}) - Premium", flush=True)
             return output_path
+        
+        # Se force_elevenlabs e falhou, avisa mas continua com fallback
+        if force_elevenlabs:
+            print("  ⚠️ ElevenLabs não disponível. Configure ELEVENLABS_API_KEY.", flush=True)
+            print("     Usando fallback...", flush=True)
 
-        # 2. edge-tts (gratuito)
+        # 2. edge-tts (gratuito, qualidade OK)
         if self._generate_edge_tts(text, output_path):
-            print("  ✓ Voz: edge-tts", flush=True)
+            print("  ✓ Voz: edge-tts (Microsoft) - Gratuito", flush=True)
             return output_path
 
         # 3. Piper (gratuito, offline)
         if self._generate_piper(text, output_path):
-            print("  ✓ Voz: Piper TTS (gratuito, offline)", flush=True)
+            print("  ✓ Voz: Piper TTS - Gratuito/Offline", flush=True)
             return output_path
 
-        # 4. gTTS (fallback)
+        # 4. gTTS (fallback básico)
         if self.use_fallback and self._generate_gtts(text, output_path):
-            print("  ✓ Voz: gTTS (gratuito)", flush=True)
+            print("  ✓ Voz: gTTS (Google) - Básico", flush=True)
             return output_path
 
-        raise RuntimeError("Nenhum engine TTS gratuito disponível. Instale: pip install piper-tts edge-tts gtts")
+        raise RuntimeError(
+            "Nenhum engine TTS disponível.\n"
+            "Para voz premium, configure: ELEVENLABS_API_KEY=sua_chave\n"
+            "Para fallback gratuito: pip install edge-tts gtts"
+        )
+    
+    @staticmethod
+    def check_elevenlabs_status() -> dict:
+        """Verifica status da configuração do ElevenLabs."""
+        key = os.getenv("ELEVENLABS_API_KEY")
+        status = {
+            "configured": bool(key),
+            "key_preview": f"{key[:8]}...{key[-4:]}" if key and len(key) > 12 else None,
+            "available_voices": list(ELEVENLABS_VOICES.keys()),
+        }
+        
+        if key:
+            try:
+                from elevenlabs.client import ElevenLabs
+                client = ElevenLabs(api_key=key)
+                # Tenta obter informações da conta
+                user = client.user.get()
+                status["account_valid"] = True
+                status["character_count"] = getattr(user, 'subscription', {}).get('character_count', 'N/A')
+                status["character_limit"] = getattr(user, 'subscription', {}).get('character_limit', 'N/A')
+            except Exception as e:
+                status["account_valid"] = False
+                status["error"] = str(e)
+        
+        return status
 
     def generate_audio_with_pauses(
         self,

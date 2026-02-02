@@ -1,0 +1,206 @@
+# =============================================================================
+# SALMO DO DIA - PREMIUM VISUAL TEMPLATES
+# =============================================================================
+# Configuração de identidade visual profissional para o canal Salmo do Dia
+# Design espiritual, elegante e calmo com alta legibilidade
+
+# Paletas de cores disponíveis (definidas em core/premium_visuals.py):
+# - heavenly: Dourados celestiais com fundo azul noite (padrão)
+# - sacred: Azuis sagrados com tons celestes
+# - dawn: Tons de amanhecer com laranjas e pêssego
+# - serene: Verdes serenos e naturais
+
+# =============================================================================
+# CONFIGURAÇÃO PARA SHORTS (9:16)
+# =============================================================================
+shorts:
+  # Configurações de vídeo premium
+  premium:
+    enabled: true
+    use_animation: true           # Partículas flutuantes animadas
+    default_palette: "heavenly"   # Paleta padrão (pode ser alterada por salmo)
+    fps: 30
+  
+  # Configuração de tipografia (processada pelo premium_visuals)
+  typography:
+    title:
+      font: "cinzel"              # Fonte elegante para títulos
+      size_ratio: 0.045           # Proporção do tamanho da tela
+      weight: "bold"
+      color: "text_primary"       # Referência à paleta
+      glow: true
+      shadow: true
+    
+    body:
+      font: "eb_garamond"         # Fonte clássica para versos
+      size_ratio: 0.032
+      weight: "regular"
+      color: "text_secondary"
+      line_spacing: 1.6
+      shadow: true
+    
+    separator:
+      enabled: true
+      style: "diamond"            # Ornamento de diamante
+      width_ratio: 0.3
+  
+  # Configuração de background
+  background:
+    type: "animated_gradient"     # gradient | animated_gradient | image
+    particles:
+      enabled: true
+      count: 12
+      glow: true
+    vignette:
+      enabled: true
+      strength: 0.4
+    divine_light:
+      enabled: true
+      position: [0.5, 0.1]        # Luz vinda de cima
+  
+  # Layout
+  layout:
+    padding_horizontal: 0.08      # 8% das laterais
+    padding_top: 0.15             # 15% do topo
+    padding_bottom: 0.12          # 12% embaixo
+    text_align: "center"
+  
+  # Configurações de encoding
+  encoding:
+    bitrate: "12000k"
+    audio_bitrate: "192k"
+    preset: "medium"
+
+# =============================================================================
+# CONFIGURAÇÃO PARA VÍDEOS LONGOS (16:9)
+# =============================================================================
+long_form:
+  # Configurações de vídeo premium
+  premium:
+    enabled: true
+    use_animation: true
+    default_palette: "heavenly"
+    fps: 30
+  
+  # Configuração de tipografia
+  typography:
+    title:
+      font: "cinzel"
+      size_ratio: 0.065           # Maior para tela horizontal
+      weight: "bold"
+      color: "text_primary"
+      glow: true
+      shadow: true
+    
+    body:
+      font: "eb_garamond"
+      size_ratio: 0.042
+      weight: "regular"
+      color: "text_secondary"
+      line_spacing: 1.5
+      shadow: true
+    
+    separator:
+      enabled: true
+      style: "diamond"
+      width_ratio: 0.25
+  
+  # Configuração de background
+  background:
+    type: "animated_gradient"
+    particles:
+      enabled: true
+      count: 15
+      glow: true
+    vignette:
+      enabled: true
+      strength: 0.35
+    divine_light:
+      enabled: true
+      position: [0.5, 0.08]
+  
+  # Layout
+  layout:
+    padding_horizontal: 0.06
+    padding_top: 0.12
+    padding_bottom: 0.10
+    text_align: "center"
+  
+  # Configurações de encoding
+  encoding:
+    bitrate: "15000k"
+    audio_bitrate: "192k"
+    preset: "medium"
+
+# =============================================================================
+# MAPEAMENTO DE SALMOS PARA PALETAS
+# =============================================================================
+# Define qual paleta usar para cada salmo baseado no tema
+psalm_palettes:
+  # Salmos de proteção e refúgio
+  "Salmo 91": "sacred"
+  "Salmo 46": "sacred"
+  
+  # Salmos de paz e descanso
+  "Salmo 23": "heavenly"
+  "Salmo 131": "serene"
+  
+  # Salmos de esperança e louvor
+  "Salmo 27": "dawn"
+  "Salmo 121": "heavenly"
+  
+  # Paleta padrão para salmos não mapeados
+  default: "heavenly"
+
+# =============================================================================
+# CONFIGURAÇÃO DE THUMBNAIL
+# =============================================================================
+thumbnail:
+  size: [1280, 720]
+  
+  typography:
+    title:
+      font: "cinzel"
+      size: 80
+      color: [255, 252, 245]
+      stroke_width: 4
+      stroke_color: [0, 0, 0]
+    
+    subtitle:
+      font: "eb_garamond"
+      size: 40
+      color: [220, 200, 160]
+  
+  background:
+    type: "gradient"
+    palette: "heavenly"
+    vignette: true
+    divine_light: true
+  
+  # Elementos decorativos
+  decorations:
+    frame: true
+    ornaments: true
+
+# =============================================================================
+# IDENTIDADE VISUAL DO CANAL
+# =============================================================================
+brand:
+  name: "Salmo do Dia"
+  tagline: "Palavra de Deus para seu dia"
+  
+  colors:
+    primary: [255, 215, 140]      # Dourado
+    secondary: [100, 150, 220]    # Azul celeste
+    accent: [255, 248, 220]       # Creme
+    dark: [15, 12, 25]            # Azul noite
+  
+  fonts:
+    primary: "cinzel"
+    secondary: "eb_garamond"
+  
+  # Estilo visual geral
+  style:
+    mood: "spiritual"
+    tone: "peaceful"
+    energy: "calm"

@@ -1,26 +1,90 @@
-# Channel configurations
+# =============================================================================
+# CANAIS DO PROJETO - ESTRUTURA MULTI-CANAL
+# =============================================================================
+# Cada canal tem seu processador em channels/<id>/ e opcionalmente
+# config em config/templates_<id>.yaml (fallback: config/templates.yaml)
+# YouTube por canal: config/youtube_channels.yaml
 
-placar_dia:
-  name: "Placar do Dia"
-  league_id: 71  # Brazilian Serie A
-  schedule: "daily"
-  generate_shorts: true
-  generate_long_form: true
+channels:
+  salmo_dia:
+    id: salmo_dia
+    name: "Salmo do Dia"
+    description: "Salmos (150) e passagens da Bíblia (Evangelhos, Provérbios, Isaías, etc.) em um só canal"
+    processor: "channels.salmo_dia.channel_processor:SalmoDiaProcessor"
+    template: config/templates_salmo_dia.yaml
+    content_type: salmos_e_passagens
+    enabled: true
 
-explicado_shorts:
-  name: "Explicado em Shorts"
-  schedule: "3x_per_week"
-  generate_shorts: true
-  generate_long_form: true
+  curiosidade_dia:
+    id: curiosidade_dia
+    name: "Curiosidade do Dia"
+    description: "Curiosidades e top 10"
+    processor: "channels.curiosidade_dia.channel_processor:CuriosidadeDiaProcessor"
+    template: config/templates.yaml
+    enabled: true
 
-quanto_rende:
-  name: "Quanto rende?"
-  schedule: "2x_per_week"
-  generate_shorts: true
-  generate_long_form: true
+  dica_carreira_dia:
+    id: dica_carreira_dia
+    name: "Dica de Carreira do Dia"
+    description: "Dicas de carreira e emprego"
+    processor: "channels.dica_carreira_dia.channel_processor:DicaCarreiraDiaProcessor"
+    template: config/templates.yaml
+    enabled: true
 
-series_explicadas:
-  name: "Series Explicadas"
-  schedule: "2x_per_week"
-  generate_shorts: true
-  generate_long_form: true
+  exercicio_dia:
+    id: exercicio_dia
+    name: "Exercício do Dia"
+    description: "Exercícios e fitness"
+    processor: "channels.exercicio_dia.channel_processor:ExercicioDiaProcessor"
+    template: config/templates.yaml
+    enabled: true
+
+  explicado_shorts:
+    id: explicado_shorts
+    name: "Explicado em Shorts"
+    description: "Educação e explicações em shorts"
+    processor: "channels.explicado_shorts.channel_processor:ExplicadoShortsProcessor"
+    template: config/templates_explicado_shorts.yaml
+    enabled: true
+
+  motivacao_dia:
+    id: motivacao_dia
+    name: "Motivação do Dia"
+    description: "Motivação e desenvolvimento pessoal"
+    processor: "channels.motivacao_dia.channel_processor:MotivacaoDiaProcessor"
+    template: config/templates.yaml
+    enabled: true
+
+  placar_dia:
+    id: placar_dia
+    name: "Placar do Dia"
+    description: "Futebol e placares"
+    processor: "channels.placar_dia.channel_processor:PlacarDiaProcessor"
+    template: config/templates_placar_dia.yaml
+    enabled: true
+
+  quanto_rende:
+    id: quanto_rende
+    name: "Quanto rende?"
+    description: "Investimentos e simulações"
+    processor: "channels.quanto_rende.channel_processor:QuantoRendeProcessor"
+    template: config/templates_quanto_rende.yaml
+    enabled: true
+
+  receita_dia:
+    id: receita_dia
+    name: "Receita do Dia"
+    description: "Receitas e culinária"
+    processor: "channels.receita_dia.channel_processor:ReceitaDiaProcessor"
+    template: config/templates.yaml
+    enabled: true
+
+  series_explicadas:
+    id: series_explicadas
+    name: "Series Explicadas"
+    description: "Séries de TV explicadas"
+    processor: "channels.series_explicadas.channel_processor:SeriesExplicadasProcessor"
+    template: config/templates_series_explicadas.yaml
+    enabled: true
+
+default_channel: salmo_dia
