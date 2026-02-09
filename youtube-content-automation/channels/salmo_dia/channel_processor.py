@@ -1,18 +1,17 @@
 """
 Processor for Salmo do Dia channel – Salmos e passagens da Bíblia em um só canal.
 
-Conteúdo unificado:
-- Salmos (livro de Salmos, 150 no total – Antigo Testamento)
-- Passagens da Bíblia (Evangelhos, Provérbios, Isaías, etc.)
-
-Features:
-- Texto sincronizado com áudio
-- Sistema visual premium
+Pipeline cinematográfico profissional:
+- Backgrounds EXCLUSIVAMENTE da pasta assets/
+- Narração: exclusivamente edge-tts
+- Vídeo vertical 9:16 (1080x1920), Ken Burns, glow, color grading espiritual
+- Tipografia elegante, fade in/out, música ambiente opcional
 - Publicação multi-destino (YouTube, Twitter, Kwai, IG, etc.)
 """
 
 import os
 import random
+from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 
@@ -22,8 +21,6 @@ try:
 except ImportError:
     pass
 
-from core.text_to_speech_enhanced import EnhancedTextToSpeech
-from core.synced_video_generator import SyncedVideoGenerator
 from data.salmos_completos import SALMOS_COMPLETOS, MOOD_TO_PALETTE as SALMO_MOOD
 from data.passagens_biblia import PASSAGENS_BIBLIA, MOOD_TO_PALETTE as PASSAGEM_MOOD
 
@@ -48,11 +45,10 @@ class SalmoDiaProcessor:
     Índices 0..N-1 = salmos; N..N+M-1 = passagens.
     """
 
-    def __init__(self, output_dir: str = "outputs"):
+    def __init__(self, output_dir: str = "outputs", assets_dir: Optional[str] = None):
         self.output_dir = output_dir
+        self.assets_dir = assets_dir or str(Path(__file__).resolve().parents[2] / "assets")
         os.makedirs(output_dir, exist_ok=True)
-        self.tts = EnhancedTextToSpeech(output_dir, voice="river")
-        self.video_generator = SyncedVideoGenerator(output_dir)
 
     def _get_item(self, index: Optional[int]) -> Tuple[str, str, str, str]:
         if index is not None:
@@ -90,46 +86,76 @@ class SalmoDiaProcessor:
         if not generate_videos:
             return result
 
-        result = self._generate_synced_videos(
+        result = self._generate_cinematic_video(
             name=nome,
             text=texto,
-            palette=palette,
             result=result,
             filename_prefix=tipo,
         )
         return result
 
-    def _generate_synced_videos(
+    def _session_folder(self) -> str:
+        """Pasta única por gravação: outputs-salmo_do_dia-salmo-YYYY-MM-DD-HH-MM (todos os arquivos da gravação)."""
+        session_name = f"salmo_do_dia/{datetime.now().strftime('%Y%m%d_%H%M')}"
+        return os.path.join(self.output_dir, session_name)
+
+    def _generate_cinematic_video(
         self,
         name: str,
         text: str,
-        palette: str,
         result: Dict,
         filename_prefix: str = "salmo",
     ) -> Dict:
+        """Gera vídeo cinematográfico: assets locais + edge-tts."""
+        from core.cinematic_salmo_pipeline import run_cinematic_salmo_pipeline
+
+        session_dir = self._session_folder()
+        os.makedirs(session_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         print(f"\n{'='*60}", flush=True)
-        print(f"  GERANDO {name} (SHORT)", flush=True)
-        print(f"  Paleta: {palette}", flush=True)
+        print(f"  GERANDO {name} (SHORT CINEMATOGRÁFICO)", flush=True)
+        print(f"  Pasta desta gravação: {session_dir}", flush=True)
+        print(f"  Background: assets/ | Voz: edge-tts", flush=True)
+        print(f"  Log: [1/6] a [6/6]. A etapa 5 (exportar MP4) costuma levar 2–5 min.", flush=True)
         print(f"{'='*60}\n", flush=True)
 
-        full_script = f"{name}.\n\n{text}"
-        print("  [1/2] Gerando áudio com ElevenLabs...", flush=True)
-        audio_path = self.tts.generate_audio(full_script)
-        print("  [2/2] Gerando Short sincronizado...", flush=True)
-        short_path = self.video_generator.create_synced_video(
-            title=name,
-            full_text=text,
-            audio_path=audio_path,
-            output_filename=f"{filename_prefix}_{timestamp}.mp4",
-            is_shorts=True,
-            palette=palette,
-            max_lines_per_page=4,
-        )
+        try:
+            out = run_cinematic_salmo_pipeline(
+                title=name,
+                body_text=text,
+                output_dir=session_dir,
+                assets_dir=self.assets_dir,
+                music_path=None,
+                output_filename=f"{filename_prefix}_cinematic_{timestamp}.mp4",
+            )
+        except RuntimeError as e:
+            if "edge" in str(e).lower() or "tts" in str(e).lower():
+                print("  ❌ ERRO: edge-tts falhou. Verifique: pip install edge-tts", flush=True)
+            print(f"  ❌ Detalhe: {e}", flush=True)
+            raise
+        except FileNotFoundError as e:
+            print(f"  ❌ ERRO: {e}", flush=True)
+            raise
+        except Exception as e:
+            print(f"  ❌ ERRO inesperado: {e}", flush=True)
+            raise
+
+        short_path = out["video_path"]
         result["short_video_path"] = short_path
         result["video_path"] = short_path
-        result["audio_path"] = audio_path
-        print(f"\n  ✅ SHORT GERADO: {short_path}\n", flush=True)
+        result["audio_path"] = out["audio_path"]
+
+        # Pacote de distribuição: descrições por rede social (youtube, instagram, twitter, tiktok)
+        try:
+            from core.social_descriptions import save_descriptions
+            desc_paths = save_descriptions(session_dir, name, text)
+            result["description_files"] = desc_paths
+            print(f"  📄 Descrições geradas: {', '.join(desc_paths.keys())}.txt", flush=True)
+        except Exception as e:
+            print(f"  ⚠️ Descrições por rede social não geradas: {e}", flush=True)
+            result["description_files"] = {}
+
+        print(f"\n  ✅ SHORT CINEMATOGRÁFICO GERADO: {short_path}\n", flush=True)
         return result
 
     def _create_description(self, name: str, text: str) -> str:

@@ -75,128 +75,149 @@ SPIRITUAL_PALETTES = {
 }
 
 # =============================================================================
-# PREMIUM FONT MANAGEMENT
+# PREMIUM FONT MANAGEMENT — SEM FALLBACK GENÉRICO
+# Apenas fontes de nível branding premium. Se não carregar → erro explícito.
 # =============================================================================
 
+# Fontes permitidas para o vídeo (PRIORIDADE 1 = bíblico cinematográfico; 2 = creator moderno)
+# URL: repositório google/fonts (raw GitHub)
 GOOGLE_FONTS = {
-    "cinzel": {
-        "name": "Cinzel",
-        # URLs diretas do Google Fonts static
-        "url_regular": "https://fonts.gstatic.com/s/cinzel/v23/8vIU7ww63mVu7gtR-kwKxNvkNOjw-tbnfY3lCQ.ttf",
-        "url_bold": "https://fonts.gstatic.com/s/cinzel/v23/8vIU7ww63mVu7gtR-kwKxNvkNOjw-jDgfY3lCQ.ttf",
-        "style": "elegant",
-        "use_for": "titles"
-    },
     "playfair": {
         "name": "Playfair Display",
-        "url_regular": "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtY.ttf",
-        "url_bold": "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiu3DXbtY.ttf",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf",
         "style": "classic",
-        "use_for": "titles"
+    },
+    "cinzel": {
+        "name": "Cinzel",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/Cinzel%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/Cinzel%5Bwght%5D.ttf",
+        "style": "elegant",
     },
     "cormorant": {
         "name": "Cormorant Garamond",
-        "url_regular": "https://fonts.gstatic.com/s/cormorantgaramond/v16/co3bmX5slCNuHLi8bLeY9MK7whWMhyjornFLsS6V7w.ttf",
-        "url_bold": "https://fonts.gstatic.com/s/cormorantgaramond/v16/co3YmX5slCNuHLi8bLeY9MK7whWMhyjQAllvuQWJ5heb_w.ttf",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
         "style": "spiritual",
-        "use_for": "body"
     },
-    "eb_garamond": {
-        "name": "EB Garamond",
-        "url_regular": "https://fonts.gstatic.com/s/ebgaramond/v27/SlGDmQSNjdsmc35JDF1K5E55YMjF_7DPuGi-6_RkC49_S6w.ttf",
-        "url_bold": "https://fonts.gstatic.com/s/ebgaramond/v27/SlGDmQSNjdsmc35JDF1K5E55YMjF_7DPuGi-2fNkC49_S6w.ttf",
-        "style": "biblical",
-        "use_for": "body"
+    "dm_serif_display": {
+        "name": "DM Serif Display",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmserifdisplay/DMSerifDisplay-Regular.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmserifdisplay/DMSerifDisplay-Regular.ttf",
+        "style": "display",
     },
-    "lora": {
-        "name": "Lora",
-        "url_regular": "https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787weuxJBkq0.ttf",
-        "url_bold": "https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOuGQbT0gvTJPa787z5vBJBkq0.ttf",
-        "style": "readable",
-        "use_for": "body"
+    "montserrat": {
+        "name": "Montserrat",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat%5Bwght%5D.ttf",
+        "style": "modern",
+    },
+    "poppins": {
+        "name": "Poppins",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins%5Bwght%5D.ttf",
+        "style": "modern",
+    },
+    "inter": {
+        "name": "Inter",
+        "url_regular": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bwght%5D.ttf",
+        "url_bold": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bwght%5D.ttf",
+        "style": "premium",
     },
 }
 
-# Fallback system fonts
-SYSTEM_FONTS = [
-    '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
-    '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
-    '/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf',
-    '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
-    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-    '/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf',
-    '/System/Library/Fonts/Times.ttc',
-]
+# Chave da fonte de marca: UMA destas (nunca fonte genérica)
+# Prioridade 1 (bíblico cinematográfico): playfair, cinzel, cormorant, dm_serif_display
+# Prioridade 2 (creator moderno): montserrat, poppins, inter
+BRAND_FONT_KEYS_ALLOWED = ("playfair", "cinzel", "cormorant", "dm_serif_display", "montserrat", "poppins", "inter")
 
 
 class FontManager:
-    """Manages premium font downloading and loading."""
-    
+    """
+    Gerencia fontes premium. Fonte de marca OBRIGATÓRIA — sem fallback genérico.
+    Se a fonte não carregar → RuntimeError explícito.
+    """
+
+    # Fonte de marca: altere para uma de BRAND_FONT_KEYS_ALLOWED (ex.: "cinzel", "cormorant", "dm_serif_display")
+    BRAND_FONT_KEY = "playfair"
+
     def __init__(self, fonts_dir: str = "assets/fonts"):
         self.fonts_dir = fonts_dir
         os.makedirs(fonts_dir, exist_ok=True)
         self._font_cache: Dict[str, ImageFont.FreeTypeFont] = {}
-    
+        if self.BRAND_FONT_KEY not in BRAND_FONT_KEYS_ALLOWED or self.BRAND_FONT_KEY not in GOOGLE_FONTS:
+            raise RuntimeError(
+                f"BRAND_FONT_KEY deve ser uma de: {BRAND_FONT_KEYS_ALLOWED}. "
+                f"Atual: {getattr(self, 'BRAND_FONT_KEY', None)}"
+            )
+
     def download_font(self, font_key: str, bold: bool = False) -> Optional[str]:
-        """Download a Google Font if not already cached."""
+        """Baixa a fonte do Google Fonts se ainda não estiver em cache."""
         if font_key not in GOOGLE_FONTS:
             return None
-        
         font_info = GOOGLE_FONTS[font_key]
         url = font_info["url_bold"] if bold else font_info["url_regular"]
         suffix = "Bold" if bold else "Regular"
         filename = f"{font_info['name'].replace(' ', '')}_{suffix}.ttf"
         filepath = os.path.join(self.fonts_dir, filename)
-        
-        if os.path.exists(filepath):
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             return filepath
-        
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
         try:
             print(f"      → Baixando fonte {font_info['name']}...", flush=True)
             urllib.request.urlretrieve(url, filepath)
             return filepath
         except Exception as e:
-            print(f"      ⚠ Não foi possível baixar {font_info['name']}: {e}")
+            print(f"      ⚠ Falha ao baixar {font_info['name']}: {e}")
             return None
-    
-    def get_font(self, font_key: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-        """Get a font, downloading if necessary, with fallback to system fonts."""
-        cache_key = f"{font_key}_{size}_{bold}"
-        
+
+    def get_brand_font_required(self, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+        """
+        Retorna a fonte de marca. NUNCA usa fallback genérico.
+        Levanta RuntimeError se a fonte não estiver disponível.
+        """
+        font_key = self.BRAND_FONT_KEY
+        cache_key = f"brand_{font_key}_{size}_{bold}"
         if cache_key in self._font_cache:
             return self._font_cache[cache_key]
-        
-        # Try to download Google Font
         font_path = self.download_font(font_key, bold)
-        
-        if font_path and os.path.exists(font_path):
-            try:
-                font = ImageFont.truetype(font_path, size)
-                self._font_cache[cache_key] = font
-                return font
-            except Exception:
-                pass
-        
-        # Fallback to system fonts
-        for sys_font in SYSTEM_FONTS:
-            if os.path.exists(sys_font):
-                try:
-                    font = ImageFont.truetype(sys_font, size)
-                    self._font_cache[cache_key] = font
-                    return font
-                except Exception:
-                    continue
-        
-        # Ultimate fallback
-        return ImageFont.load_default()
-    
+        if not font_path or not os.path.exists(font_path) or os.path.getsize(font_path) == 0:
+            name = GOOGLE_FONTS.get(font_key, {}).get("name", font_key)
+            raise RuntimeError(
+                f"Fonte de marca '{name}' não disponível. "
+                f"Verifique conexão com a internet e pasta de fontes: {self.fonts_dir}. "
+                f"Não é permitido usar fonte genérica."
+            )
+        try:
+            font = ImageFont.truetype(font_path, size)
+        except Exception as e:
+            name = GOOGLE_FONTS.get(font_key, {}).get("name", font_key)
+            raise RuntimeError(
+                f"Fonte de marca '{name}' não pôde ser carregada: {e}. "
+                f"Arquivo: {font_path}. Não é permitido usar fonte genérica."
+            ) from e
+        self._font_cache[cache_key] = font
+        return font
+
+    def get_brand_title_font(self, size: int) -> ImageFont.FreeTypeFont:
+        """Fonte de marca para títulos/header (semi-bold). Erro explícito se não carregar."""
+        return self.get_brand_font_required(size, bold=True)
+
+    def get_brand_body_font(self, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+        """Fonte de marca para corpo. Erro explícito se não carregar."""
+        return self.get_brand_font_required(size, bold=bold)
+
     def get_title_font(self, size: int) -> ImageFont.FreeTypeFont:
-        """Get the premium title font (Cinzel Bold)."""
-        return self.get_font("cinzel", size, bold=True)
-    
+        """Alias para compatibilidade: usa fonte de marca."""
+        return self.get_brand_title_font(size)
+
     def get_body_font(self, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-        """Get the premium body font (EB Garamond)."""
-        return self.get_font("eb_garamond", size, bold=bold)
+        """Alias para compatibilidade: usa fonte de marca."""
+        return self.get_brand_body_font(size, bold=bold)
 
 
 # =============================================================================

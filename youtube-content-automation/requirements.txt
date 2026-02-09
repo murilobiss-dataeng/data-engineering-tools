@@ -5,8 +5,8 @@ moviepy>=1.0.3
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# Text-to-Speech (ElevenLabs priority)
-elevenlabs>=1.0.0
+# Text-to-Speech (exclusivamente edge-tts; 7.2.7+ evita 403 por token desatualizado)
+edge-tts>=7.2.7
 pydub>=0.25.0
 
 # Publishing (multi-destination)
