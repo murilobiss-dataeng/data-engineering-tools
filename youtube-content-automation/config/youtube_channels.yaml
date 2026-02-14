@@ -39,7 +39,7 @@ channels:
   salmo_dia:
     name: "Salmo do Dia"
     channel_id: null
-    credentials_path: null
+    credentials_path: null  # ou ex.: config/salmo_dia (token em config/salmo_dia/youtube_token.json)
     category_id: "28"  # Nonprofits & Activism
     default_tags: ["salmo", "bíblia", "reflexão", "palavra", "fé"]
     description_keywords: "salmo, bíblia, palavra de Deus, reflexão diária, fé, devocional, mensagem cristã, salmo do dia, versículo, meditação"

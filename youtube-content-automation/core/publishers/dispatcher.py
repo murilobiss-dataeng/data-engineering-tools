@@ -14,6 +14,7 @@ from .instagram_publisher import InstagramPublisher
 from .tiktok_publisher import TikTokPublisher
 from .facebook_publisher import FacebookPublisher
 from .linkedin_publisher import LinkedInPublisher
+from .pinterest_publisher import PinterestPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ _instagram = InstagramPublisher()
 _tiktok = TikTokPublisher()
 _facebook = FacebookPublisher()
 _linkedin = LinkedInPublisher()
+_pinterest = PinterestPublisher()
 
 DESTINATIONS: Dict[str, BasePublisher] = {
     "youtube": _youtube,
@@ -36,6 +38,8 @@ DESTINATIONS: Dict[str, BasePublisher] = {
     "facebook": _facebook,
     "fb": _facebook,
     "linkedin": _linkedin,
+    "pinterest": _pinterest,
+    "pin": _pinterest,
 }
 
 # Nomes amigáveis para exibição
@@ -49,6 +53,8 @@ DESTINATION_NAMES = {
     "facebook": "Facebook",
     "fb": "Facebook",
     "linkedin": "LinkedIn",
+    "pinterest": "Pinterest",
+    "pin": "Pinterest",
 }
 
 
@@ -56,7 +62,7 @@ def get_available_destinations() -> List[str]:
     """Retorna lista de IDs de destinos disponíveis (sem aliases duplicados)."""
     seen = set()
     out = []
-    for d in ("youtube", "twitter", "kwai", "instagram", "tiktok", "facebook", "linkedin"):
+    for d in ("youtube", "twitter", "kwai", "instagram", "tiktok", "facebook", "linkedin", "pinterest"):
         if d not in seen:
             seen.add(d)
             out.append(d)
@@ -111,15 +117,31 @@ def publish_to_destinations(
         description: Descrição
         content_name: Nome do conteúdo (ex: Salmo 23, João 3:16)
         channel_label: Rótulo do canal
-        tags: Lista de tags
+        tags: Lista de tags (se vazio, YouTube pode gerar por título+tema via kwargs theme/tema)
         destinations: Lista de IDs (youtube, twitter, kwai, instagram, tiktok, facebook, linkedin).
                       Se None, usa PUBLISH_TO ou todos configurados.
+        kwargs: content_hash + channel_namespace → bloqueio anti-repost (cancela se hash já publicado).
+                description_with_chapters, duration_estimate_sec, theme, publish_at, etc. para YouTube.
 
     Returns:
         Dict com chave por plataforma: {"youtube": {...}, "twitter": {...}, ...}
     """
     if destinations is None:
         destinations = parse_destinations(os.getenv("PUBLISH_TO"))
+
+    # Bloqueio de repostagem: se content_hash + channel_namespace, verificar antes de publicar
+    content_hash_val = kwargs.get("content_hash")
+    channel_namespace = kwargs.get("channel_namespace")
+    if content_hash_val and channel_namespace:
+        try:
+            from core.publication_options import ContentHashStorage
+            storage = ContentHashStorage(channel_namespace, base_dir=kwargs.get("output_base_dir", "outputs"))
+            if storage.is_duplicate(content_hash_val):
+                logger.warning("Upload cancelado: conteúdo já publicado (hash duplicado).")
+                return {dest_id: {"cancelled": True, "reason": "duplicate_content_hash"} for dest_id in destinations}
+        except Exception as e:
+            logger.exception("Erro ao verificar hash anti-repost: %s", e)
+
     results: Dict[str, Any] = {}
     for dest_id in destinations:
         pub = DESTINATIONS.get(dest_id)
@@ -140,6 +162,14 @@ def publish_to_destinations(
                 **kwargs,
             )
             results[dest_id] = r if r is not None else {"ok": False, "error": "upload_failed"}
+            # Após sucesso: salvar hash para impedir repostagem futura
+            if content_hash_val and channel_namespace and results[dest_id] and isinstance(results[dest_id], dict) and results[dest_id].get("id"):
+                try:
+                    from core.publication_options import ContentHashStorage
+                    storage = ContentHashStorage(channel_namespace, base_dir=kwargs.get("output_base_dir", "outputs"))
+                    storage.save_hash(content_hash_val)
+                except Exception as e:
+                    logger.exception("Erro ao salvar hash após publicação: %s", e)
         except Exception as e:
             logger.exception("Erro ao publicar em %s: %s", dest_id, e)
             results[dest_id] = {"ok": False, "error": str(e)}

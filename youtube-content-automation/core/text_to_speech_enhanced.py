@@ -128,9 +128,11 @@ class EnhancedTextToSpeech:
             return False
 
     def _generate_piper(self, text: str, output_path: str, _tried_download: bool = False) -> bool:
-        """Gera áudio com Piper TTS (offline, gratuito)."""
+        """Gera áudio com Piper TTS (offline, gratuito). Temp em outputs, não na root."""
         try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp_dir = os.path.dirname(output_path) or self.output_dir or "outputs"
+            os.makedirs(tmp_dir, exist_ok=True)
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir=tmp_dir) as tmp:
                 tmp_path = tmp.name
             result = subprocess.run(
                 [sys.executable, "-m", "piper", "-m", PIPER_PT_BR_MODEL, "-f", tmp_path, "--", text],

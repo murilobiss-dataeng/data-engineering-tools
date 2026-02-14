@@ -95,7 +95,7 @@ class SalmoDiaProcessor:
         return result
 
     def _session_folder(self) -> str:
-        """Pasta única por gravação: outputs-salmo_do_dia-salmo-YYYY-MM-DD-HH-MM (todos os arquivos da gravação)."""
+        """Pasta única por gravação: outputs/salmo_do_dia/YYYYMMDD_HHMM."""
         session_name = f"salmo_do_dia/{datetime.now().strftime('%Y%m%d_%H%M')}"
         return os.path.join(self.output_dir, session_name)
 
@@ -144,6 +144,7 @@ class SalmoDiaProcessor:
         result["short_video_path"] = short_path
         result["video_path"] = short_path
         result["audio_path"] = out["audio_path"]
+        result["duration_estimate_sec"] = out.get("duration_seconds", 35.0)
 
         # Pacote de distribuição: descrições por rede social (youtube, instagram, twitter, tiktok)
         try:
@@ -191,19 +192,46 @@ class SalmoDiaProcessor:
         description: str = "",
         tags: Optional[List[str]] = None,
         destinations: Optional[List[str]] = None,
+        result_metadata: Optional[Dict] = None,
+        schedule_at: Optional[str] = None,
     ) -> Dict:
         from core.publishers import publish_to_destinations, parse_destinations
+        from core.publication_options import content_hash, build_description_with_chapters
         dest_list = destinations if destinations is not None else parse_destinations(None)
+        meta = result_metadata or {}
+        title = f"{psalm_name} | Salmo do Dia"
+        desc = description or ""
+        # Tags automáticas (título + tema); capítulos na descrição; hash anti-repost
+        theme = psalm_name
+        duration_sec = meta.get("duration_estimate_sec")
+        if duration_sec is not None and duration_sec >= 10:
+            desc = build_description_with_chapters(desc, float(duration_sec))
+        content_hash_val = content_hash(
+            title,
+            meta.get("psalm_text", meta.get("description", "")),
+            meta.get("script", ""),
+        )
+        kwargs = {
+            "theme": theme,
+            "duration_estimate_sec": duration_sec,
+            "description_with_chapters": desc if (duration_sec and duration_sec >= 10) else None,
+            "content_hash": content_hash_val,
+            "channel_namespace": "salmo_do_dia",
+            "output_base_dir": self.output_dir,
+        }
+        if schedule_at:
+            kwargs["publish_at"] = schedule_at
         for d in dest_list:
             print(f"  📤 Publicando em {d}...", flush=True)
         results = publish_to_destinations(
             video_path=video_path,
-            title=f"{psalm_name} | Salmo do Dia",
-            description=description or "",
+            title=title,
+            description=desc,
             content_name=psalm_name,
             channel_label="Salmo do Dia",
             tags=tags,
             destinations=dest_list,
+            **kwargs,
         )
         for dest_id, r in results.items():
             if isinstance(r, dict) and r.get("url"):
@@ -216,6 +244,7 @@ class SalmoDiaProcessor:
         self,
         salmo_index: Optional[int] = None,
         publish_destinations: Optional[List[str]] = None,
+        schedule_at: Optional[str] = None,
     ) -> Dict:
         result = self.process_salmo(generate_videos=True, salmo_index=salmo_index)
         if result.get("short_video_path"):
@@ -228,6 +257,8 @@ class SalmoDiaProcessor:
                 description=result.get("description", ""),
                 tags=result.get("tags"),
                 destinations=dest_list,
+                result_metadata=result,
+                schedule_at=schedule_at,
             )
             result["publish"] = pub
             result["twitter"] = pub.get("twitter")

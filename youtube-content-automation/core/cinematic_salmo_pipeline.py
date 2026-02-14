@@ -719,7 +719,7 @@ def generate_voice(text: str, output_path: str) -> str:
 
     logger.info("[2/6] Gerando voz (edge-tts – %s)...", EDGE_TTS_VOICE)
     t0 = time.monotonic()
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(output_path) or "outputs", exist_ok=True)
     try:
         asyncio.run(_synthesize())
     except Exception as e:
@@ -748,8 +748,11 @@ def _generate_voice_from_segments(
     import tempfile
     from pydub import AudioSegment
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    tmp_dir = tempfile.mkdtemp(prefix="salmo_tts_")
+    parent = os.path.dirname(output_path)
+    if not parent:
+        parent = "outputs"
+    os.makedirs(parent, exist_ok=True)
+    tmp_dir = tempfile.mkdtemp(prefix="salmo_tts_", dir=parent)
     paths: List[str] = []
     used_segments: List[str] = []
     try:
@@ -939,7 +942,7 @@ def compose_video(
     else:
         composite = composite.set_audio(voice_clip)
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(output_path) or "outputs", exist_ok=True)
     composite.write_videofile(
         output_path,
         fps=fps,
@@ -1081,7 +1084,7 @@ def compose_retention_video(
     else:
         final = final.set_audio(voice_with_silence)
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(output_path) or "outputs", exist_ok=True)
     logger.info("[5/6] Exportando MP4 (pode levar 2–5 min; aguarde)...")
     t_export_ret = time.monotonic()
     final.write_videofile(
@@ -1247,7 +1250,7 @@ def compose_synced_video(
     else:
         final = final.set_audio(voice_with_silence)
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(output_path) or "outputs", exist_ok=True)
     logger.info("[5/6] Exportando MP4 (pode levar 2–5 min; aguarde)...")
     t_export = time.monotonic()
     try:
