@@ -543,6 +543,421 @@ Porque só o seu nome é exaltado; a sua glória está sobre a terra e o céu.
 Louvai ao Senhor!""",
         "creation"
     ),
+
+    # =========================================================================
+    # NOVOS SALMOS – PAZ E CONFIANÇA
+    # =========================================================================
+    (
+        "Salmo 3",
+        """Senhor, como se têm multiplicado os meus adversários!
+Muitos são os que se levantam contra mim.
+Mas tu, ó Senhor, és o meu escudo; és a minha glória e o que exalta a minha cabeça.
+Com a minha voz clamei ao Senhor, e ele me ouviu.
+Eu me deitei e dormi; acordei, porque o Senhor me sustentou.
+Não terei medo de dez milhares de pessoas que se puseram contra mim ao meu redor.
+Levanta-te, Senhor; salva-me, Deus meu.""",
+        "peace"
+    ),
+    (
+        "Salmo 5",
+        """Dá ouvidos às minhas palavras, ó Senhor; considera a minha meditação.
+Atende à voz do meu clamor, Rei meu e Deus meu.
+Pela manhã ouvirás a minha voz; pela manhã me apresentarei a ti.
+Porque tu não és um Deus que tenha prazer na iniquidade.
+Tu destruirás aqueles que falam a mentira.
+Mas quanto a mim, entrarei em tua casa pela grandeza da tua misericórdia.
+E em teu temor me prostrarei no teu santo templo.
+Guia-me, Senhor, na tua justiça.""",
+        "trust"
+    ),
+    (
+        "Salmo 11",
+        """No Senhor confio. Como dizeis à minha alma: Fuge para o vosso monte, como pássaro?
+Porque eis que os ímpios armam o arco.
+Os fundamentos se destroem; que pode fazer o justo?
+O Senhor está no seu santo templo; o trono do Senhor está nos céus.
+Os seus olhos contemplam; as suas pálpebras provam os filhos dos homens.
+O Senhor prova o justo.""",
+        "trust"
+    ),
+    (
+        "Salmo 16",
+        """Guarda-me, ó Deus, porque em ti confio.
+Disse ao Senhor: Tu és o meu Senhor; não tenho outro bem além de ti.
+O Senhor é a porção da minha herança e do meu cálice.
+Manterás o meu quinhão.
+As linhas caíram-me em lugares deleitosos; sim, a minha herança é formosa para mim.
+Bendigo ao Senhor que me aconselhou; até de noite o meu coração me instrui.
+Ao Senhor tenho sempre diante de mim; estando ele à minha direita, não serei abalado.
+Portanto está alegre o meu coração e a minha glória se regozija.""",
+        "peace"
+    ),
+    (
+        "Salmo 20",
+        """O Senhor te ouça no dia da angústia; o nome do Deus de Jacó te proteja.
+Envie-te socorro desde o santuário, e te sustenha desde Sião.
+Lembre-se de todas as tuas ofertas e aceite os teus holocaustos.
+Conceda-te conforme o desejo do teu coração e cumpra todo o teu propósito.
+Celebraremos a tua vitória e em nome do nosso Deus arvoraremos pendões.
+Agora sei que o Senhor salva o seu ungido.""",
+        "hope"
+    ),
+    (
+        "Salmo 24",
+        """Do Senhor é a terra e a sua plenitude; o mundo e os que nele habitam.
+Porque ele a fundou sobre os mares e a estabeleceu sobre os rios.
+Quem subirá ao monte do Senhor, ou quem estará no seu lugar santo?
+Aquele que é limpo de mãos e puro de coração.
+Este receberá a bênção do Senhor e a justiça do Deus da sua salvação.
+Levantai, ó portas, as vossas cabeças; e levantai-vos, ó entradas eternas.
+E entrará o Rei da glória. Quem é este Rei da glória? O Senhor forte e poderoso.""",
+        "praise"
+    ),
+    (
+        "Salmo 25",
+        """A ti, ó Senhor, levanto a minha alma.
+Deus meu, em ti confio; não seja eu envergonhado.
+Faze-me conhecer os teus caminhos, ó Senhor; ensina-me as tuas veredas.
+Guia-me na tua verdade e ensina-me.
+Porque tu és o Deus da minha salvação; em ti espero todo o dia.
+Lembra-te, Senhor, das tuas misericórdias e das tuas benignidades.
+Porque são desde a eternidade.
+Bom e reto é o Senhor; por isso ensinará o caminho aos pecadores.""",
+        "trust"
+    ),
+    (
+        "Salmo 28",
+        """A ti clamo, ó Senhor, Rocha minha; não emudeças para comigo.
+Ouve a voz das minhas súplicas quando a ti clamo.
+O Senhor é a minha força e o meu escudo; nele confiou o meu coração.
+O Senhor é a força do seu povo; é a fortaleza salvadora do seu ungido.
+Salva o teu povo e abençoa a tua herança; e apascenta-os e exalta-os para sempre.""",
+        "strength"
+    ),
+    (
+        "Salmo 29",
+        """Dai ao Senhor, ó filhos dos poderosos, dai ao Senhor glória e força.
+Dai ao Senhor a glória devida ao seu nome; adorai o Senhor na beleza da santidade.
+A voz do Senhor ouve-se sobre as águas; o Deus da glória troveja.
+A voz do Senhor é poderosa; a voz do Senhor é cheia de majestade.
+O Senhor dará força ao seu povo; o Senhor abençoará o seu povo com paz.""",
+        "praise"
+    ),
+    (
+        "Salmo 30",
+        """Exaltar-te-ei, ó Senhor, porque me levantaste.
+Cantarei ao Senhor, pois me fez bem.
+O Senhor fez subir a minha alma da sepultura; guardaste-me a vida.
+Converteste o meu pranto em regozijo.
+Para que a minha glória te cante louvores e não se cale.
+Senhor, meu Deus, eu te darei graças para sempre.""",
+        "gratitude"
+    ),
+    (
+        "Salmo 33",
+        """Regozijai-vos no Senhor, vós justos, pois aos retos convém o louvor.
+Louvai ao Senhor com harpa; cantai-lhe cânticos com saltério.
+Porque a palavra do Senhor é reta, e todas as suas obras são fiéis.
+Ele ama a justiça e o juízo; a terra está cheia da bondade do Senhor.
+O Senhor desfaz o conselho das nações; quebranta os intentos dos povos.
+Bem-aventurada é a nação cujo Deus é o Senhor.
+A nossa alma espera no Senhor; ele é o nosso auxílio e o nosso escudo.""",
+        "praise"
+    ),
+    (
+        "Salmo 40",
+        """Esperei com paciência no Senhor, e ele se inclinou para mim e ouviu o meu clamor.
+Pôs um novo cântico na minha boca, um hino ao nosso Deus.
+Muitos verão isso e temerão, e confiarão no Senhor.
+Bem-aventurado o homem que põe no Senhor a sua confiança.
+Muitas são, ó Senhor meu Deus, as maravilhas que tens feito.
+Não há quem se compare a ti.""",
+        "trust"
+    ),
+    (
+        "Salmo 43",
+        """Faze-me justiça, ó Deus, e pleiteia a minha causa contra uma nação ímpia.
+Tu és o Deus da minha fortaleza; por que me rejeitaste?
+Envia a tua luz e a tua verdade para me guiarem.
+Então irei ao altar de Deus, ao Deus da minha alegria e regozijo.
+E te louvarei com harpa, ó Deus, Deus meu.
+Por que estás abatida, ó minha alma? Espera em Deus, pois ainda o louvarei.""",
+        "hope"
+    ),
+    (
+        "Salmo 54",
+        """Salva-me, ó Deus, pelo teu nome, e faze-me justiça pelo teu poder.
+Ouve a minha oração, ó Deus; inclina os teus ouvidos às palavras da minha boca.
+Porque homens estranhos se levantaram contra mim.
+Eis que Deus é o meu ajudador; o Senhor é com aqueles que sustêm a minha alma.
+Voltará o mal sobre os meus inimigos.
+Eu te sacrificarei voluntariamente; louvarei o teu nome, ó Senhor, porque é bom.""",
+        "protection"
+    ),
+    (
+        "Salmo 56",
+        """Tem misericórdia de mim, ó Deus, pois o homem quer devorar-me.
+Os meus inimigos me oprimem cada dia.
+Quando temo, confio em ti.
+Em Deus louvarei a sua palavra; em Deus pus a minha confiança.
+Que me pode fazer o homem?
+Entrega os meus prantos ao teu odre; não estão eles no teu livro?
+Em Deus louvarei a sua palavra; no Senhor louvarei a sua palavra.""",
+        "trust"
+    ),
+    (
+        "Salmo 61",
+        """Ouve, ó Deus, o meu clamor; atende à minha oração.
+Desde a extremidade da terra clamo a ti, quando o meu coração desfalece.
+Leva-me à rocha que é mais alta do que eu.
+Porque tu és o meu refúgio, uma torre forte contra o inimigo.
+Assim habitarei no teu tabernáculo para sempre; confiarei à sombra das tuas asas.
+Porque tu, ó Deus, ouviste os meus votos; deste-me a herança dos que temem o teu nome.""",
+        "protection"
+    ),
+    (
+        "Salmo 70",
+        """Apressa-te, ó Deus, em me livrar; Senhor, apressa-te em socorrer-me.
+Fiquem envergonhados e confundidos os que buscam a minha alma.
+Voltem atrás e envergonhem-se os que desejam o meu mal.
+Mas regozijem-se e alegrem-se em ti todos os que te buscam.
+E digam continuamente: Magnificado seja o Deus que tem prazer no meu bem-estar.
+Eu sou pobre e necessitado; apressa-te, ó Deus; tu és o meu auxílio e o meu libertador.""",
+        "cry"
+    ),
+    (
+        "Salmo 84",
+        """Quão amáveis são os teus tabernáculos, ó Senhor dos Exércitos!
+A minha alma anela e deseja os átrios do Senhor.
+O meu coração e a minha carne clamam pelo Deus vivo.
+Bem-aventurados os que habitam em tua casa; louvar-te-ão continuamente.
+Bem-aventurado o homem cuja força está em ti.
+Vale de lágrimas fazem dele um lugar de fontes.
+O Senhor Deus é sol e escudo; o Senhor dará graça e glória.""",
+        "hope"
+    ),
+    (
+        "Salmo 90",
+        """Senhor, tu tens sido o nosso refúgio de geração em geração.
+Antes que os montes nascessem, ou que tu formasses a terra e o mundo.
+De eternidade a eternidade tu és Deus.
+Tu reduzes o homem à destruição; e dizes: Voltai, filhos dos homens.
+Porque mil anos são aos teus olhos como o dia de ontem que passou.
+Ensina-nos a contar os nossos dias de tal maneira que alcancemos corações sábios.
+Satisfaze-nos de manhã com a tua benignidade.""",
+        "wisdom"
+    ),
+    (
+        "Salmo 92",
+        """Bom é louvar ao Senhor, e cantar louvores ao teu nome, ó Altíssimo.
+Anunciar de manhã a tua benignidade e de noite a tua fidelidade.
+Os justos florescerão como a palmeira; crescerão como o cedro no Líbano.
+Plantados na casa do Senhor, florescerão nos átrios do nosso Deus.
+Na velhice ainda darão frutos; serão viçosos e florescentes.
+Para anunciar que o Senhor é reto; ele é a minha rocha e nele não há injustiça.""",
+        "praise"
+    ),
+    (
+        "Salmo 93",
+        """O Senhor reina; está vestido de majestade.
+O Senhor se revestiu e cingiu de poder; o mundo também está firmado.
+O teu trono está firme desde a antiguidade; tu és desde a eternidade.
+Os rios levantam, ó Senhor, os rios levantam o seu ruído.
+O Senhor nas alturas é mais poderoso do que o ruído das grandes águas.
+Os teus testemunhos são mui fiéis; a santidade convém à tua casa, ó Senhor, para sempre.""",
+        "praise"
+    ),
+    (
+        "Salmo 95",
+        """Vinde, cantemos ao Senhor; jubilemos à rocha da nossa salvação.
+Apresentemo-nos ante a sua face com louvor; jubilemos a ele com salmos.
+Porque o Senhor é Deus grande, e Rei grande acima de todos os deuses.
+Nele estão as profundezas da terra, e as alturas dos montes são dele.
+O mar é dele, e ele o fez; e as suas mãos formaram a terra seca.
+Vinde, adoremos e prostremo-nos; ajoelhemos diante do Senhor que nos criou.
+Porque ele é o nosso Deus, e nós povo do seu pasto e ovelhas da sua mão.""",
+        "praise"
+    ),
+    (
+        "Salmo 96",
+        """Cantai ao Senhor um cântico novo; cantai ao Senhor, toda a terra.
+Cantai ao Senhor, bendizei o seu nome; anunciai a sua salvação de dia em dia.
+Declarai entre as nações a sua glória, entre todos os povos as suas maravilhas.
+Porque grande é o Senhor e mui digno de louvor.
+Honra e majestade estão diante dele; força e formosura no seu santuário.
+Dai ao Senhor, ó famílias dos povos, dai ao Senhor glória e força.
+Tributai ao Senhor a glória devida ao seu nome; trazei ofertas e entrai nos seus átrios.""",
+        "praise"
+    ),
+    (
+        "Salmo 116",
+        """Amo ao Senhor, porque ouviu a minha voz e as minhas súplicas.
+Porque inclinou a seu ouvido a mim, invocá-lo-ei em todos os meus dias.
+Laços de morte me cercaram; encontrei aperto e tristeza.
+Então invoquei o nome do Senhor: Ó Senhor, livra a minha alma.
+Gracioso é o Senhor e justo; o nosso Deus é misericordioso.
+Retribuirei os meus votos ao Senhor, na presença de todo o seu povo.
+Preciosa é aos olhos do Senhor a morte dos seus santos.
+Ó Senhor, verdadeiramente sou teu servo; livraste a minha alma da morte.""",
+        "gratitude"
+    ),
+    (
+        "Salmo 117",
+        """Louvai ao Senhor, todas as nações; louvai-o, todos os povos.
+Porque a sua benignidade é grande para conosco, e a verdade do Senhor permanece para sempre.
+Louvai ao Senhor!""",
+        "praise"
+    ),
+    (
+        "Salmo 118",
+        """Louvai ao Senhor, porque ele é bom; porque a sua misericórdia dura para sempre.
+Melhor é confiar no Senhor do que confiar no homem.
+O Senhor é a minha força e o meu cântico; tornou-se a minha salvação.
+A pedra que os edificadores rejeitaram tornou-se a cabeça da esquina.
+Este é o dia que o Senhor fez; regozijemo-nos e alegremo-nos nele.
+Tu és o meu Deus, e eu te louvarei; tu és o meu Deus, e eu te exaltarei.
+Louvai ao Senhor, porque ele é bom; porque a sua misericórdia dura para sempre.""",
+        "gratitude"
+    ),
+    (
+        "Salmo 120",
+        """Na minha angústia clamei ao Senhor, e ele me ouviu.
+Senhor, livra a minha alma dos lábios mentirosos e da língua enganosa.
+Que te será dado, ou que te será acrescentado, língua enganosa?
+Guias de guerra, com brasas de zimbro.
+Ai de mim, que habito em Meseque e que moro nas tendas de Quedar!
+Há muito que a minha alma habita com aqueles que odeiam a paz.
+Eu sou pela paz; mas quando falo, eles são pela guerra.""",
+        "cry"
+    ),
+    (
+        "Salmo 123",
+        """A ti levanto os meus olhos, ó tu que habitas nos céus.
+Eis que assim como os olhos dos servos atentam para a mão dos seus senhores.
+Assim os nossos olhos atentam para o Senhor nosso Deus.
+Tem misericórdia de nós, ó Senhor, tem misericórdia de nós.
+A nossa alma está farta da zombaria daqueles que estão à sua vontade.""",
+        "cry"
+    ),
+    (
+        "Salmo 124",
+        """Se não fora o Senhor, que esteve ao nosso lado, ora diga Israel.
+Se não fora o Senhor, quando os homens se levantaram contra nós.
+Então nos teriam engolido vivos, quando a sua ira se acendeu contra nós.
+Então as águas teriam transbordado sobre a nossa alma.
+Bendito seja o Senhor, que não nos deu por presa aos seus dentes.
+A nossa alma escapou como um pássaro do laço dos passarinheiros.
+O nosso socorro está no nome do Senhor, que fez o céu e a terra.""",
+        "gratitude"
+    ),
+    (
+        "Salmo 125",
+        """Os que confiam no Senhor são como o monte de Sião, que não se abala.
+Assim como estão os montes ao redor de Jerusalém, assim o Senhor está ao redor do seu povo.
+Porque o cetro da impiedade não permanecerá sobre a sorte dos justos.
+Faze bem, ó Senhor, aos bons e aos que são retos de coração.
+Quanto àqueles que se desviam para os seus caminhos tortuosos, o Senhor os levará com os que praticam a iniquidade.
+Paz sobre Israel.""",
+        "trust"
+    ),
+    (
+        "Salmo 126",
+        """Quando o Senhor trouxe do cativeiro os que voltaram a Sião, éramos como os que sonham.
+Então a nossa boca se encheu de riso e a nossa língua de cântico.
+Então se dizia entre as nações: Grandes coisas fez o Senhor a estes.
+Grandes coisas fez o Senhor por nós, e por isso estamos alegres.
+Traze-nos outra vez, ó Senhor, como as correntes no sul.
+Os que semeiam com lágrimas segarão com alegria.""",
+        "hope"
+    ),
+    (
+        "Salmo 127",
+        """Se o Senhor não edificar a casa, em vão trabalham os que a edificam.
+Se o Senhor não guardar a cidade, em vão vigia a sentinela.
+Inútil vos será levantar de madrugada, repousar tarde, comer o pão de dores.
+Porque assim dá ele aos seus amados o sono.
+Eis que os filhos são herança do Senhor, e o fruto do ventre o seu galardão.
+Bem-aventurado o homem que enche deles a sua aljava.""",
+        "wisdom"
+    ),
+    (
+        "Salmo 128",
+        """Bem-aventurado aquele que teme ao Senhor e anda nos seus caminhos.
+Pois comerás do trabalho das tuas mãos; feliz serás, e te irá bem.
+A tua mulher será como a videira frutífera no interior da tua casa.
+Os teus filhos como plantas de oliveira à roda da tua mesa.
+Eis que assim será abençoado o homem que teme ao Senhor.
+O Senhor te abençoe desde Sião, para que vejas a prosperidade de Jerusalém.""",
+        "peace"
+    ),
+    (
+        "Salmo 132",
+        """Lembra-te, ó Senhor, de Davi e de todas as suas aflições.
+Como jurou ao Senhor e fez voto ao Forte de Jacó.
+Não entrarei na tenda da minha casa, nem subirei ao leito da minha cama.
+Até que eu ache lugar para o Senhor, morada para o Forte de Jacó.
+Eis que ouvimos falar dela em Efrata; achamo-la no campo do bosque.
+Entraremos nos seus tabernáculos; nos prostraremos ante o escabelo dos seus pés.""",
+        "praise"
+    ),
+    (
+        "Salmo 138",
+        """Louvar-te-ei de todo o meu coração; na presença dos deuses a ti cantarei.
+Inclinar-me-ei para o teu santo templo e louvarei o teu nome.
+Por causa da tua benignidade e da tua verdade.
+No dia em que clamei, me respondeste; e alentaste com força a minha alma.
+Todos os reis da terra te louvarão, ó Senhor, quando ouvirem as palavras da tua boca.
+Ainda que o Senhor é excelso, atenta para o humilde.""",
+        "gratitude"
+    ),
+    (
+        "Salmo 145",
+        """Exaltar-te-ei, ó Deus meu Rei, e bendirei o teu nome para todo o sempre.
+Cada dia te bendirei e louvarei o teu nome para todo o sempre.
+Grande é o Senhor e mui digno de louvor; a sua grandeza é inescrutável.
+Uma geração louvará as tuas obras à outra geração.
+O Senhor é benigno em todas as suas obras, e piedoso em todos os seus caminhos.
+O Senhor está perto de todos os que o invocam.
+Abre a tua mão e satisfazes o desejo de todo ser vivente.
+O Senhor é justo em todos os seus caminhos e santo em todas as suas obras.
+O Senhor está perto de todos os que o invocam, de todos os que o invocam em verdade.
+Louvai ao Senhor.""",
+        "praise"
+    ),
+    (
+        "Salmo 146",
+        """Louvai ao Senhor. Louva, ó minha alma, ao Senhor.
+Louvarei ao Senhor enquanto viver; cantarei louvores ao meu Deus enquanto eu existir.
+Não confieis nos príncipes, nem no filho do homem, em quem não há salvação.
+Bem-aventurado aquele que tem o Deus de Jacó por seu auxílio.
+O Senhor fez o céu e a terra, o mar e tudo o que neles há.
+Ele mantém a verdade para sempre; faz justiça aos oprimidos.
+O Senhor abre os olhos aos cegos; o Senhor levanta os abatidos.
+O Senhor ama os justos; o Senhor guarda os estrangeiros.""",
+        "praise"
+    ),
+    (
+        "Salmo 147",
+        """Louvai ao Senhor, porque é bom cantar louvores ao nosso Deus.
+O Senhor edifica Jerusalém; ajunta os dispersos de Israel.
+Sara os quebrantados de coração e liga as suas feridas.
+Ele conta o número das estrelas; chama a todas pelos seus nomes.
+Grande é o nosso Senhor e de grande poder; o seu entendimento é infinito.
+O Senhor levanta os mansos e abate os ímpios até à terra.
+Cantai ao Senhor com ação de graças; cantai louvores ao nosso Deus.""",
+        "praise"
+    ),
+    (
+        "Salmo 149",
+        """Louvai ao Senhor! Cantai ao Senhor um cântico novo.
+O seu louvor na congregação dos santos.
+Alegre-se Israel naquele que o criou; regozijem-se os filhos de Sião no seu Rei.
+Louvem o seu nome com danças; cantem-lhe louvor com tamboril e harpa.
+Porque o Senhor se agrada do seu povo; adornará os mansos com a salvação.
+Exultem os santos em glória; alegrem-se nos seus leitos.
+Louvai ao Senhor!""",
+        "praise"
+    ),
 ]
 
 # Mapeamento de mood para paleta visual

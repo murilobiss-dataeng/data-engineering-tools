@@ -246,6 +246,23 @@ class SalmoDiaProcessor:
         publish_destinations: Optional[List[str]] = None,
         schedule_at: Optional[str] = None,
     ) -> Dict:
+        # Verificação de conteúdo já publicado ANTES de confeccionar o vídeo
+        tipo, nome, texto, mood = self._get_item(salmo_index)
+        title = f"{nome} | Salmo do Dia"
+        from core.publication_options import content_hash, ContentHashStorage
+        content_hash_val = content_hash(title, texto, "")
+        storage = ContentHashStorage("salmo_do_dia", base_dir=self.output_dir)
+        if storage.is_duplicate(content_hash_val):
+            dest_list = publish_destinations if publish_destinations is not None else ["youtube"]
+            if dest_list is not None and len(dest_list) == 0:
+                dest_list = ["youtube"]
+            return {
+                "psalm_name": nome,
+                "palette": _palette(mood),
+                "short_video_path": None,
+                "publish": {d: {"cancelled": True, "reason": "duplicate_content_hash"} for d in dest_list},
+            }
+
         result = self.process_salmo(generate_videos=True, salmo_index=salmo_index)
         if result.get("short_video_path"):
             dest_list = publish_destinations if publish_destinations is not None else None

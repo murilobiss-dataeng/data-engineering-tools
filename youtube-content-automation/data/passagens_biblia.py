@@ -194,6 +194,268 @@ E isto não vem de vós; é dom de Deus.
 Não vem das obras, para que ninguém se glorie.""",
         "grace"
     ),
+
+    # =========================================================================
+    # NOVAS PASSAGENS – EVANGELHOS
+    # =========================================================================
+    (
+        "Mateus 6:9-13",
+        """Pai nosso, que estás nos céus, santificado seja o teu nome.
+Venha o teu reino; faça-se a tua vontade assim na terra como no céu.
+O pão nosso de cada dia dá-nos hoje.
+E perdoa-nos as nossas dívidas, assim como nós perdoamos aos nossos devedores.
+E não nos deixes cair em tentação; mas livra-nos do mal.""",
+        "peace"
+    ),
+    (
+        "João 1:12",
+        """Mas a todos quantos o receberam deu-lhes o poder de serem feitos filhos de Deus.""",
+        "grace"
+    ),
+    (
+        "João 10:10",
+        """Eu vim para que tenham vida e a tenham em abundância.""",
+        "hope"
+    ),
+    (
+        "João 15:12",
+        """O meu mandamento é este: que vos ameis uns aos outros, assim como eu vos amei.""",
+        "love"
+    ),
+    (
+        "Mateus 28:19-20",
+        """Ide portanto e fazei discípulos de todas as nações.
+Ensinando-os a guardar todas as coisas que vos ordenei.
+E eis que eu estou convosco todos os dias, até à consumação dos séculos.""",
+        "trust"
+    ),
+    (
+        "Lucas 1:37",
+        """Porque para Deus nada é impossível.""",
+        "faith"
+    ),
+    (
+        "Marcos 9:23",
+        """Tudo é possível ao que crê.""",
+        "faith"
+    ),
+    (
+        "Mateus 17:20",
+        """Se tiverdes fé como um grão de mostarda, nada vos será impossível.""",
+        "faith"
+    ),
+    (
+        "João 6:35",
+        """Disse-lhes Jesus: Eu sou o pão da vida; aquele que vem a mim não terá fome.""",
+        "hope"
+    ),
+    (
+        "João 11:25-26",
+        """Disse-lhe Jesus: Eu sou a ressurreição e a vida.
+Quem crê em mim, ainda que morra, viverá.""",
+        "hope"
+    ),
+
+    # =========================================================================
+    # NOVAS PASSAGENS – PROVÉRBIOS E SABEDORIA
+    # =========================================================================
+    (
+        "Provérbios 4:23",
+        """Sobre tudo o que guardar, guarda o teu coração, porque dele procedem as fontes da vida.""",
+        "wisdom"
+    ),
+    (
+        "Provérbios 12:25",
+        """A ansiedade no coração do homem o abate, mas a boa palavra o alegra.""",
+        "peace"
+    ),
+    (
+        "Provérbios 16:9",
+        """O coração do homem planeja o seu caminho, mas o Senhor lhe dirige os passos.""",
+        "trust"
+    ),
+    (
+        "Provérbios 19:21",
+        """Muitos são os planos no coração do homem, mas o propósito do Senhor permanecerá.""",
+        "trust"
+    ),
+    (
+        "Provérbios 27:17",
+        """O ferro com o ferro se afia, e o homem afia o rosto do seu amigo.""",
+        "wisdom"
+    ),
+    (
+        "Eclesiastes 3:1",
+        """Tudo tem o seu tempo determinado; há tempo para todo propósito debaixo do céu.""",
+        "wisdom"
+    ),
+    (
+        "Eclesiastes 4:9-10",
+        """Melhor é serem dois do que um.
+Porque se um cair, o outro levanta o seu companheiro.""",
+        "unity"
+    ),
+
+    # =========================================================================
+    # NOVAS PASSAGENS – ISAÍAS E PROFETAS
+    # =========================================================================
+    (
+        "Isaías 26:3",
+        """Tu guardarás em paz aquele cuja mente está firme em ti; porque em ti confia.""",
+        "peace"
+    ),
+    (
+        "Isaías 55:8-9",
+        """Porque os meus pensamentos não são os vossos pensamentos.
+Assim como os céus são mais altos do que a terra, assim são os meus caminhos mais altos do que os vossos caminhos.""",
+        "wisdom"
+    ),
+    (
+        "Isaías 55:6",
+        """Buscai ao Senhor enquanto se pode achar; invocai-o enquanto está perto.""",
+        "hope"
+    ),
+    (
+        "Jeremias 17:7",
+        """Bem-aventurado o homem que confia no Senhor, e cuja esperança é o Senhor.""",
+        "trust"
+    ),
+    (
+        "Miqueias 6:8",
+        """Ele te declarou, ó homem, o que é bom: que pratiques a justiça, e ames a benignidade, e andes humildemente com o teu Deus.""",
+        "wisdom"
+    ),
+    (
+        "Sofonias 3:17",
+        """O Senhor teu Deus está no meio de ti, poderoso para salvar; ele se deleitará em ti com alegria.""",
+        "peace"
+    ),
+    (
+        "Naum 1:7",
+        """O Senhor é bom, uma fortaleza no dia da angústia; e conhece os que nele confiam.""",
+        "protection"
+    ),
+
+    # =========================================================================
+    # NOVAS PASSAGENS – EPÍSTOLAS
+    # =========================================================================
+    (
+        "Colossenses 3:2",
+        """Pensai nas coisas que são de cima, e não nas que são da terra.""",
+        "wisdom"
+    ),
+    (
+        "Colossenses 3:23",
+        """E tudo quanto fizerdes, fazei-o de todo o coração, como ao Senhor e não aos homens.""",
+        "strength"
+    ),
+    (
+        "1 Tessalonicenses 5:16-18",
+        """Regozijai-vos sempre. Orai sem cessar. Em tudo dai graças.""",
+        "gratitude"
+    ),
+    (
+        "2 Timóteo 1:7",
+        """Porque Deus não nos deu o espírito de temor, mas de poder, de amor e de moderação.""",
+        "strength"
+    ),
+    (
+        "Tiago 1:5",
+        """Se algum de vós tem falta de sabedoria, peça-a a Deus, que a todos dá liberalmente.""",
+        "wisdom"
+    ),
+    (
+        "Tiago 1:12",
+        """Bem-aventurado o homem que suporta a tentação; porque quando for provado receberá a coroa da vida.""",
+        "hope"
+    ),
+    (
+        "1 Pedro 5:7",
+        """Lançando sobre ele toda a vossa ansiedade, porque ele tem cuidado de vós.""",
+        "peace"
+    ),
+    (
+        "1 João 4:8",
+        """Aquele que não ama não conhece a Deus; porque Deus é amor.""",
+        "love"
+    ),
+    (
+        "1 João 4:18",
+        """No amor não há temor; antes o perfeito amor lança fora o temor.""",
+        "love"
+    ),
+    (
+        "Apocalipse 3:20",
+        """Eis que estou à porta e bato; se alguém ouvir a minha voz e abrir a porta, entrarei.""",
+        "hope"
+    ),
+
+    # =========================================================================
+    # LEITURAS – TRECHOS UM POUCO MAIS LONGOS (INÉDITOS)
+    # =========================================================================
+    (
+        "Leitura – Romanos 12:9-12",
+        """O amor seja não fingido. Aborrecei o mal e apegai-vos ao bem.
+Amai-vos cordialmente uns aos outros com amor fraternal.
+Não vos deixeis vencer do mal, mas vencei o mal com o bem.
+Sede constantes na tribulação, perseverai na oração.""",
+        "love"
+    ),
+    (
+        "Leitura – Salmo 19:14 (oração)",
+        """Sejam agradáveis as palavras da minha boca e a meditação do meu coração perante a tua face, ó Senhor, Rocha minha e Redentor meu.""",
+        "wisdom"
+    ),
+    (
+        "Leitura – Filipenses 4:8",
+        """Finalmente, irmãos, tudo o que é verdadeiro, tudo o que é honesto, tudo o que é justo, tudo o que é puro, tudo o que é amável, tudo o que é de boa fama, nisso pensai.""",
+        "wisdom"
+    ),
+    (
+        "Leitura – Isaías 40:28-31",
+        """Não sabes tu? Não ouviste que o eterno Deus, o Senhor, criador dos fins da terra, não se cansa?
+Dá força ao cansado e multiplica as forças ao que não tem nenhum.
+Os jovens se cansarão e se fatigarão, e os moços certamente cairão.
+Mas os que esperam no Senhor renovarão as suas forças; subirão com asas como águias.""",
+        "hope"
+    ),
+    (
+        "Leitura – Deuteronômio 31:6",
+        """Esforçai-vos e tende bom ânimo; não temais nem vos espanteis.
+Porque o Senhor vosso Deus é convosco; não vos deixará nem vos desamparará.""",
+        "strength"
+    ),
+    (
+        "Leitura – Lamentações 3:22-23",
+        """As misericórdias do Senhor são a causa de não sermos consumidos.
+Novas são cada manhã; grande é a tua fidelidade.""",
+        "hope"
+    ),
+    (
+        "Leitura – Mateus 5:3-5",
+        """Bem-aventurados os pobres de espírito, porque deles é o reino dos céus.
+Bem-aventurados os que choram, porque eles serão consolados.
+Bem-aventurados os mansos, porque eles herdarão a terra.""",
+        "peace"
+    ),
+    (
+        "Leitura – João 14:27",
+        """Deixo-vos a paz, a minha paz vos dou; não vo-la dou como o mundo a dá.
+Não se turbe o vosso coração, nem se atemorize.""",
+        "peace"
+    ),
+    (
+        "Leitura – Efésios 4:32",
+        """Antes sede uns para com os outros benignos, misericordiosos, perdoando-vos uns aos outros.
+Como também Deus vos perdoou em Cristo.""",
+        "forgiveness"
+    ),
+    (
+        "Leitura – 1 Coríntios 16:13-14",
+        """Vigiai, estai firmes na fé, portai-vos varonilmente, sede fortes.
+Todas as vossas coisas sejam feitas com amor.""",
+        "strength"
+    ),
 ]
 
 # Mapeamento de mood para paleta visual (compatível com salmos)
@@ -209,6 +471,9 @@ MOOD_TO_PALETTE = {
     "hope": "dawn",
     "faith": "heavenly",
     "grace": "heavenly",
+    "gratitude": "heavenly",
+    "forgiveness": "heavenly",
+    "unity": "serene",
 }
 
 

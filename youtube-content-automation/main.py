@@ -4,12 +4,13 @@ YouTube Content Automation - Múltiplos canais
 
 Uso (salmo_dia):
   python main.py salmo_dia                           # Apenas monta o vídeo (não publica)
-  python main.py salmo_dia --upload                  # Gera e publica no YouTube
-  python main.py salmo_dia --upload youtube twitter  # Publica no YouTube e no Twitter
-  python main.py salmo_dia --upload youtube,twitter 16.02.26 09   # Destinos + agendar 16/02 9h
-  python main.py salmo_dia --list                    # Lista conteúdo
-  python main.py salmo_dia --index 0                 # Usa item no índice 0
-  python main.py salmo_dia --upload youtube 16.02.26 09 --dry-run   # Dry-run com destinos
+  python main.py salmo_dia --upload                   # Gera e publica no YouTube
+  python main.py salmo_dia --upload youtube           # Publica só no YouTube
+  python main.py salmo_dia --upload youtube 18.02.26 15   # Programa postagem: 18/02/2026 às 15h (YouTube)
+  python main.py salmo_dia --upload youtube twitter 16.02.26 09   # YouTube + Twitter, agendado 16/02 9h
+  python main.py salmo_dia --list                     # Lista conteúdo
+  python main.py salmo_dia --index 0 --upload youtube 18.02.26 15   # Item no índice 0, programado
+  python main.py salmo_dia --upload youtube 16.02.26 09 --dry-run  # Dry-run: mostra comando/crontab
 
 Agenda (vários canais/datas):
   python main.py agenda.txt                   # Um post por linha: canal  data  hora
@@ -333,14 +334,17 @@ Exemplos de comando:
   python main.py salmo_dia --upload
       → Gera o vídeo e publica no YouTube
 
+  python main.py salmo_dia --upload youtube 18.02.26 15
+      → Gera o vídeo, envia ao YouTube e programa publicação para 18/02/2026 às 15h
+
   python main.py salmo_dia --upload youtube twitter
-      → Publica no YouTube e no Twitter
+      → Publica no YouTube e no Twitter (imediatamente)
 
   python main.py salmo_dia --upload youtube,twitter 16.02.2026 09
-      → Publica no YouTube e Twitter e programa para 16/02/2026 às 9h
+      → YouTube + Twitter programados para 16/02/2026 às 9h
 
   python main.py salmo_dia --upload youtube 16.02.2026 09 --dry-run
-      → Dry-run: mostra comando e crontab (não executa)
+      → Dry-run: mostra comando e linha de crontab (não executa)
 
   python main.py salmo_dia --list
       → Lista todo o conteúdo (salmos e passagens)
@@ -419,7 +423,7 @@ Exemplos de comando:
         if date_str:
             args.schedule_at = _schedule_at_from_date_time(date_str, time_str)
             if args.schedule_at:
-                print(f"  📅 Agendando postagem para {date_str} às {time_str}\n")
+                print(f"  📅 Postagem programada para {date_str} às {time_str}\n")
 
     if args.channel == "salmo_dia":
         run_salmo_dia(args)
