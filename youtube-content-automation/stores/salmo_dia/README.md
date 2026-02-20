@@ -71,6 +71,25 @@ npm start
 4. **Output Directory**: padrão (Next.js)
 5. Variáveis de ambiente (opcional): em **Settings → Environment Variables** adicione `NEXT_PUBLIC_SITE_URL` com a URL final (ex: `https://salmododia.com.br`).
 
+### Se der 404 no Vercel
+
+O 404 costuma acontecer quando o Vercel está fazendo build **na raiz do repositório** em vez da pasta deste projeto (Next.js só existe em `stores/salmo_dia`).
+
+**Passos para corrigir e fazer redeploy:**
+
+1. Abra o [Dashboard da Vercel](https://vercel.com/dashboard) e selecione o projeto do Salmo do Dia.
+2. Vá em **Settings** → **General**.
+3. Em **Root Directory**, clique em **Edit** e defina:
+   - Se o repositório conectado for **youtube-content-automation**: use `stores/salmo_dia`.
+   - Se o repositório for o **pai** (ex.: GitProjects ou data-engineering-tools): use o caminho até esta pasta, ex.: `data-engineering-tools/youtube-content-automation/stores/salmo_dia`.
+4. Deixe **Framework Preset** = Next.js (detectado automaticamente).
+5. **Build Command**: `npm run build` (ou em branco para usar o padrão).
+6. **Install Command**: `npm install` (ou em branco).
+7. **Output Directory**: em branco (padrão do Next.js).
+8. Salve e vá em **Deployments** → no último deploy, clique nos **três pontinhos** → **Redeploy** (ou faça um novo commit e aguarde o deploy automático).
+
+Depois do redeploy, a home e as rotas devem responder normalmente.
+
 ## Funcionalidades
 
 - **Home**: hero, salmo do dia (dinâmico), destaque de produtos, CTAs.
