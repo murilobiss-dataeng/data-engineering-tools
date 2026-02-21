@@ -1,0 +1,5 @@
+# Exemplo crontab (Linux/Mac) - pipeline diário às 9h, 12h e 18h
+# Edite: crontab -e
+
+# Pipeline de captura de ofertas
+0 9,12,18 * * * cd /home/crislaine/GitProjects/data-engineering-tools/mb-ofertas && npm run pipeline >> /tmp/mb-ofertas-pipeline.log 2>&1

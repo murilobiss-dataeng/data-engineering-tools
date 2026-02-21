@@ -2,12 +2,53 @@
 Descrições otimizadas por rede social para o Salmo do Dia.
 
 Gera automaticamente descrições para: YouTube, Instagram, Twitter, TikTok,
-Facebook, Threads, Pinterest e Telegram — com tom, hashtags e CTA por plataforma.
+Facebook, Threads, Pinterest e Telegram — com tom viral, hashtags e CTA por plataforma.
 Identidade espiritual moderna, linguagem natural.
 """
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+# Hashtags em formato texto; ao gerar, usar .replace(" ", "") para o hashtag (#salmododia)
+HASHTAGS_SALMO_DIA = [
+    "salmo do dia",
+    "salmo de hoje",
+    "palavra do dia",
+    "mensagem de deus",
+    "versiculo do dia",
+    "biblia sagrada",
+    "salmos",
+    "oração do dia",
+    "oração poderosa",
+    "deus",
+    "jesus",
+    "espirito santo",
+    "fé",
+    "palavra de deus",
+    "evangelho",
+    "salmo 23",
+    "salmo 91",
+    "oração da manhã",
+    "oração da noite",
+    "oração para dormir",
+    "oração para proteção",
+    "oração milagrosa",
+    "shorts",
+    "youtube shorts",
+    "viral",
+    "reflexão",
+    "mensagem motivacional",
+    "brasil",
+    "português",
+]
+
+
+def _hashtag_line(tags: List[str], limit: Optional[int] = None) -> str:
+    """Junta tags em linha de hashtags (sem espaços)."""
+    normalized = [t.replace(" ", "") for t in tags]
+    if limit is not None:
+        normalized = normalized[:limit]
+    return " ".join(f"#{t}" for t in normalized)
 
 
 def _first_sentence(text: str, max_chars: int = 120) -> str:
@@ -32,221 +73,163 @@ def _first_line_short(text: str, max_chars: int = 80) -> str:
     return line[: max_chars - 3].rsplit(" ", 1)[0] + "..."
 
 
+def _viral_caption(psalm_name: str, body_text: str) -> str:
+    """
+    Gera bloco de legenda no estilo viral: citação, não é por acaso, reflexão, CTA e engajamento.
+    """
+    quote = _first_sentence(body_text, 100).strip()
+    if not quote:
+        quote = "Uma palavra para o seu dia."
+    if not quote.endswith(("…", ".", "!", "?")):
+        quote = quote + "…"
+    lines = [
+        f'"{quote}" ❤️',
+        "",
+        f"📖 {psalm_name}",
+        "",
+        "Se essa mensagem chegou até você hoje… não é por acaso.",
+        "Deus está te lembrando de algo simples, mas poderoso.",
+        "",
+        "Mesmo quando for difícil… Mesmo quando doer… Deus está com você.",
+        "",
+        "🤍 Guarde essa palavra no coração hoje.",
+        "",
+        "🔥 Comenta \"AMÉM\" se você crê",
+        "💬 Você já sentiu isso na sua vida?",
+        "",
+        "Segue para receber a Palavra todos os dias 🙌",
+    ]
+    return "\n".join(lines)
+
+
+def _viral_caption_youtube(psalm_name: str, body_text: str) -> str:
+    """
+    Versão para YouTube: reflexiva e amigável às regras da plataforma.
+    Sem CTAs repetitivos de engajamento (evita "comenta AMÉM", etc.) para não ser visto como engagement bait.
+    """
+    quote = _first_sentence(body_text, 100).strip()
+    if not quote:
+        quote = "Uma palavra para o seu dia."
+    if not quote.endswith(("…", ".", "!", "?")):
+        quote = quote + "…"
+    lines = [
+        f'"{quote}"',
+        "",
+        f"📖 {psalm_name}",
+        "",
+        "Se essa mensagem chegou até você hoje, que ela acompanhe o seu dia.",
+        "Deus está com você.",
+        "",
+        "Inscreva-se no canal e ative o sininho para não perder os próximos vídeos.",
+        "Salmos e passagens da Bíblia para inspirar e refletir.",
+    ]
+    return "\n".join(lines)
+
+
 def generate_youtube_description(psalm_name: str, body_text: str) -> str:
     """
-    Descrição para YouTube: 2–3 parágrafos, reflexiva, SEO bíblico.
-    Call to action: curtir, comentar, inscrever-se. 5–8 hashtags no final.
+    Descrição para YouTube: reflexiva, dentro das regras (sem engagement bait).
+    CTA discreto (inscreva-se/ative o sininho). Hashtags para SEO.
     """
-    intro = (
-        f"📖 {psalm_name}\n\n"
-        "Uma palavra para o seu dia. Este salmo nos convida à reflexão e ao encontro com Deus.\n\n"
-    )
-    # Breve contexto: primeiras linhas do salmo como “resumo”
-    first = _first_sentence(body_text, 200)
-    if first:
-        intro += f'"{first}"\n\n'
-    outro = (
-        "Se este vídeo falou ao seu coração, deixe seu like e um comentário. "
-        "Inscreva-se no canal e ative o sininho para não perder os próximos Salmos do Dia.\n\n"
-        "🙏 Salmos e passagens da Bíblia para inspirar o seu dia."
-    )
-    hashtags = [
-        "salmo",
-        "bíblia",
-        "palavradeDeus",
-        "reflexão",
-        "fé",
-        "espiritualidade",
-        "oração",
-        "cristão",
-    ]
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:8])
-    return f"{intro}{outro}\n\n{hashtag_line}"
+    body = _viral_caption_youtube(psalm_name, body_text)
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=30)
+    return f"{body}\n\n{hashtag_line}"
 
 
 def generate_instagram_description(psalm_name: str, body_text: str) -> str:
     """
-    Texto emocional para Instagram: quebras de linha, emojis sutis.
-    Incentivo a salvar/compartilhar. 8–12 hashtags. Foco em inspiração.
+    Instagram: estilo viral, emocional, incentivo a salvar/compartilhar. Muitas hashtags.
     """
-    hook = _first_sentence(body_text, 100)
-    lines = [
-        f"📖 {psalm_name}",
-        "",
-        hook if hook else "Uma palavra para o seu dia.",
-        "",
-        "Salve este post para ler de novo quando precisar de paz. 💛",
-        "Compartilhe com quem precisa ouvir isso hoje.",
-        "",
-        "— Salmo do Dia",
-    ]
-    hashtags = [
-        "salmo",
-        "bíblia",
-        "palavradeDeus",
-        "fé",
-        "espiritualidade",
-        "oração",
-        "cristão",
-        "reflexão",
-        "inspiração",
-        "meditação",
-        "palavra",
-        "jesus",
-    ]
-    body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:12])
-    return f"{body}\n\n{hashtag_line}"
+    viral = _viral_caption(psalm_name, body_text)
+    viral += "\n\nSalve este post para ler de novo quando precisar de paz. 💛"
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=30)
+    return f"{viral}\n\n{hashtag_line}"
 
 
 def generate_twitter_description(psalm_name: str, body_text: str) -> str:
     """
-    Twitter/X: curto e impactante. Frase central do salmo. 2–4 hashtags. Linguagem direta.
+    Twitter/X: até 280 caracteres (limite da plataforma). Curto e impactante.
     """
-    central = _first_line_short(body_text, 80)
-    if not central:
-        central = f"{psalm_name} — uma palavra para o seu dia."
-    line = f'"{central}"'
-    if len(line) > 200:
-        line = line[:197] + "..."
-    hashtags = ["salmo", "bíblia", "palavradeDeus", "fé"]
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:4])
-    return f"{line}\n\n{psalm_name}\n\n{hashtag_line}"
+    TWITTER_MAX = 280
+    quote = _first_line_short(body_text, 100)
+    if not quote:
+        quote = "Uma palavra para o seu dia."
+    if not quote.endswith(("…", ".", "!", "?")):
+        quote = quote + "…"
+    # Texto principal: citação + referência (deixar espaço para hashtags)
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=5)
+    base = f'"{quote}" 📖 {psalm_name}\n\n{hashtag_line}'
+    if len(base) <= TWITTER_MAX:
+        return base
+    # Encurta a citação até caber
+    for max_quote in (80, 60, 40):
+        quote = _first_line_short(body_text, max_quote)
+        if not quote.endswith(("…", ".", "!", "?")):
+            quote = quote + "…"
+        base = f'"{quote}" 📖 {psalm_name}\n\n{hashtag_line}'
+        if len(base) <= TWITTER_MAX:
+            return base
+    # Último recurso: só referência + hashtags
+    fallback = f"📖 {psalm_name}\n\n{hashtag_line}"
+    return fallback[:TWITTER_MAX]
 
 
 def generate_tiktok_description(psalm_name: str, body_text: str) -> str:
     """
-    TikTok: hook forte na primeira linha, conversacional, retenção.
-    Chamada para seguir. 5–8 hashtags. Tom jovem mas respeitoso.
+    TikTok: estilo viral, hook forte, CTA para seguir e comentar AMÉM. Muitas hashtags.
     """
-    hook = _first_line_short(body_text, 70)
-    if not hook:
-        hook = "Uma palavra que pode mudar o seu dia."
-    lines = [
-        hook,
-        "",
-        f"📖 {psalm_name}",
-        "",
-        "Se isso falou com você, segue aqui para mais Salmos do Dia. 🙏",
-        "Comenta o que mais te tocou.",
-    ]
-    hashtags = [
-        "salmo",
-        "bíblia",
-        "palavradeDeus",
-        "fé",
-        "espiritualidade",
-        "salmododia",
-        "cristão",
-        "oração",
-    ]
-    body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:8])
-    return f"{body}\n\n{hashtag_line}"
+    viral = _viral_caption(psalm_name, body_text)
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=30)
+    return f"{viral}\n\n{hashtag_line}"
 
 
 def generate_facebook_description(psalm_name: str, body_text: str) -> str:
     """
-    Facebook Reels: texto inspirador, tom comunitário.
-    Incentivo a compartilhar. 5–8 hashtags.
+    Facebook Reels: estilo viral, tom comunitário, incentivo a compartilhar. Muitas hashtags.
     """
-    hook = _first_sentence(body_text, 120)
-    lines = [
-        f"📖 {psalm_name}",
-        "",
-        hook if hook else "Uma palavra para o seu dia.",
-        "",
-        "Compartilhe com sua família e amigos. Que essa mensagem alcance quem precisa.",
-        "Deixe um comentário contando o que esse salmo significa para você. 🙏",
-        "",
-        "— Salmo do Dia",
-    ]
-    hashtags = [
-        "salmo",
-        "bíblia",
-        "palavradeDeus",
-        "fé",
-        "espiritualidade",
-        "oração",
-        "cristão",
-        "comunidade",
-    ]
-    body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:8])
-    return f"{body}\n\n{hashtag_line}"
+    viral = _viral_caption(psalm_name, body_text)
+    viral += "\n\nCompartilhe com quem precisa ouvir isso hoje. 🙏"
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=30)
+    return f"{viral}\n\n{hashtag_line}"
 
 
 def generate_threads_description(psalm_name: str, body_text: str) -> str:
     """
-    Threads: frase reflexiva, tom humano e conversacional.
-    Poucas hashtags (1–3).
+    Threads: estilo viral, tom conversacional. Hashtags moderadas.
     """
-    central = _first_sentence(body_text, 100)
-    if not central:
-        central = "Uma palavra para o seu dia."
+    quote = _first_sentence(body_text, 90)
+    if not quote:
+        quote = "Uma palavra para o seu dia."
+    if not quote.endswith(("…", ".", "!", "?")):
+        quote = quote + "…"
     lines = [
-        f'"{central}"',
+        f'"{quote}" ❤️',
+        f"📖 {psalm_name}",
         "",
-        f"— {psalm_name}",
-        "",
-        "O que esse trecho falou pra você?",
+        "Se essa mensagem chegou até você hoje… não é por acaso. Comenta AMÉM se você crê 🙌",
     ]
-    hashtags = ["salmo", "bíblia", "fé"]
     body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:3])
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=12)
     return f"{body}\n\n{hashtag_line}"
 
 
 def generate_pinterest_description(psalm_name: str, body_text: str) -> str:
     """
-    Pinterest: descrição inspiracional, SEO espiritual.
-    Palavras-chave bíblicas. 5–10 hashtags.
+    Pinterest: estilo viral, SEO espiritual. Muitas hashtags.
     """
-    hook = _first_sentence(body_text, 150)
-    lines = [
-        f"{psalm_name} — uma palavra para inspirar o seu dia.",
-        "",
-        hook if hook else "Salmos e passagens da Bíblia para reflexão e paz.",
-        "",
-        "Salve no seu quadro e volte quando precisar de inspiração. "
-        "Ideal para meditação, devocional e momentos de quietude.",
-    ]
-    hashtags = [
-        "salmo",
-        "bíblia",
-        "palavradeDeus",
-        "fé",
-        "espiritualidade",
-        "oração",
-        "meditação",
-        "devocional",
-        "reflexão",
-        "cristão",
-    ]
-    body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:10])
-    return f"{body}\n\n{hashtag_line}"
+    viral = _viral_caption(psalm_name, body_text)
+    viral += "\n\nSalve no seu quadro e volte quando precisar de inspiração."
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=25)
+    return f"{viral}\n\n{hashtag_line}"
 
 
 def generate_telegram_description(psalm_name: str, body_text: str) -> str:
     """
-    Telegram: mensagem limpa, estilo devocional.
-    Sem excesso de hashtags. Tom íntimo e contemplativo.
+    Telegram: estilo viral, tom íntimo. Hashtags moderadas.
     """
-    hook = _first_sentence(body_text, 130)
-    lines = [
-        f"📖 {psalm_name}",
-        "",
-        hook if hook else "Uma palavra para o seu dia.",
-        "",
-        "Que essa mensagem acompanhe você hoje.",
-        "",
-        "— Salmo do Dia",
-    ]
-    hashtags = ["salmo", "bíblia", "fé"]
-    body = "\n".join(lines)
-    hashtag_line = " ".join(f"#{t}" for t in hashtags[:3])
-    return f"{body}\n\n{hashtag_line}"
+    viral = _viral_caption(psalm_name, body_text)
+    hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=15)
+    return f"{viral}\n\n{hashtag_line}"
 
 
 def save_descriptions(

@@ -160,21 +160,14 @@ class SalmoDiaProcessor:
         return result
 
     def _create_description(self, name: str, text: str) -> str:
-        return f"""📖 {name}
-
-{text}
-
----
-🙏 Inscreva-se e ative o sininho. Salmos e passagens da Bíblia.
-
-#salmo #bíblia #palavradeDeus #reflexão #fé #espiritualidade #oração #cristão"""
+        from core.social_descriptions import _viral_caption_youtube, _hashtag_line, HASHTAGS_SALMO_DIA
+        body = _viral_caption_youtube(name, text)
+        hashtag_line = _hashtag_line(HASHTAGS_SALMO_DIA, limit=30)
+        return f"{body}\n\n{hashtag_line}"
 
     def _create_tags(self, name: str, mood: str) -> List[str]:
-        base = [
-            "salmo", "bíblia", "palavra de deus", "reflexão", "fé",
-            "espiritualidade", "oração", "cristão", "shorts", "jesus",
-            name.lower().replace(" ", ""),
-        ]
+        from core.social_descriptions import HASHTAGS_SALMO_DIA
+        base = [t.replace(" ", "") for t in HASHTAGS_SALMO_DIA] + [name.lower().replace(" ", "")]
         mood_tags = {
             "peace": ["paz", "descanso"], "protection": ["proteção", "refúgio"],
             "hope": ["esperança", "luz"], "praise": ["louvor", "adoração"],

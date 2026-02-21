@@ -1,0 +1,100 @@
+import pg from "pg";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
+
+const { Pool } = pg;
+
+let pool: pg.Pool | null = null;
+
+export function getPool(): pg.Pool {
+  if (!env.DATABASE_URL) {
+    throw new Error("DATABASE_URL é obrigatório. Configure no .env (Supabase).");
+  }
+  if (!pool) {
+    pool = new Pool({
+      connectionString: env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+    pool.on("error", (err) => logger.error({ err }, "Pool PostgreSQL error"));
+  }
+  return pool;
+}
+
+export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
+  text: string,
+  params?: unknown[]
+): Promise<pg.QueryResult<T>> {
+  const client = getPool();
+  const start = Date.now();
+  try {
+    const res = await client.query(text, params) as pg.QueryResult<T>;
+    logger.debug({ text: text.slice(0, 80), duration: Date.now() - start }, "db query");
+    return res;
+  } catch (err) {
+    logger.error({ err, text: text.slice(0, 80) }, "db query error");
+    throw err;
+  }
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+    logger.info("Pool PostgreSQL closed");
+  }
+}
+
+export type Product = {
+  id: string;
+  category_id: string | null;
+  external_id: string | null;
+  title: string;
+  price: string;
+  previous_price: string | null;
+  discount_pct: string | null;
+  affiliate_link: string;
+  image_url: string | null;
+  source: string;
+  status: string;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Campaign = {
+  id: string;
+  name: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  product_ids: string[];
+  target_type: string;
+  target_ref: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Message = {
+  id: string;
+  campaign_id: string;
+  product_id: string;
+  body: string;
+  short_link: string | null;
+  status: string;
+  sent_at: string | null;
+  recipient: string | null;
+  error_message: string | null;
+  created_at: string;
+};
