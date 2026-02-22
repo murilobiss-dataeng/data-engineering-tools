@@ -463,6 +463,12 @@ credentials.json
 
 # MB-Ofertas Next.js: lib/ (api.ts) não pode ser ignorado pelo padrão lib/ do Python
 !mb-ofertas/lib/
+!mb-ofertas/lib/**
 !mb-ofertas/dashboard/lib/
+!mb-ofertas/dashboard/lib/**
 !mb-ofertas/package.json
 !mb-ofertas/vercel.json
+
+# Salmo do Dia (stores/salmo_dia): lib/ do Next.js não pode ser ignorado
+!youtube-content-automation/stores/salmo_dia/lib/
+!youtube-content-automation/stores/salmo_dia/lib/**

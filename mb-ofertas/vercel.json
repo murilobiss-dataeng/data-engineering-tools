@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "cd mb-ofertas/dashboard && npm install",
-  "buildCommand": "cd mb-ofertas/dashboard && npm install && npm run build"
+  "installCommand": "npm install",
+  "buildCommand": "npm install && npm run build"
 }
