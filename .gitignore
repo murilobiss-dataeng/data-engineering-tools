@@ -461,14 +461,18 @@ credentials.json
 !curriculum-vitae/**/vercel.json
 !curriculum-vitae/**/package.json
 
-# MB-Ofertas Next.js: lib/ (api.ts) não pode ser ignorado pelo padrão lib/ do Python
+# MB-Ofertas: não ignorar pelo padrão lib/, *.json, public (Python/Node/Gatsby)
 !mb-ofertas/lib/
 !mb-ofertas/lib/**
 !mb-ofertas/dashboard/lib/
 !mb-ofertas/dashboard/lib/**
-!mb-ofertas/package.json
-!mb-ofertas/vercel.json
+!mb-ofertas/**/*.json
+!mb-ofertas/public/
+!mb-ofertas/public/**
 
-# Salmo do Dia (stores/salmo_dia): lib/ do Next.js não pode ser ignorado
+# Salmo do Dia (stores/salmo_dia): idem
 !youtube-content-automation/stores/salmo_dia/lib/
 !youtube-content-automation/stores/salmo_dia/lib/**
+!youtube-content-automation/stores/salmo_dia/**/*.json
+!youtube-content-automation/stores/salmo_dia/public/
+!youtube-content-automation/stores/salmo_dia/public/**
