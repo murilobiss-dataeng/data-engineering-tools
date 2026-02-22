@@ -460,3 +460,9 @@ credentials.json
 !curriculum-vitae/**/*.json
 !curriculum-vitae/**/vercel.json
 !curriculum-vitae/**/package.json
+
+# MB-Ofertas Next.js: lib/ (api.ts) não pode ser ignorado pelo padrão lib/ do Python
+!mb-ofertas/lib/
+!mb-ofertas/dashboard/lib/
+!mb-ofertas/package.json
+!mb-ofertas/vercel.json
