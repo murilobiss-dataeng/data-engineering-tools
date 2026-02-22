@@ -280,6 +280,12 @@ dist
 # Gatsby files
 .cache/
 public
+!mb-ofertas/public
+!mb-ofertas/public/**
+!mb-ofertas/dashboard/public
+!mb-ofertas/dashboard/public/**
+!youtube-content-automation/stores/salmo_dia/public
+!youtube-content-automation/stores/salmo_dia/public/**
 
 # Storybook build outputs
 .out
@@ -461,18 +467,14 @@ credentials.json
 !curriculum-vitae/**/vercel.json
 !curriculum-vitae/**/package.json
 
-# MB-Ofertas: não ignorar pelo padrão lib/, *.json, public (Python/Node/Gatsby)
+# MB-Ofertas: não ignorar pelo padrão lib/, *.json (Python/Node)
 !mb-ofertas/lib/
 !mb-ofertas/lib/**
 !mb-ofertas/dashboard/lib/
 !mb-ofertas/dashboard/lib/**
 !mb-ofertas/**/*.json
-!mb-ofertas/public/
-!mb-ofertas/public/**
 
 # Salmo do Dia (stores/salmo_dia): idem
 !youtube-content-automation/stores/salmo_dia/lib/
 !youtube-content-automation/stores/salmo_dia/lib/**
 !youtube-content-automation/stores/salmo_dia/**/*.json
-!youtube-content-automation/stores/salmo_dia/public/
-!youtube-content-automation/stores/salmo_dia/public/**
