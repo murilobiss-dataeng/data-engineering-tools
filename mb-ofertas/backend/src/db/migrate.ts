@@ -1,12 +1,17 @@
+import { config } from "dotenv";
+import { resolve } from "path";
+config();
+if (!process.env.DATABASE_URL) config({ path: resolve(process.cwd(), "..", ".env") });
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { getPool } from "./client.js";
+import { initPool, getPool } from "./client.js";
 import { logger } from "../config/logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function migrate(): Promise<void> {
+  await initPool();
   const pool = getPool();
   const schemaPath = join(__dirname, "schema.sql");
   const sql = readFileSync(schemaPath, "utf-8");
