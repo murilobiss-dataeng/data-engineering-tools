@@ -16,12 +16,12 @@ let poolInit: Promise<pg.Pool> | null = null;
 async function buildConnectionString(): Promise<string> {
   const url = env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL é obrigatório. Configure no .env (Supabase).");
-  let connectionString = url.includes("supabase.co") && !url.includes("sslmode=")
-    ? `${url}${url.includes("?") ? "&" : "?"}sslmode=verify-full`
-    : url;
+  let connectionString = url;
   if (!url.includes("supabase.co")) return connectionString;
+  const u = new URL(connectionString);
+  u.searchParams.delete("sslmode");
+  connectionString = u.toString();
   try {
-    const u = new URL(connectionString);
     const host = u.hostname;
     const [ipv4] = await dns.resolve4(host);
     if (ipv4) {
