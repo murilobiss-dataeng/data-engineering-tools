@@ -11,8 +11,12 @@ export function getPool(): pg.Pool {
     throw new Error("DATABASE_URL é obrigatório. Configure no .env (Supabase).");
   }
   if (!pool) {
+    const url = env.DATABASE_URL;
+    const connectionString = url?.includes("supabase.co") && !url?.includes("sslmode=")
+      ? `${url}${url.includes("?") ? "&" : "?"}sslmode=require`
+      : url;
     pool = new Pool({
-      connectionString: env.DATABASE_URL,
+      connectionString: connectionString,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
