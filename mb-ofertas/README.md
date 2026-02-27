@@ -39,7 +39,7 @@ npm install
 ```bash
 cp .env.example .env
 # Edite .env com:
-# - DATABASE_URL (Supabase: Connection string)
+# - DATABASE_URL (Supabase: em Render ou rede sem IPv6, use "Session" no Connect → Session)
 # - REDIS_URL (ex: redis://localhost:6379)
 # - WHATSAPP_* (Twilio ou seu provedor)
 # - AMAZON_PARTNER_TAG (se usar API/scraping)

@@ -1,3 +1,8 @@
+/**
+ * Client Postgres. Para Supabase em ambientes sem IPv6 (ex.: Render), use
+ * a connection string em Session mode (pooler): Connect → Session no dashboard.
+ * Host: aws-0-XX.pooler.supabase.com:5432 — suporta IPv4.
+ */
 import pg from "pg";
 import dns from "dns/promises";
 import { env } from "../config/env.js";
@@ -35,11 +40,15 @@ export async function initPool(): Promise<pg.Pool> {
   if (poolInit) return poolInit;
   poolInit = (async () => {
     const connectionString = await buildConnectionString();
+    const isSupabase = connectionString.includes("supabase.co") || connectionString.includes("pooler.supabase.com");
     pool = new Pool({
       connectionString,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      ...(isSupabase && {
+        ssl: { rejectUnauthorized: false },
+      }),
     });
     pool.on("error", (err) => logger.error({ err }, "Pool PostgreSQL error"));
     return pool;
