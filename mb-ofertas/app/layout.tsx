@@ -48,6 +48,9 @@ export default function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
+        <footer className="mt-auto border-t border-stone-200 bg-white py-3 text-center text-xs text-stone-400">
+          Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local"}
+        </footer>
       </body>
     </html>
   );
