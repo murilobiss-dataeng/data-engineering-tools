@@ -10,12 +10,6 @@ import pg from "pg";
 config();
 if (!process.env.DATABASE_URL) config({ path: resolve(process.cwd(), "..", ".env") });
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error("❌ DATABASE_URL não definido. Configure no .env (raiz ou backend).");
-  process.exit(1);
-}
-
 function maskUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -27,6 +21,11 @@ function maskUrl(url: string): string {
 }
 
 async function main() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    console.error("❌ DATABASE_URL não definido. Configure no .env (raiz ou backend).");
+    process.exit(1);
+  }
   console.log("🔍 DATABASE_URL (mascarado):", maskUrl(connectionString));
   let host: string;
   try {
