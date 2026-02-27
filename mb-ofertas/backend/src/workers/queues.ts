@@ -18,7 +18,7 @@ function getRedisOptions(): { host: string; port: number; password?: string } {
 
 const connection = getRedisOptions();
 
-const QUEUE_NAME = "mb-ofertas:send";
+const QUEUE_NAME = "mb-ofertas-send";
 
 export type SendJobPayload = {
   campaignId: string;
