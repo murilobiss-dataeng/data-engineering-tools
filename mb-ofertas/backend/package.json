@@ -10,7 +10,8 @@
     "worker": "tsx src/workers/run.ts",
     "pipeline": "tsx src/pipeline/daily.ts",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:generate": "tsx src/db/generate-migration.ts"
+    "db:generate": "tsx src/db/generate-migration.ts",
+    "fetch-ofertas": "tsx src/pipeline/fetch-ofertas.ts"
   },
   "dependencies": {
     "bullmq": "^5.34.0",

@@ -1,0 +1,7 @@
+{
+  "urls": [
+    "https://www.amazon.com.br/deals",
+    "https://www.mercadolivre.com.br/ofertas"
+  ],
+  "comment": "Adicione URLs de páginas de ofertas (listagem) ou de produtos individuais. Uma URL por linha também pode ser usada em ofertas-urls.txt"
+}

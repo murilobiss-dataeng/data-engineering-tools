@@ -16,17 +16,48 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="badge-pending">Pendente</span>;
 }
 
+type FetchOfertasResult = { inserted: number; failed: number; totalUrls: number; message: string };
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
+  const [fetchOfertasLoading, setFetchOfertasLoading] = useState(false);
+  const [fetchOfertasResult, setFetchOfertasResult] = useState<FetchOfertasResult | null>(null);
 
-  useEffect(() => {
-    api<{ products: Product[] }>(`/products?status=${filter}&limit=50`)
+  const loadProducts = () => {
+    return api<{ products: Product[] }>(`/products?status=${filter}&limit=50`)
       .then((data) => setProducts(data.products))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadProducts();
   }, [filter]);
+
+  async function handleFetchOfertas() {
+    setFetchOfertasResult(null);
+    setFetchOfertasLoading(true);
+    try {
+      const result = await api<FetchOfertasResult>("/products/fetch-ofertas", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      setFetchOfertasResult(result);
+      await loadProducts();
+    } catch (e) {
+      setFetchOfertasResult({
+        inserted: 0,
+        failed: 0,
+        totalUrls: 0,
+        message: e instanceof Error ? e.message : "Erro ao buscar ofertas.",
+      });
+    } finally {
+      setFetchOfertasLoading(false);
+    }
+  }
 
   async function updateStatus(id: string, status: "approved" | "rejected") {
     try {
@@ -62,6 +93,31 @@ export default function ProductsPage() {
           <PlusIcon />
           Nova oferta
         </a>
+      </div>
+
+      <div className="card-flat mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-semibold text-stone-800">Buscar ofertas automaticamente</h2>
+          <p className="text-sm text-stone-500">
+            Usa as URLs configuradas no backend (Amazon e Mercado Livre) e adiciona produtos como pendentes.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleFetchOfertas}
+            disabled={fetchOfertasLoading}
+            className="btn-primary"
+          >
+            {fetchOfertasLoading ? "Buscando… (pode levar 1–2 min)" : "Iniciar busca"}
+          </button>
+          {fetchOfertasResult && (
+            <p className="text-sm text-stone-600">
+              {fetchOfertasResult.message}
+              {fetchOfertasResult.failed > 0 && ` ${fetchOfertasResult.failed} falha(s).`}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">

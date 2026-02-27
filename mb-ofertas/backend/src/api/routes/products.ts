@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as productsRepo from "../../repositories/products.repository.js";
 import { captureAmazonDeals } from "../../services/products/amazon.service.js";
 import { scrapeProductFromUrl } from "../../services/products/scrape-url.service.js";
+import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
 import type { ProductInput } from "../../services/products/types.js";
 
@@ -15,6 +16,29 @@ productsRouter.get("/", async (req, res) => {
     const offset = Number(req.query.offset) || 0;
     const rows = await productsRepo.listProducts({ status, categoryId, limit, offset });
     res.json({ products: rows });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Busca ofertas automaticamente (Amazon + ML) — acionado pela UI ou por integração. */
+productsRouter.post("/fetch-ofertas", async (req, res) => {
+  try {
+    const body = (req.body || {}) as { urls?: string[] };
+    const result = await runFetchOfertas({
+      urls: body.urls?.length ? body.urls : undefined,
+      maxPerListing: 8,
+      delayMs: 1500,
+    });
+    res.json({
+      inserted: result.inserted,
+      failed: result.failed,
+      totalUrls: result.totalUrls,
+      message:
+        result.totalUrls === 0
+          ? "Nenhuma URL configurada. Configure em backend/scripts/ofertas-urls.json ou OFERTAS_URLS no .env."
+          : `${result.inserted} produto(s) adicionado(s) como pendentes.`,
+    });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
