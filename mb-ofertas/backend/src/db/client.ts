@@ -1,27 +1,55 @@
 import pg from "pg";
+import dns from "dns/promises";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 
 const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
+let poolInit: Promise<pg.Pool> | null = null;
 
-export function getPool(): pg.Pool {
-  if (!env.DATABASE_URL) {
-    throw new Error("DATABASE_URL é obrigatório. Configure no .env (Supabase).");
+async function buildConnectionString(): Promise<string> {
+  const url = env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL é obrigatório. Configure no .env (Supabase).");
+  let connectionString = url.includes("supabase.co") && !url.includes("sslmode=")
+    ? `${url}${url.includes("?") ? "&" : "?"}sslmode=verify-full`
+    : url;
+  if (!url.includes("supabase.co")) return connectionString;
+  try {
+    const u = new URL(connectionString);
+    const host = u.hostname;
+    const [ipv4] = await dns.resolve4(host);
+    if (ipv4) {
+      u.hostname = ipv4;
+      connectionString = u.toString();
+      logger.info({ host, ipv4 }, "Postgres: using IPv4 for Supabase");
+    }
+  } catch (e) {
+    logger.warn({ err: e }, "Postgres: could not resolve IPv4, using hostname");
   }
-  if (!pool) {
-    const url = env.DATABASE_URL;
-    const connectionString = url?.includes("supabase.co") && !url?.includes("sslmode=")
-      ? `${url}${url.includes("?") ? "&" : "?"}sslmode=require`
-      : url;
+  return connectionString;
+}
+
+export async function initPool(): Promise<pg.Pool> {
+  if (pool) return pool;
+  if (poolInit) return poolInit;
+  poolInit = (async () => {
+    const connectionString = await buildConnectionString();
     pool = new Pool({
-      connectionString: connectionString,
+      connectionString,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
     });
     pool.on("error", (err) => logger.error({ err }, "Pool PostgreSQL error"));
+    return pool;
+  })();
+  return poolInit;
+}
+
+export function getPool(): pg.Pool {
+  if (!pool) {
+    throw new Error("Pool não inicializado. Chame await initPool() no startup da API.");
   }
   return pool;
 }

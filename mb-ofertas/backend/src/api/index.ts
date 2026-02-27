@@ -7,12 +7,14 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { initPool } from "../db/client.js";
 import { productsRouter } from "./routes/products.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { categoriesRouter } from "./routes/categories.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
@@ -37,6 +39,13 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 const port = env.API_PORT;
-app.listen(port, () => {
-  logger.info({ port }, "API listening");
-});
+initPool()
+  .then(() => {
+    app.listen(port, () => {
+      logger.info({ port }, "API listening");
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Failed to init DB pool");
+    process.exit(1);
+  });
