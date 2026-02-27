@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm install && npm run build"
+  "buildCommand": "cd dashboard && npm install && cd dashboard && npm run build"
 }
