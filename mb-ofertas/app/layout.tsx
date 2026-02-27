@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MB Ofertas - Painel",
-  description: "Envio automatizado de ofertas via WhatsApp",
+  description: "Crie e gerencie ofertas para divulgar em redes e WhatsApp",
 };
 
 export default function RootLayout({
@@ -13,35 +13,41 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 antialiased">
-        <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-            <a href="/" className="text-lg font-bold tracking-tight text-emerald-700 hover:text-emerald-800">
+      <body className="min-h-screen bg-stone-50 text-stone-800 antialiased">
+        <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 shadow-sm backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+            <a
+              href="/"
+              className="flex items-center gap-2 text-xl font-bold tracking-tight text-stone-900 hover:text-amber-700 transition"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white text-sm font-bold">
+                M
+              </span>
               MB Ofertas
             </a>
-            <nav className="flex gap-1">
+            <nav className="flex items-center gap-1">
               <a
                 href="/gerar-oferta"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-amber-50 hover:text-amber-800"
               >
-                Gerar oferta
+                Buscar por URL
               </a>
               <a
                 href="/"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
               >
                 Produtos
               </a>
               <a
                 href="/campanhas"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
               >
                 Campanhas
               </a>
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
       </body>
     </html>
   );

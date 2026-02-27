@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,28 +26,89 @@ textarea {
   font: inherit;
 }
 
-/* Design tokens */
 :root {
-  --color-brand: 24 90 55; /* green-800 */
-  --color-brand-light: 34 197 94; /* green-500 */
-  --color-accent: 245 158 11; /* amber-500 */
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --bg-page: 250 250 249; /* stone-50 */
+  --bg-card: 255 255 255;
+  --border: 231 229 228; /* stone-200 */
+  --text: 41 37 36; /* stone-800 */
+  --text-muted: 120 113 108; /* stone-600 */
+  --accent: 180 83 9; /* amber-800 */
+  --accent-hover: 146 64 14; /* amber-900 */
+  --accent-light: 254 243 199; /* amber-100 */
+  --success: 22 163 74; /* green-600 */
+  --success-bg: 220 252 231; /* green-100 */
+  --pending: 161 98 7; /* yellow-800 */
+  --pending-bg: 254 249 195; /* yellow-100 */
+  --rejected: 127 29 29; /* red-900 */
+  --rejected-bg: 254 226 226; /* red-100 */
+}
+
+body {
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer components {
+  .page-header {
+    @apply mb-8 flex flex-wrap items-center justify-between gap-4;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-stone-800;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-stone-500;
+  }
+
   .card {
-    @apply rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5;
+    @apply rounded-2xl border border-stone-200/90 bg-white p-6 shadow-sm transition hover:shadow-md;
+  }
+
+  .card-flat {
+    @apply rounded-2xl border border-stone-200/90 bg-white p-6;
   }
 
   .input {
-    @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20;
+    @apply w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-stone-800 placeholder-stone-400 transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/25;
+  }
+
+  .input-label {
+    @apply mb-1.5 block text-sm font-medium text-stone-700;
   }
 
   .btn-primary {
-    @apply rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-60;
   }
 
   .btn-secondary {
-    @apply rounded-lg border border-slate-300 bg-white px-4 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-5 py-2.5 font-medium text-stone-700 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-300;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-pending {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+
+  .badge-approved {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-rejected {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .tab {
+    @apply rounded-lg px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900;
+  }
+
+  .tab-active {
+    @apply tab bg-amber-100 text-amber-900 hover:bg-amber-100;
   }
 }

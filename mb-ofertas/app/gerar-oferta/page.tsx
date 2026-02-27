@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { api, type ScrapedProduct } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { api, type ScrapedProduct, type Product } from "@/lib/api";
 
 export default function GerarOfertaPage() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [product, setProduct] = useState<ScrapedProduct | null>(null);
   const [postText, setPostText] = useState<string | null>(null);
@@ -72,17 +75,42 @@ export default function GerarOfertaPage() {
     setTimeout(() => setCopiedImage(false), 2000);
   }
 
+  async function handleSalvarOferta() {
+    if (!product) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const saved = await api<Product>("/products", {
+        method: "POST",
+        body: JSON.stringify({
+          title: product.title,
+          price: product.price,
+          previousPrice: product.previousPrice,
+          discountPct: product.discountPct,
+          affiliateLink: product.affiliateLink,
+          imageUrl: product.imageUrl,
+          source: "amazon",
+        }),
+      });
+      router.push(`/produtos/${saved.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Gerar oferta</h1>
-        <p className="mt-1 text-slate-600">
-          Cole a URL do produto (Amazon ou Mercado Livre) e gere o texto + imagem para você copiar e postar.
+        <h1 className="page-title">Buscar oferta por URL</h1>
+        <p className="page-subtitle">
+          Cole a URL do produto (Amazon ou Mercado Livre) e gere o texto + imagem para copiar e postar.
         </p>
       </div>
 
-      <section className="card">
-        <h2 className="text-lg font-semibold text-slate-800">1. Buscar oferta na Amazon</h2>
+      <section className="card-flat">
+        <h2 className="text-lg font-semibold text-stone-800">1. Buscar oferta</h2>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label className="mb-1 block text-sm font-medium text-slate-700">URL do produto</label>
@@ -108,8 +136,8 @@ export default function GerarOfertaPage() {
 
       {product && (
         <>
-          <section className="card">
-            <h2 className="text-lg font-semibold text-slate-800">2. Dados do produto (edite se quiser)</h2>
+<section className="card-flat">
+        <h2 className="text-lg font-semibold text-stone-800">2. Dados do produto (edite se quiser)</h2>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row">
               {product.imageUrl && (
                 <img
@@ -120,7 +148,7 @@ export default function GerarOfertaPage() {
               )}
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Título</label>
+                  <label className="input-label">Título</label>
                   <input
                     type="text"
                     value={product.title}
@@ -130,7 +158,7 @@ export default function GerarOfertaPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Preço (R$)</label>
+                    <label className="input-label">Preço (R$)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -140,7 +168,7 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">De (R$) — opcional</label>
+                    <label className="input-label">De (R$) — opcional</label>
                     <input
                       type="number"
                       step="0.01"
@@ -162,7 +190,7 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Link de afiliado</label>
+                    <label className="input-label">Link de afiliado</label>
                     <input
                       type="url"
                       value={product.affiliateLink}
@@ -173,11 +201,22 @@ export default function GerarOfertaPage() {
                 </div>
               </div>
             </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleSalvarOferta}
+                disabled={saving}
+                className="btn-secondary"
+              >
+                {saving ? "Salvando…" : "Salvar oferta na lista"}
+              </button>
+              <span className="text-sm text-stone-500">Salve para aprovar e usar em campanhas.</span>
+            </div>
           </section>
 
-          <section className="card">
-            <h2 className="text-lg font-semibold text-slate-800">3. Conteúdo para postar</h2>
-            <p className="mt-1 text-sm text-slate-600">
+          <section className="card-flat">
+            <h2 className="text-lg font-semibold text-stone-800">3. Conteúdo para postar</h2>
+            <p className="mt-1 text-sm text-stone-600">
               Gere o texto e use a imagem abaixo. Copie e cole onde for postar (WhatsApp, redes sociais, etc.).
             </p>
             <button
@@ -196,7 +235,7 @@ export default function GerarOfertaPage() {
                     <button
                       type="button"
                       onClick={copyText}
-                      className="rounded bg-amber-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-600"
+                      className="btn-primary text-sm"
                     >
                       {copiedText ? "Copiado!" : "Copiar texto"}
                     </button>
@@ -212,7 +251,7 @@ export default function GerarOfertaPage() {
                       <button
                         type="button"
                         onClick={copyImageUrl}
-                        className="rounded bg-slate-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                        className="btn-secondary text-sm"
                       >
                         {copiedImage ? "Copiado!" : "Copiar URL da imagem"}
                       </button>

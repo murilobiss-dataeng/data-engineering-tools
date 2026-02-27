@@ -53,12 +53,21 @@ export default function CampaignsPage() {
     }
   }
 
-  if (loading) return <p className="text-slate-500">Carregando...</p>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <p className="text-stone-500">Carregando campanhas…</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-800">Campanhas</h2>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Campanhas</h1>
+          <p className="page-subtitle">Envie ofertas por WhatsApp para sua lista.</p>
+        </div>
         <a href="/campanhas/nova" className="btn-primary">
           Nova campanha
         </a>
@@ -66,15 +75,15 @@ export default function CampaignsPage() {
 
       <ul className="space-y-4">
         {campaigns.length === 0 && (
-          <li className="card p-8 text-center text-slate-500">
+          <li className="card-flat p-8 text-center text-stone-500">
             Nenhuma campanha. Crie uma e adicione produtos aprovados.
           </li>
         )}
         {campaigns.map((c) => (
-          <li key={c.id} className="card flex items-center justify-between p-4">
+          <li key={c.id} className="card flex items-center justify-between p-5">
             <div>
-              <p className="font-medium">{c.name}</p>
-              <p className="text-sm text-slate-500">
+              <p className="font-semibold text-stone-900">{c.name}</p>
+              <p className="text-sm text-stone-500">
                 Status: {c.status} • {c.product_ids?.length ?? 0} produto(s)
               </p>
             </div>
@@ -94,9 +103,9 @@ export default function CampaignsPage() {
 
       {sendModal && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50">
-          <div className="card w-full max-w-md p-6 shadow-xl">
-            <h3 className="mb-2 font-semibold">Enviar agora: {sendModal.name}</h3>
-            <p className="mb-4 text-sm text-slate-600">
+          <div className="card-flat w-full max-w-md p-6 shadow-xl">
+            <h3 className="mb-2 font-semibold text-stone-900">Enviar agora: {sendModal.name}</h3>
+            <p className="mb-4 text-sm text-stone-600">
               Um número por linha ou separados por vírgula (com DDD, ex: 11999999999)
             </p>
             <textarea

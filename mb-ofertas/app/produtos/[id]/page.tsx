@@ -39,57 +39,66 @@ export default function ProductDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (!product) return <p className="text-slate-500">Carregando…</p>;
+  if (!product) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <p className="text-stone-500">Carregando…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <a href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+    <div className="space-y-8">
+      <a href="/" className="btn-ghost text-sm">
         ← Voltar aos produtos
       </a>
-      <div className="card">
+
+      <div className="card-flat">
         <div className="flex flex-col gap-6 sm:flex-row">
-          {product.image_url && (
-            <img
-              src={product.image_url}
-              alt=""
-              className="h-40 w-40 shrink-0 rounded-lg object-cover"
-            />
-          )}
+          <div className="h-48 w-48 shrink-0 overflow-hidden rounded-xl bg-stone-100">
+            {product.image_url ? (
+              <img src={product.image_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-stone-400">—</div>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-slate-900">{product.title}</h1>
-            <p className="mt-2 text-slate-600">
-              R$ {product.price}
+            <h1 className="text-xl font-bold text-stone-900">{product.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-amber-700">R$ {product.price}</span>
               {product.previous_price && (
-                <span className="ml-2 text-slate-400 line-through">R$ {product.previous_price}</span>
+                <span className="text-stone-400 line-through">R$ {product.previous_price}</span>
               )}
               {product.discount_pct && (
-                <span className="ml-2 font-medium text-emerald-600">{product.discount_pct}% OFF</span>
+                <span className="badge bg-amber-100 text-amber-800">{product.discount_pct}% OFF</span>
               )}
-            </p>
-            <p className="mt-1 text-sm text-slate-400">Status: {product.status}</p>
+            </div>
+            <p className="mt-2 text-sm text-stone-500">Status: {product.status}</p>
             <a
               href={product.affiliate_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-block text-sm font-medium text-emerald-600 hover:underline"
+              className="mt-4 inline-block text-sm font-medium text-amber-700 hover:underline"
             >
               Abrir link de afiliado →
             </a>
           </div>
         </div>
       </div>
+
       {preview && (
-        <div className="card">
-          <h2 className="mb-2 font-semibold text-slate-800">Preview da mensagem WhatsApp</h2>
-          <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+        <div className="card-flat">
+          <h2 className="mb-2 font-semibold text-stone-800">Preview da mensagem WhatsApp</h2>
+          <pre className="whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm text-stone-700">
             {preview}
           </pre>
         </div>
       )}
-      <div className="card">
-        <h2 className="mb-2 font-semibold text-slate-800">Conteúdo para post (copiar e colar)</h2>
-        <p className="mb-4 text-sm text-slate-600">
-          Texto e imagem prontos para você colar em redes sociais ou WhatsApp.
+
+      <div className="card-flat">
+        <h2 className="mb-1 font-semibold text-stone-800">Conteúdo para post</h2>
+        <p className="mb-4 text-sm text-stone-500">
+          Texto e imagem prontos para copiar e colar em redes sociais ou WhatsApp.
         </p>
         {!postContent ? (
           <button type="button" onClick={loadPostContent} className="btn-primary">
@@ -99,26 +108,26 @@ export default function ProductDetailPage() {
           <div className="space-y-4">
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Texto</span>
+                <span className="text-sm font-medium text-stone-700">Texto</span>
                 <button
                   type="button"
                   onClick={copyPostText}
-                  className="rounded bg-amber-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-600"
+                  className="btn-primary text-sm"
                 >
                   {copied ? "Copiado!" : "Copiar texto"}
                 </button>
               </div>
-              <pre className="max-h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm whitespace-pre-wrap text-slate-800">
+              <pre className="max-h-48 overflow-auto rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm whitespace-pre-wrap text-stone-800">
                 {postContent.text}
               </pre>
             </div>
             {postContent.imageUrl && (
               <div>
-                <span className="mb-2 block text-sm font-medium text-slate-700">Imagem</span>
+                <span className="mb-2 block text-sm font-medium text-stone-700">Imagem</span>
                 <img
                   src={postContent.imageUrl}
                   alt="Produto"
-                  className="max-h-64 rounded-lg border border-slate-200 object-contain shadow-sm"
+                  className="max-h-64 rounded-xl border border-stone-200 object-contain shadow-sm"
                 />
               </div>
             )}
