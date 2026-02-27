@@ -58,26 +58,20 @@ export default function CampaignsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Campanhas</h2>
-        <a
-          href="/campanhas/nova"
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
+        <h2 className="text-xl font-semibold text-slate-800">Campanhas</h2>
+        <a href="/campanhas/nova" className="btn-primary">
           Nova campanha
         </a>
       </div>
 
       <ul className="space-y-4">
         {campaigns.length === 0 && (
-          <li className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">
+          <li className="card p-8 text-center text-slate-500">
             Nenhuma campanha. Crie uma e adicione produtos aprovados.
           </li>
         )}
         {campaigns.map((c) => (
-          <li
-            key={c.id}
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <li key={c.id} className="card flex items-center justify-between p-4">
             <div>
               <p className="font-medium">{c.name}</p>
               <p className="text-sm text-slate-500">
@@ -86,17 +80,11 @@ export default function CampaignsPage() {
             </div>
             <div className="flex gap-2">
               {["draft", "scheduled"].includes(c.status) && (
-                <button
-                  onClick={() => setSendModal(c)}
-                  className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-                >
+                <button onClick={() => setSendModal(c)} className="btn-primary text-sm">
                   Enviar agora
                 </button>
               )}
-              <a
-                href={`/campanhas/${c.id}`}
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
-              >
+              <a href={`/campanhas/${c.id}`} className="btn-secondary text-sm">
                 Ver
               </a>
             </div>
@@ -106,7 +94,7 @@ export default function CampaignsPage() {
 
       {sendModal && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="card w-full max-w-md p-6 shadow-xl">
             <h3 className="mb-2 font-semibold">Enviar agora: {sendModal.name}</h3>
             <p className="mb-4 text-sm text-slate-600">
               Um número por linha ou separados por vírgula (com DDD, ex: 11999999999)
@@ -116,19 +104,16 @@ export default function CampaignsPage() {
               onChange={(e) => setPhones(e.target.value)}
               placeholder="11999999999&#10;21988887777"
               rows={5}
-              className="mb-4 w-full rounded border border-slate-300 p-2 text-sm"
+              className="input mb-4 w-full"
             />
             <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setSendModal(null)}
-                className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
-              >
+              <button onClick={() => setSendModal(null)} className="btn-secondary">
                 Cancelar
               </button>
               <button
                 onClick={handleSendNow}
                 disabled={sending}
-                className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                className="btn-primary disabled:opacity-50"
               >
                 {sending ? "Enfileirando..." : "Enviar"}
               </button>

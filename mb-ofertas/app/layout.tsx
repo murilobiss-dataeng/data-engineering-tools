@@ -13,15 +13,29 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        <header className="border-b border-slate-200 bg-white">
+      <body className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 antialiased">
+        <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-            <h1 className="text-lg font-semibold">MB Ofertas</h1>
-            <nav className="flex gap-6">
-              <a href="/" className="text-slate-600 hover:text-slate-900">
+            <a href="/" className="text-lg font-bold tracking-tight text-emerald-700 hover:text-emerald-800">
+              MB Ofertas
+            </a>
+            <nav className="flex gap-1">
+              <a
+                href="/gerar-oferta"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                Gerar oferta
+              </a>
+              <a
+                href="/"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              >
                 Produtos
               </a>
-              <a href="/campanhas" className="text-slate-600 hover:text-slate-900">
+              <a
+                href="/campanhas"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              >
                 Campanhas
               </a>
             </nav>

@@ -35,3 +35,13 @@ export type Campaign = {
 };
 
 export type Category = { id: string; name: string; slug: string };
+
+export type ScrapedProduct = {
+  title: string;
+  price: number;
+  previousPrice: number | null;
+  discountPct: number | null;
+  imageUrl: string | null;
+  affiliateLink: string;
+  rawUrl: string;
+};

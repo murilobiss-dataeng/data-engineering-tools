@@ -61,3 +61,33 @@ export function generateUrgentOfferMessage(product: ProductInput, shortLink?: st
   const header = `${EMOJIS.fire} OFERTA DO DIA ${EMOJIS.fire}\n`;
   return header + base.replace(`${EMOJIS.fire} OFERTA DO DIA`, "").trim();
 }
+
+/**
+ * Conteúdo pronto para post (rede social / WhatsApp): texto + URL da imagem.
+ * Use imageUrl para baixar/colar a foto; text para copiar e colar o texto.
+ */
+export function generatePostContent(product: ProductInput, options?: { shortLink?: string }): { text: string; imageUrl: string | null } {
+  const link = options?.shortLink ?? product.affiliateLink;
+  const lines: string[] = [];
+
+  lines.push(`${EMOJIS.fire} OFERTA DO DIA`);
+  lines.push("");
+  lines.push(product.title);
+  lines.push("");
+
+  if (product.previousPrice != null && product.previousPrice > product.price) {
+    lines.push(`${EMOJIS.money} De: ${formatPrice(product.previousPrice)} por ${formatPrice(product.price)}`);
+    if (product.discountPct != null && product.discountPct > 0) {
+      lines.push(`${EMOJIS.tag} ${product.discountPct}% OFF`);
+    }
+  } else {
+    lines.push(`${EMOJIS.money} ${formatPrice(product.price)}`);
+  }
+
+  lines.push("");
+  lines.push("⏰ Oferta por tempo limitado. Aproveite!");
+  lines.push("");
+  lines.push(`${EMOJIS.arrow} ${link}`);
+
+  return { text: lines.join("\n"), imageUrl: product.imageUrl ?? null };
+}
