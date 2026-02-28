@@ -11,6 +11,7 @@
     "pipeline": "tsx src/pipeline/daily.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:generate": "tsx src/db/generate-migration.ts",
+    "db:drop": "tsx src/db/drop.ts",
     "db:test": "tsx src/db/test-connection.ts",
     "fetch-ofertas": "tsx src/pipeline/fetch-ofertas.ts"
   },

@@ -41,7 +41,7 @@ export async function initPool(): Promise<pg.Pool> {
   poolInit = (async () => {
     const connectionString = await buildConnectionString();
     const isSupabase = connectionString.includes("supabase.co") || connectionString.includes("pooler.supabase.com");
-    const maxConnections = env.DATABASE_POOL_MAX ?? (isSupabase ? 3 : 20);
+    const maxConnections = env.DATABASE_POOL_MAX ?? (isSupabase ? 1 : 20);
     pool = new Pool({
       connectionString,
       max: maxConnections,
