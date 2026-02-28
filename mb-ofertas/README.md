@@ -51,6 +51,14 @@ cp .env.example .env
 npm run db:migrate
 ```
 
+Se o banco já existia antes da coluna `installments` (erro "column installments does not exist" em produção), rode no backend:
+
+```bash
+cd backend && npm run db:ensure-columns
+```
+
+(No Render: use **Shell** do serviço ou adicione um passo no deploy que execute `npm run db:ensure-columns` com `DATABASE_URL` configurada.)
+
 4. **Subir API e Redis (local)**
 
 Com Docker:

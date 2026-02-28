@@ -53,6 +53,8 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   lines.push("⏰ Oferta por tempo limitado. Aproveite!");
   lines.push("");
   lines.push(`${EMOJIS.arrow} ${link}`);
+  lines.push("");
+  lines.push("⚠️ Valores e disponibilidade podem variar. Confira no site no momento da compra.");
 
   return lines.join("\n");
 }
@@ -103,6 +105,8 @@ export function generatePostContent(
   lines.push("⏰ Oferta por tempo limitado. Aproveite!");
   lines.push("");
   lines.push(`${EMOJIS.arrow} ${link}`);
+  lines.push("");
+  lines.push("⚠️ Valores e disponibilidade podem variar. Confira no site no momento da compra.");
 
   return { text: lines.join("\n"), imageUrl: product.imageUrl ?? null };
 }

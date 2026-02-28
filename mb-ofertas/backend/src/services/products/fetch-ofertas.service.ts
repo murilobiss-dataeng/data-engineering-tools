@@ -18,9 +18,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function getSource(url: string): "amazon" | "mercadolivre" {
+function getSource(url: string): "amazon" | "mercadolivre" | "shopee" {
   const u = url.toLowerCase();
-  return u.includes("mercadolivre") || u.includes("mercadolibre") ? "mercadolivre" : "amazon";
+  if (u.includes("mercadolivre") || u.includes("mercadolibre")) return "mercadolivre";
+  if (u.includes("shopee")) return "shopee";
+  return "amazon";
 }
 
 /** Diretório raiz do backend (funciona com tsx e com node dist/). */
@@ -28,6 +30,16 @@ function getBackendRoot(): string {
   const cwd = process.cwd();
   if (cwd.endsWith("backend")) return cwd;
   return join(cwd, "backend");
+}
+
+/** URLs padrão de listagem para busca automática (Amazon, ML, Shopee). */
+export function getDefaultListingUrls(): string[] {
+  return [
+    "https://www.amazon.com.br/deals",
+    "https://www.mercadolivre.com.br/ofertas",
+    "https://shopee.com.br/flash-sale",
+    "https://shopee.com.br/",
+  ];
 }
 
 function loadUrlsFromConfig(): string[] {
@@ -76,7 +88,8 @@ export type FetchOfertasResult = {
  * Pode ser chamado pelo script CLI ou pelo endpoint da API (UI).
  */
 export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promise<FetchOfertasResult> {
-  const urls = options.urls?.length ? options.urls : loadUrlsFromConfig();
+  const configUrls = options.urls?.length ? options.urls : loadUrlsFromConfig();
+  const urls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
   const delayMs = options.delayMs ?? DEFAULT_DELAY_MS;
   const maxPerListing = options.maxPerListing ?? DEFAULT_MAX_PER_LISTING;
 
@@ -97,7 +110,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
             const scraped = await scrapeProductFromUrl(productUrl);
             const source = getSource(scraped.rawUrl);
             const input = { ...scrapedToProductInput(scraped), source };
-            const categorySlug = inferCategorySlugFromTitle(scraped.title);
+            const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
             const category = await categoriesRepo.getCategoryBySlug(categorySlug);
             if (category) input.categoryId = category.id;
             await productsRepo.insertProduct(input);
@@ -113,7 +126,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         const scraped = await scrapeProductFromUrl(url);
         const source = getSource(scraped.rawUrl);
         const input = { ...scrapedToProductInput(scraped), source };
-        const categorySlug = inferCategorySlugFromTitle(scraped.title);
+        const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
         const category = await categoriesRepo.getCategoryBySlug(categorySlug);
         if (category) input.categoryId = category.id;
         await productsRepo.insertProduct(input);

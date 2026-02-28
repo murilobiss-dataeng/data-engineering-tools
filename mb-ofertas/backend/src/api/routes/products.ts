@@ -117,7 +117,7 @@ productsRouter.post("/", async (req, res) => {
     }
     let categoryId = body.categoryId ?? null;
     if (!categoryId && body.title) {
-      const slug = inferCategorySlugFromTitle(body.title);
+      const slug = inferCategorySlugFromTitle(body.title, { discountPct: body.discountPct });
       const cat = await categoriesRepo.getCategoryBySlug(slug);
       if (cat) categoryId = cat.id;
     }

@@ -47,16 +47,36 @@ const CATEGORY_KEYWORDS: { slug: string; keywords: string[] }[] = [
       "limpeza", "vassoura", "rodo", "balde", "desinfetante",
     ],
   },
+  {
+    slug: "fitness",
+    keywords: [
+      "fitness", "academia", "musculação", "musculacao", "treino", "suplemento",
+      "whey", "proteína", "proteina", "creatina", "pré-treino", "pre treino",
+      "bcaa", "termogênico", "termogenico", "colchonete", "peso", "halter",
+      "elástico", "elastico", "corda", "pular", "abdominal", "esteira",
+      "bicicleta ergométrica", "ergometrica", "luvas academia", "cinta",
+    ],
+  },
 ];
 
-const DEFAULT_SLUG = "ofertas-do-dia";
+const SLUG_OUTROS = "outros";
+const SLUG_OFERTA_DO_DIA = "oferta-do-dia";
+const DESCONTO_MIN_OFERTA_DIA = 40;
 
 /**
- * Infere o slug da categoria a partir do título do produto (e opcionalmente da fonte).
- * Útil para segmentar ofertas por canal WhatsApp.
+ * Infere o slug da categoria a partir do título (e opcionalmente do desconto).
+ * Oferta do dia: somente quando desconto > 40% e nenhuma outra categoria bateu.
+ * Caso contrário, fallback em "outros".
  */
-export function inferCategorySlugFromTitle(title: string): string {
-  if (!title || typeof title !== "string") return DEFAULT_SLUG;
+export function inferCategorySlugFromTitle(
+  title: string,
+  options?: { discountPct?: number | null }
+): string {
+  if (!title || typeof title !== "string") {
+    return options?.discountPct != null && options.discountPct > DESCONTO_MIN_OFERTA_DIA
+      ? SLUG_OFERTA_DO_DIA
+      : SLUG_OUTROS;
+  }
   const lower = title.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
   for (const { slug, keywords } of CATEGORY_KEYWORDS) {
@@ -66,5 +86,8 @@ export function inferCategorySlugFromTitle(title: string): string {
     }
   }
 
-  return DEFAULT_SLUG;
+  if (options?.discountPct != null && options.discountPct > DESCONTO_MIN_OFERTA_DIA) {
+    return SLUG_OFERTA_DO_DIA;
+  }
+  return SLUG_OUTROS;
 }

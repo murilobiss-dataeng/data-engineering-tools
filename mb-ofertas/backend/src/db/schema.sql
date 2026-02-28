@@ -90,13 +90,15 @@ CREATE TABLE IF NOT EXISTS send_counters (
   UNIQUE(window_at)
 );
 
--- Seed categorias iniciais
+-- Seed categorias iniciais: Casa, Católicos, Eletrônicos, Livros, Fitness, Oferta do dia (>40% off), Outros
 INSERT INTO categories (name, slug) VALUES
+  ('Casa', 'casa'),
+  ('Católicos', 'catolicos'),
   ('Eletrônicos', 'eletronicos'),
   ('Livros', 'livros'),
-  ('Católicos', 'catolicos'),
-  ('Casa', 'casa'),
-  ('Ofertas do dia', 'ofertas-do-dia')
+  ('Fitness', 'fitness'),
+  ('Oferta do dia', 'oferta-do-dia'),
+  ('Outros', 'outros')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Coluna installments (para bancos já existentes)

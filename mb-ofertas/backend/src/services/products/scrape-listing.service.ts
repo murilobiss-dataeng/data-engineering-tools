@@ -1,6 +1,6 @@
 /**
  * Extrai links de produtos a partir de páginas de listagem (ofertas, busca)
- * Amazon e Mercado Livre. Para uso com o script de busca automática.
+ * Amazon, Mercado Livre e Shopee. Para uso com o script de busca automática.
  */
 import * as cheerio from "cheerio";
 import { logger } from "../../config/logger.js";
@@ -11,6 +11,7 @@ const BROWSER_UA =
 /** Padrões de URL de produto por site */
 const AMAZON_PRODUCT_PATH = /^\/(dp|gp\/product)\/[A-Z0-9]{10}/i;
 const ML_PRODUCT_PATH = /\/p\/[A-Z0-9]+|(?:listado|item)\.mercadolivre\.com\.br\/[^/]+_[A-Z0-9]+/i;
+const SHOPEE_PRODUCT_PATH = /\/[^/]+-i\.(\d+)\.(\d+)/i;
 
 function normalizeUrl(href: string, baseUrl: string): string | null {
   try {
@@ -28,6 +29,11 @@ function normalizeUrl(href: string, baseUrl: string): string | null {
     if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
       if (/\/p\/[A-Z0-9]+/.test(path)) return u.origin + path;
       if (path.includes("MLB") && path.length < 200) return u.origin + path;
+      return null;
+    }
+    // Shopee: produto -i.shopid.itemid
+    if (host.includes("shopee")) {
+      if (SHOPEE_PRODUCT_PATH.test(path) && path.length < 500) return u.origin + path;
       return null;
     }
     return null;
@@ -88,6 +94,10 @@ export function looksLikeListingPage(url: string): boolean {
     // ML: /ofertas, /lista, busca
     if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
       return path.includes("/ofertas") || path.includes("/lista") || path.includes("/busca") || path === "/";
+    }
+    // Shopee: flash sale, categorias, busca
+    if (host.includes("shopee")) {
+      return path.includes("/flash-sale") || path.includes("/cat/") || path.includes("/search") || path === "/" || path === "";
     }
     return false;
   } catch {

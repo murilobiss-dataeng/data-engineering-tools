@@ -1,36 +1,22 @@
 /**
- * Pipeline diário: buscar produtos → filtrar → gerar copy → salvar.
+ * Pipeline diário: buscar produtos em listagens (Amazon, ML, Shopee) → categorizar → salvar.
  * Agende com cron: 0 9,12,18 * * * (9h, 12h, 18h)
  */
 import "dotenv/config";
-import { captureAmazonDeals } from "../services/products/amazon.service.js";
-import * as productsRepo from "../repositories/products.repository.js";
+import { runFetchOfertas, getDefaultListingUrls } from "../services/products/fetch-ofertas.service.js";
 import { logger } from "../config/logger.js";
 
 async function run() {
   logger.info("Pipeline daily: start");
 
-  const categories = ["ofertas-do-dia", "eletronicos", "livros"];
-  let totalInserted = 0;
+  const urls = getDefaultListingUrls();
+  const result = await runFetchOfertas({
+    urls,
+    maxPerListing: 15,
+    delayMs: 2500,
+  });
 
-  for (const slug of categories) {
-    try {
-      const result = await captureAmazonDeals(slug);
-      for (const p of result.products) {
-        try {
-          await productsRepo.insertProduct({ ...p, categoryId: undefined });
-          totalInserted++;
-        } catch (e) {
-          // duplicata por external_id
-          logger.debug({ err: e }, "Skip duplicate product");
-        }
-      }
-    } catch (err) {
-      logger.warn({ err, slug }, "Capture failed for category");
-    }
-  }
-
-  logger.info({ totalInserted }, "Pipeline daily: done");
+  logger.info({ inserted: result.inserted, failed: result.failed, totalUrls: result.totalUrls }, "Pipeline daily: done");
   process.exit(0);
 }
 

@@ -12,6 +12,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:generate": "tsx src/db/generate-migration.ts",
     "db:drop": "tsx src/db/drop.ts",
+    "db:ensure-columns": "tsx src/db/ensure-columns.ts",
     "db:test": "tsx src/db/test-connection.ts",
     "fetch-ofertas": "tsx src/pipeline/fetch-ofertas.ts"
   },

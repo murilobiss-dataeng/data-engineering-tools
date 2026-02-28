@@ -1,5 +1,5 @@
 /**
- * Extrai dados de produto a partir de uma URL (Amazon ou Mercado Livre).
+ * Extrai dados de produto a partir de uma URL (Amazon, Mercado Livre ou Shopee).
  * Usa fetch + Cheerio; sem API oficial. Para uso ético (delay, cache, ToS).
  */
 import * as cheerio from "cheerio";
@@ -49,6 +49,16 @@ function isMercadoLivreUrl(url: string): boolean {
   }
 }
 
+function isShopeeUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    return host === "shopee.com.br" || host === "shopee.br" || host.endsWith(".shopee.com.br");
+  } catch {
+    return false;
+  }
+}
+
 /** Adiciona/ substitui tag de afiliado na URL da Amazon. */
 function withPartnerTag(url: string): string {
   if (!PARTNER_TAG) return url;
@@ -59,6 +69,16 @@ function withPartnerTag(url: string): string {
   } catch {
     return url;
   }
+}
+
+/** Extrai link curto amzn.to do HTML (Amazon não oferece API para criar; usamos se a página tiver). */
+function extractAmznShortLink(html: string): string | null {
+  const m = html.match(/https?:\/\/amzn\.to\/[a-zA-Z0-9]+/i) || html.match(/"amzn\.to\/[a-zA-Z0-9]+"/i);
+  if (m) {
+    const raw = m[0].replace(/^"|"$/g, "");
+    return raw.startsWith("http") ? raw : `https://${raw}`;
+  }
+  return null;
 }
 
 /** Extrai preço de string "R$ 99,90" ou "99,90" ou "99.90". */
@@ -178,23 +198,39 @@ function extractFromJsonLd(html: string): Partial<ScrapedProduct> | null {
 function extractPriceFromPageJson(html: string): { price: number; listPrice?: number } | null {
   // priceToPay = preço que o cliente paga (evita confusão com "por litro")
   const priceToPayMatch = html.match(/priceToPay["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
+  let price: number | null = null;
+  let listPrice: number | undefined;
   if (priceToPayMatch) {
     const p = parseFloat(priceToPayMatch[1]);
-    if (Number.isFinite(p) && p > 0 && p < 1000000) {
-      let listPrice: number | undefined;
-      const listMatch = html.match(/basisPrice["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
-      if (listMatch) {
-        const lp = parseFloat(listMatch[1]);
-        if (Number.isFinite(lp) && lp > p) listPrice = lp;
-      }
-      return { price: p, listPrice };
+    if (Number.isFinite(p) && p > 0 && p < 1000000) price = p;
+  }
+  if (price == null) {
+    const amountMatch = html.match(/"amount":\s*([\d.]+)/);
+    if (amountMatch) {
+      const p = parseFloat(amountMatch[1]);
+      if (Number.isFinite(p) && p > 0 && p < 1000000) price = p;
     }
   }
-  const amountMatch = html.match(/"amount":\s*([\d.]+)/);
-  if (amountMatch) {
-    const p = parseFloat(amountMatch[1]);
-    if (Number.isFinite(p) && p > 0 && p < 1000000) return { price: p };
+  // Preço de lista: basisPrice, savingsBasis, strikePrice, wasPrice, listPrice, regularPrice
+  const listPatterns = [
+    /basisPrice["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+    /savingsBasis["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+    /"strikePrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+    /"wasPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+    /"listPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+    /"regularPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
+  ];
+  for (const re of listPatterns) {
+    const m = html.match(re);
+    if (m) {
+      const lp = parseFloat(m[1]);
+      if (Number.isFinite(lp) && lp > 0 && lp < 1000000 && (price == null || lp > price)) {
+        listPrice = lp;
+        break;
+      }
+    }
   }
+  if (price != null) return { price, listPrice };
   return null;
 }
 
@@ -273,10 +309,13 @@ function extractMercadoLivreFromHtml(
   // Preço original (riscado) — ML: várias classes possíveis
   const listSelectors = [
     ".ui-pdp-price--original .andes-money-amount__fraction",
+    ".ui-pdp-price__original-value .andes-money-amount__fraction",
     ".andes-money-amount--previous .andes-money-amount__fraction",
     ".andes-money-amount--previous",
     ".ui-pdp-price__original-value",
     '[data-testid="original-price"] .andes-money-amount__fraction',
+    ".ui-pdp-price--secondary .andes-money-amount__fraction",
+    "[class*='original'] .andes-money-amount__fraction",
   ];
   for (const sel of listSelectors) {
     const el = $(sel).first();
@@ -287,18 +326,34 @@ function extractMercadoLivreFromHtml(
       if (listPrice != null) break;
     }
   }
-
-  // Fallback preço atual e original no JSON (ML: __PRELOADED_STATE__, window.__PRELOADED_STATE__, etc.)
-  const jsonPriceMatch = html.match(/"price":\s*([\d.]+)/);
-  const jsonOriginalMatch = html.match(/"original_price":\s*([\d.]+)|"list_price":\s*([\d.]+)|"prices"\s*:\s*\{[^}]*"original"\s*:\s*([\d.]+)/);
-  if (jsonPriceMatch && price == null) {
-    const p = parseFloat(jsonPriceMatch[1]);
-    if (p > 0 && p < 1000000) price = p;
+  if (listPrice == null) {
+    const parent = $(".ui-pdp-price__second-line, .ui-pdp-price--secondary, [class*='original']").first();
+    if (parent.length) {
+      const full = parent.text();
+      const p = parsePrice(full);
+      if (p != null && p > 0 && (price == null || p > price)) listPrice = p;
+    }
   }
-  if (jsonOriginalMatch && listPrice == null) {
-    const raw = jsonOriginalMatch[1] ?? jsonOriginalMatch[2] ?? jsonOriginalMatch[3];
+
+  // Preço atual e original no JSON (ML: __PRELOADED_STATE__, initial state, API de preços)
+  const jsonPriceMatch = html.match(/"price":\s*([\d.]+)|"amount":\s*([\d.]+)(?=\s*[,}])/);
+  if (jsonPriceMatch && price == null) {
+    const raw = jsonPriceMatch[1] ?? jsonPriceMatch[2];
     if (raw) {
       const p = parseFloat(raw);
+      if (p > 0 && p < 1000000) price = p;
+    }
+  }
+  // regular_amount = preço original (API ML); original_price, list_price, previous (HTML/JSON)
+  const jsonOriginalMatch = html.match(
+   /"regular_amount"\s*:\s*([\d.]+)|"original_price"\s*:\s*([\d.]+)|"list_price"\s*:\s*([\d.]+)|"prices"\s*:\s*\{[^}]*"original"\s*:\s*([\d.]+)|"previous"\s*:\s*\{[^}]*"amount"\s*:\s*([\d.]+)|"base_price"\s*:\s*([\d.]+)/
+  );
+  if (jsonOriginalMatch && listPrice == null) {
+    const raw =
+      jsonOriginalMatch[1] ?? jsonOriginalMatch[2] ?? jsonOriginalMatch[3] ?? jsonOriginalMatch[4] ?? jsonOriginalMatch[5] ?? jsonOriginalMatch[6];
+    if (raw) {
+      let p = parseFloat(raw);
+      if (p > 10000 && p < 100000000) p = p / 100;
       if (p > 0 && p < 1000000 && (price == null || p > price)) listPrice = p;
     }
   }
@@ -335,8 +390,70 @@ function extractMercadoLivreFromHtml(
   return { title, price: price ?? 0, listPrice, imageUrl, installments };
 }
 
+/** Extrai título, preço e imagem da página da Shopee (og + JSON embutido quando disponível). */
+function extractShopeeFromHtml(
+  $: cheerio.CheerioAPI,
+  html: string
+): { title: string; price: number; listPrice: number | null; imageUrl: string | null; installments: string | null } {
+  const ogTitle = $('meta[property="og:title"]').attr("content")?.trim() ?? "";
+  let title =
+    $(".shopee-product-info__header__text").first().text().trim() ||
+    $("[data-sqe='name']").first().text().trim() ||
+    $("h1").first().text().trim() ||
+    ogTitle ||
+    "";
+
+  let price: number | null = null;
+  let listPrice: number | null = null;
+
+  const saleMatch = html.match(/"sale_price"\s*:\s*([\d.]+)|"min_price"\s*:\s*([\d.]+)/);
+  if (saleMatch) {
+    const raw = saleMatch[1] ?? saleMatch[2];
+    if (raw) {
+      const p = parseFloat(raw);
+      if (p > 0 && p < 10000000) price = p;
+    }
+  }
+  if (price == null) {
+    const priceMatch = html.match(/"price"\s*:\s*([\d.]+)/);
+    if (priceMatch) {
+      const p = parseFloat(priceMatch[1]);
+      if (p > 0 && p < 10000000) price = p;
+    }
+  }
+  const listMatch = html.match(/"price_before_discount"\s*:\s*([\d.]+)|"original_price"\s*:\s*([\d.]+)/);
+  if (listMatch && listPrice == null) {
+    const raw = listMatch[1] ?? listMatch[2];
+    if (raw) {
+      const p = parseFloat(raw);
+      if (p > 0 && p < 10000000 && (price == null || p > price)) listPrice = p;
+    }
+  }
+  if (price == null) {
+    const reais = html.match(/R\$\s*[\d.,]+/g);
+    if (reais && reais.length > 0) {
+      const p = parsePrice(reais[0]);
+      if (p != null && p > 0) price = p;
+    }
+  }
+  const priceText = $(".shopee-product-info__price__current, [data-sqe='price'], .pqTWkA").first().text().trim();
+  if (price == null && priceText) {
+    const p = parsePrice(priceText);
+    if (p != null && p > 0) price = p;
+  }
+
+  const ogImage = $('meta[property="og:image"]').attr("content")?.trim() ?? null;
+  const imageUrl =
+    $(".shopee-product-info__images img").first().attr("src") ||
+    $("[data-sqe='image'] img").first().attr("src") ||
+    ogImage ||
+    null;
+
+  return { title, price: price ?? 0, listPrice, imageUrl, installments: null };
+}
+
 /**
- * Busca dados do produto na URL (Amazon ou Mercado Livre).
+ * Busca dados do produto na URL (Amazon, Mercado Livre ou Shopee).
  * Retorna dados para preencher ProductInput; falha se não conseguir título ou preço.
  */
 export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct> {
@@ -373,6 +490,13 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;
     installments = ml.installments;
+  } else if (isShopeeUrl(normalized)) {
+    const shopee = extractShopeeFromHtml($, html);
+    title = (shopee.title || ogTitle).slice(0, 500);
+    price = shopee.price;
+    listPrice = shopee.listPrice;
+    imageUrl = shopee.imageUrl || ogImage || null;
+    installments = shopee.installments;
   } else {
     // Amazon: priorizar priceToPay do JSON (preço real de compra, não "por litro")
     title =
@@ -405,7 +529,14 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
   if (price <= 0) throw new Error("Não foi possível obter o preço. A página pode ser dinâmica (JavaScript).");
 
   let affiliateLink = ogUrl || normalized;
-  if (isAmazonUrl(normalized)) affiliateLink = withPartnerTag(affiliateLink);
+  if (isAmazonUrl(normalized)) {
+    const shortLink = extractAmznShortLink(html);
+    if (shortLink) affiliateLink = shortLink;
+    else affiliateLink = withPartnerTag(affiliateLink);
+  }
+  if (isShopeeUrl(normalized)) {
+    affiliateLink = ogUrl || normalized;
+  }
 
   const previousPrice = listPrice != null && listPrice > price ? listPrice : null;
   const discountPct =
