@@ -8,6 +8,7 @@ export type ProductInput = {
   externalId?: string;
   source?: string;
   categoryId?: string | null;
+  installments?: string | null;
 };
 
 export type ProductCaptureResult = {

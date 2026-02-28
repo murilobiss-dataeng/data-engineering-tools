@@ -20,6 +20,7 @@ export type ScrapedProduct = {
   imageUrl: string | null;
   affiliateLink: string;
   rawUrl: string;
+  installments: string | null;
 };
 
 function isAmazonUrl(url: string): boolean {
@@ -69,37 +70,48 @@ function parsePrice(text: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Tenta extrair preço do HTML (Amazon BR/global). */
+/** Retorna true se o nó ou pais próximos indicam "preço por litro/kg" (não é o preço do produto). */
+function isPerUnitOrPerLiter($: cheerio.CheerioAPI, el: { closest: (s: string) => { length: number; text: () => string }; text: () => string }): boolean {
+  const block = el.closest("#corePrice_feature_div, #apex_desktop, .a-section, #twisterContainer");
+  const text = (block.length ? block : el).text().toLowerCase();
+  return (
+    /por\s*litro|por\s*kg|por\s*100\s*g|por\s*unidade\s*\(|preço\s*por\s*litro|preço\s*por\s*kg/i.test(text) &&
+    !/preço\s*por\s*unidade\s*[R$]|cada\s*unidade\s*[R$]/i.test(text)
+  );
+}
+
+/** Tenta extrair preço do HTML (Amazon BR/global). Evita preço "por litro/kg". */
 function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice: number | null } {
   let price: number | null = null;
   let listPrice: number | null = null;
 
-  // Preço atual: seletores comuns Amazon
+  // Preço atual: priorizar blocos que são claramente o preço de compra (não por litro)
   const selectors = [
+    "#corePrice_feature_div .a-offscreen",
+    "#corePriceDisplay_desktop_feature_div .a-offscreen",
+    ".priceToPay .a-offscreen",
     ".a-price .a-offscreen",
     "span.a-price .a-offscreen",
     "#priceblock_ourprice",
     "#priceblock_dealprice",
     "#priceblock_saleprice",
-    "#corePrice_feature_div .a-offscreen",
-    "#corePriceDisplay_desktop_feature_div .a-offscreen",
     '[data-a-color="price"] .a-offscreen',
-    ".priceToPay .a-offscreen",
     "#apex_desktop .a-offscreen",
   ];
   for (const sel of selectors) {
     const el = $(sel).first();
     if (el.length) {
+      if (isPerUnitOrPerLiter($, el)) continue;
       const text = el.text().trim();
       const p = parsePrice(text);
-      if (p != null && p > 0) {
+      if (p != null && p > 0 && p < 100000) {
         price = p;
         break;
       }
     }
   }
 
-  // Preço de lista (riscado)
+  // Preço de lista (riscado) — evitar blocos "por litro"
   const listSelectors = [
     ".a-price.a-text-price .a-offscreen",
     "#priceblock_retailprice",
@@ -109,23 +121,24 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
   for (const sel of listSelectors) {
     const el = $(sel).first();
     if (el.length) {
+      if (isPerUnitOrPerLiter($, el)) continue;
       const text = el.text().trim();
       const p = parsePrice(text);
-      if (p != null && p > 0 && (price == null || p > price)) {
+      if (p != null && p > 0 && p < 100000 && (price == null || p > price)) {
         listPrice = p;
         break;
       }
     }
   }
 
-  // Fallback: busca por padrão "R$ X,XX" no HTML
+  // Fallback: busca por padrão "R$ X,XX" no HTML (evitar valores absurdos tipo 102 quando é "por litro")
   if (price == null) {
     const body = $.html();
     const priceMatch = body.match(/R\$\s*[\d.,]+|[\d.,]+\s*R\$|"amount"\s*:\s*([\d.]+)/);
     if (priceMatch) {
       const raw = priceMatch[1] ? priceMatch[1] : priceMatch[0];
       const p = parsePrice(raw);
-      if (p != null && p > 0) price = p;
+      if (p != null && p > 0 && p < 100000) price = p;
     }
   }
 
@@ -161,23 +174,62 @@ function extractFromJsonLd(html: string): Partial<ScrapedProduct> | null {
   }
 }
 
-/** Busca JSON de estado da página (Amazon às vezes expõe preço aqui). */
+/** Busca JSON de estado da página (Amazon). priceToPay = preço real de compra (não por litro). */
 function extractPriceFromPageJson(html: string): { price: number; listPrice?: number } | null {
-  // Padrão comum: "priceToPay":{"amount":99.9 ou "formattedString":"R$ 99,90"
+  // priceToPay = preço que o cliente paga (evita confusão com "por litro")
   const priceToPayMatch = html.match(/priceToPay["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
-  const amountMatch = html.match(/"amount":\s*([\d.]+)/);
-  const formattedMatch = html.match(/R\$\s*([\d.,]+)/g);
   if (priceToPayMatch) {
     const p = parseFloat(priceToPayMatch[1]);
-    if (Number.isFinite(p)) return { price: p };
+    if (Number.isFinite(p) && p > 0 && p < 1000000) {
+      let listPrice: number | undefined;
+      const listMatch = html.match(/basisPrice["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
+      if (listMatch) {
+        const lp = parseFloat(listMatch[1]);
+        if (Number.isFinite(lp) && lp > p) listPrice = lp;
+      }
+      return { price: p, listPrice };
+    }
   }
+  const amountMatch = html.match(/"amount":\s*([\d.]+)/);
   if (amountMatch) {
     const p = parseFloat(amountMatch[1]);
     if (Number.isFinite(p) && p > 0 && p < 1000000) return { price: p };
   }
-  if (formattedMatch && formattedMatch.length > 0) {
-    const p = parsePrice(formattedMatch[0]);
-    if (p != null) return { price: p };
+  return null;
+}
+
+/** Extrai texto de parcelamento (ex.: "em 12x de R$ 25,00 sem juros"). */
+function extractInstallmentsAmazon($: cheerio.CheerioAPI, html: string): string | null {
+  const selectors = [
+    "#installmentCalculatorFeature .a-text-bold",
+    ".installmentPrice",
+    "[data-cel-widget*='installment']",
+    ".a-section .a-size-base.a-color-secondary",
+  ];
+  for (const sel of selectors) {
+    const el = $(sel).first();
+    if (el.length) {
+      const text = el.text().trim();
+      const m = text.match(/em\s*\d+x\s*(?:de\s*)?R\$\s*[\d.,]+(?:\s*sem\s*juros)?/i) || text.match(/\d+x\s*de\s*R\$\s*[\d.,]+/i);
+      if (m && m[0].length > 5) return m[0].trim();
+    }
+  }
+  const match = html.match(/(?:em\s*)?(\d+x)\s*de\s*R\$\s*[\d.,]+(?:\s*sem\s*juros)?/i);
+  return match ? (match[0].startsWith("em") ? match[0] : `em ${match[0]}`).trim() : null;
+}
+
+/** Extrai parcelamento Mercado Livre. */
+function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
+  const sel = [
+    ".ui-pdp-payment__title",
+    ".ui-pdp-installments",
+    "[data-testid='installment-option']",
+    ".cf-installments",
+  ];
+  for (const s of sel) {
+    const text = $(s).first().text().trim();
+    const m = text.match(/em\s*\d+x\s*(?:de\s*)?R\$\s*[\d.,]+(?:\s*sem\s*juros)?/i) || text.match(/\d+x\s*de\s*R\$\s*[\d.,]+/i);
+    if (m && m[0].length > 5) return m[0].trim();
   }
   return null;
 }
@@ -186,7 +238,7 @@ function extractPriceFromPageJson(html: string): { price: number; listPrice?: nu
 function extractMercadoLivreFromHtml(
   $: cheerio.CheerioAPI,
   html: string
-): { title: string; price: number; listPrice: number | null; imageUrl: string | null } {
+): { title: string; price: number; listPrice: number | null; imageUrl: string | null; installments: string | null } {
   let title =
     $(".ui-pdp-title").first().text().trim() ||
     $("h1.ui-pdp-title").text().trim() ||
@@ -218,11 +270,13 @@ function extractMercadoLivreFromHtml(
     }
   }
 
-  // Preço original (riscado)
+  // Preço original (riscado) — ML: várias classes possíveis
   const listSelectors = [
-    ".andes-money-amount--previous .andes-money-amount__fraction",
     ".ui-pdp-price--original .andes-money-amount__fraction",
+    ".andes-money-amount--previous .andes-money-amount__fraction",
     ".andes-money-amount--previous",
+    ".ui-pdp-price__original-value",
+    '[data-testid="original-price"] .andes-money-amount__fraction',
   ];
   for (const sel of listSelectors) {
     const el = $(sel).first();
@@ -230,13 +284,26 @@ function extractMercadoLivreFromHtml(
       const text = el.text().trim();
       const p = parsePrice(text);
       if (p != null && p > 0 && (price == null || p > price)) listPrice = p;
-      break;
+      if (listPrice != null) break;
     }
   }
 
-  // Fallback: JSON embutido (ML usa __PRELOADED_STATE__ ou similar)
+  // Fallback preço atual e original no JSON (ML: __PRELOADED_STATE__, window.__PRELOADED_STATE__, etc.)
+  const jsonPriceMatch = html.match(/"price":\s*([\d.]+)/);
+  const jsonOriginalMatch = html.match(/"original_price":\s*([\d.]+)|"list_price":\s*([\d.]+)|"prices"\s*:\s*\{[^}]*"original"\s*:\s*([\d.]+)/);
+  if (jsonPriceMatch && price == null) {
+    const p = parseFloat(jsonPriceMatch[1]);
+    if (p > 0 && p < 1000000) price = p;
+  }
+  if (jsonOriginalMatch && listPrice == null) {
+    const raw = jsonOriginalMatch[1] ?? jsonOriginalMatch[2] ?? jsonOriginalMatch[3];
+    if (raw) {
+      const p = parseFloat(raw);
+      if (p > 0 && p < 1000000 && (price == null || p > price)) listPrice = p;
+    }
+  }
   if (price == null) {
-    const priceInJson = html.match(/"price":\s*([\d.]+)|"original_price":\s*([\d.]+)|"amount":\s*([\d.]+)/g);
+    const priceInJson = html.match(/"amount":\s*([\d.]+)/g);
     if (priceInJson) {
       for (const part of priceInJson) {
         const m = part.match(/([\d.]+)/);
@@ -264,7 +331,8 @@ function extractMercadoLivreFromHtml(
     $(".ui-pdp-image__source").first().attr("src") ||
     null;
 
-  return { title, price: price ?? 0, listPrice, imageUrl };
+  const installments = extractInstallmentsML($);
+  return { title, price: price ?? 0, listPrice, imageUrl, installments };
 }
 
 /**
@@ -293,9 +361,10 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
   const ogUrl = $('meta[property="og:url"]').attr("content")?.trim() || normalized;
 
   let title: string;
-  let price: number;
+  let price: number = 0;
   let listPrice: number | null = null;
   let imageUrl: string | null = null;
+  let installments: string | null = null;
 
   if (isMercadoLivreUrl(normalized)) {
     const ml = extractMercadoLivreFromHtml($, html);
@@ -303,8 +372,9 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     price = ml.price;
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;
+    installments = ml.installments;
   } else {
-    // Amazon ou genérico
+    // Amazon: priorizar priceToPay do JSON (preço real de compra, não "por litro")
     title =
       $("#productTitle").text().trim() ||
       $("#title").text().trim() ||
@@ -313,21 +383,22 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       "";
     title = title.slice(0, 500);
 
-    let result = extractPriceFromHtml($);
-    price = result.price;
-    listPrice = result.listPrice;
+    const fromJson = extractPriceFromPageJson(html);
+    if (fromJson) {
+      price = fromJson.price;
+      listPrice = fromJson.listPrice ?? listPrice;
+    }
     if (price <= 0) {
-      const fromJson = extractPriceFromPageJson(html);
-      if (fromJson) {
-        price = fromJson.price;
-        listPrice = fromJson.listPrice ?? listPrice;
-      }
+      const result = extractPriceFromHtml($);
+      price = result.price;
+      listPrice = result.listPrice ?? listPrice;
     }
     if (price <= 0) {
       const fromLd = extractFromJsonLd(html);
       if (fromLd?.price) price = fromLd.price as number;
     }
     imageUrl = ogImage || $("#landingImage").attr("src") || $("#imgBlkFront").attr("src") || null;
+    installments = extractInstallmentsAmazon($, html);
   }
 
   if (!title) throw new Error("Não foi possível obter o título do produto.");
@@ -350,6 +421,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     imageUrl,
     affiliateLink,
     rawUrl: normalized,
+    installments,
   };
 }
 
@@ -362,6 +434,7 @@ export function scrapedToProductInput(scraped: ScrapedProduct, categoryId?: stri
     discountPct: scraped.discountPct,
     affiliateLink: scraped.affiliateLink,
     imageUrl: scraped.imageUrl,
+    installments: scraped.installments ?? undefined,
     source: "amazon",
     categoryId,
   };

@@ -45,6 +45,10 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
     lines.push(`${EMOJIS.money} ${formatPrice(product.price)}`);
   }
 
+  if (product.installments?.trim()) {
+    lines.push(product.installments.trim());
+  }
+
   lines.push("");
   lines.push("⏰ Oferta por tempo limitado. Aproveite!");
   lines.push("");
@@ -64,9 +68,12 @@ export function generateUrgentOfferMessage(product: ProductInput, shortLink?: st
 
 /**
  * Conteúdo pronto para post (rede social / WhatsApp): texto + URL da imagem.
- * Use imageUrl para baixar/colar a foto; text para copiar e colar o texto.
+ * options.coupon: se preenchido, inclui linha "CUPOM: XXX" em maiúsculas.
  */
-export function generatePostContent(product: ProductInput, options?: { shortLink?: string }): { text: string; imageUrl: string | null } {
+export function generatePostContent(
+  product: ProductInput,
+  options?: { shortLink?: string; coupon?: string }
+): { text: string; imageUrl: string | null } {
   const link = options?.shortLink ?? product.affiliateLink;
   const lines: string[] = [];
 
@@ -82,6 +89,14 @@ export function generatePostContent(product: ProductInput, options?: { shortLink
     }
   } else {
     lines.push(`${EMOJIS.money} ${formatPrice(product.price)}`);
+  }
+
+  if (product.installments?.trim()) {
+    lines.push(`${product.installments.trim()}`);
+  }
+
+  if (options?.coupon?.trim()) {
+    lines.push(`CUPOM: ${options.coupon.trim().toUpperCase()}`);
   }
 
   lines.push("");

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS products (
   status          VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, approved, rejected, sent
   approved_at     TIMESTAMPTZ,
   approved_by     UUID,
+  installments    TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(external_id, source)
@@ -97,3 +98,11 @@ INSERT INTO categories (name, slug) VALUES
   ('Casa', 'casa'),
   ('Ofertas do dia', 'ofertas-do-dia')
 ON CONFLICT (slug) DO NOTHING;
+
+-- Coluna installments (para bancos já existentes)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'installments') THEN
+    ALTER TABLE products ADD COLUMN installments TEXT;
+  END IF;
+END $$;

@@ -15,6 +15,7 @@ export default function GerarOfertaPage() {
   const [postImageUrl, setPostImageUrl] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
+  const [coupon, setCoupon] = useState("");
 
   async function handleBuscar() {
     if (!url.trim()) {
@@ -52,6 +53,8 @@ export default function GerarOfertaPage() {
           discountPct: product.discountPct,
           affiliateLink: product.affiliateLink,
           imageUrl: product.imageUrl,
+          installments: product.installments ?? undefined,
+          coupon: coupon.trim() || undefined,
         }),
       });
       setPostText(data.text);
@@ -89,6 +92,7 @@ export default function GerarOfertaPage() {
           discountPct: product.discountPct,
           affiliateLink: product.affiliateLink,
           imageUrl: product.imageUrl,
+          installments: product.installments ?? undefined,
           source: "amazon",
         }),
       });
@@ -199,6 +203,16 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="input-label">Parcelamento (opcional)</label>
+                  <input
+                    type="text"
+                    value={product.installments ?? ""}
+                    onChange={(e) => setProduct({ ...product, installments: e.target.value || null })}
+                    placeholder="ex.: em 12x de R$ 25,00 sem juros"
+                    className="input w-full"
+                  />
+                </div>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
@@ -219,13 +233,25 @@ export default function GerarOfertaPage() {
             <p className="mt-1 text-sm text-stone-600">
               Gere o texto e use a imagem abaixo. Copie e cole onde for postar (WhatsApp, redes sociais, etc.).
             </p>
-            <button
-              type="button"
-              onClick={handleGerarConteudo}
-              className="btn-primary mt-4"
-            >
-              Gerar conteúdo para post
-            </button>
+            <div className="mt-4 flex flex-wrap items-end gap-4">
+              <div className="min-w-[200px]">
+                <label className="mb-1 block text-sm font-medium text-stone-700">Cupom (opcional)</label>
+                <input
+                  type="text"
+                  value={coupon}
+                  onChange={(e) => setCoupon(e.target.value)}
+                  placeholder="Se vazio, não aparece no post"
+                  className="input w-full uppercase"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleGerarConteudo}
+                className="btn-primary"
+              >
+                Gerar conteúdo para post
+              </button>
+            </div>
 
             {postText != null && (
               <div className="mt-6 space-y-4">

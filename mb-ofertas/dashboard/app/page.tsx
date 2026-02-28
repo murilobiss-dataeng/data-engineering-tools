@@ -15,7 +15,7 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   }, [filter]);
 
-  async function updateStatus(id: string, status: "approved" | "rejected") {
+  async function updateStatus(id: string, status: "approved") {
     try {
       await api(`/products/${id}/status`, {
         method: "PATCH",
@@ -25,6 +25,18 @@ export default function ProductsPage() {
     } catch (e) {
       console.error(e);
       alert("Erro ao atualizar");
+    }
+  }
+
+  /** Reprovar = apagar o produto do banco e tirar da lista. */
+  async function rejectProduct(id: string) {
+    if (!confirm("Tirar este produto da lista? Ele será apagado do banco.")) return;
+    try {
+      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao remover produto.");
     }
   }
 
@@ -87,7 +99,7 @@ export default function ProductsPage() {
                     Aprovar
                   </button>
                   <button
-                    onClick={() => updateStatus(p.id, "rejected")}
+                    onClick={() => rejectProduct(p.id)}
                     className="rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-300"
                   >
                     Reprovar

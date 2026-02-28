@@ -11,18 +11,21 @@ export default function NewCampaignPage() {
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
 
   useEffect(() => {
-    Promise.all([
-      api<{ products: Product[] }>("/products?status=approved&limit=200"),
-      api<{ categories: Category[] }>("/categories"),
-    ])
-      .then(([p, c]) => {
-        setProducts(p.products);
-        setCategories(c.categories);
-      })
+    api<{ categories: Category[] }>("/categories")
+      .then((d) => setCategories(d.categories))
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams({ status: "approved", limit: "200" });
+    if (categoryFilter) params.set("categoryId", categoryFilter);
+    api<{ products: Product[] }>(`/products?${params.toString()}`)
+      .then((d) => setProducts(d.products))
+      .catch(console.error);
+  }, [categoryFilter]);
 
   function toggle(id: string) {
     setSelectedIds((prev) => {
@@ -76,6 +79,21 @@ export default function NewCampaignPage() {
           />
         </div>
         <div>
+          <div className="mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-700">Segmento (categoria):</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm"
+            >
+              <option value="">Todas</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <p className="text-sm font-medium text-slate-700">
             Produtos aprovados ({selectedIds.size} selecionados)
           </p>

@@ -102,6 +102,7 @@ export type Product = {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  installments: string | null;
 };
 
 export type Category = {

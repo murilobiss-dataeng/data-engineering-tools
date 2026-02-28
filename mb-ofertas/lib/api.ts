@@ -14,6 +14,9 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
 
 export type Product = {
   id: string;
+  category_id: string | null;
+  category_name: string | null;
+  category_slug: string | null;
   title: string;
   price: string;
   previous_price: string | null;
@@ -22,6 +25,7 @@ export type Product = {
   image_url: string | null;
   status: string;
   created_at: string;
+  installments: string | null;
 };
 
 export type Campaign = {
@@ -44,4 +48,5 @@ export type ScrapedProduct = {
   imageUrl: string | null;
   affiliateLink: string;
   rawUrl: string;
+  installments: string | null;
 };

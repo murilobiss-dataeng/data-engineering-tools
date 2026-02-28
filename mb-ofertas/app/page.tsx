@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Product } from "@/lib/api";
+import { api, type Product, type Category } from "@/lib/api";
 
 const FILTERS = [
   { value: "", label: "Todos" },
@@ -20,22 +20,34 @@ type FetchOfertasResult = { inserted: number; failed: number; totalUrls: number;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [fetchOfertasLoading, setFetchOfertasLoading] = useState(false);
   const [fetchOfertasResult, setFetchOfertasResult] = useState<FetchOfertasResult | null>(null);
 
   const loadProducts = () => {
-    return api<{ products: Product[] }>(`/products?status=${filter}&limit=50`)
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    if (categoryFilter) params.set("categoryId", categoryFilter);
+    params.set("limit", "50");
+    return api<{ products: Product[] }>(`/products?${params.toString()}`)
       .then((data) => setProducts(data.products))
       .catch(console.error)
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
+    api<{ categories: Category[] }>("/categories")
+      .then((d) => setCategories(d.categories))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
     setLoading(true);
     loadProducts();
-  }, [filter]);
+  }, [filter, categoryFilter]);
 
   async function handleFetchOfertas() {
     setFetchOfertasResult(null);
@@ -59,7 +71,7 @@ export default function ProductsPage() {
     }
   }
 
-  async function updateStatus(id: string, status: "approved" | "rejected") {
+  async function updateStatus(id: string, status: "approved") {
     try {
       await api(`/products/${id}/status`, {
         method: "PATCH",
@@ -69,6 +81,42 @@ export default function ProductsPage() {
     } catch (e) {
       console.error(e);
       alert("Erro ao atualizar");
+    }
+  }
+
+  /** Reprovar = apagar o produto do banco e tirar da lista. */
+  async function rejectProduct(id: string) {
+    if (!confirm("Tirar este produto da lista? Ele será apagado do banco.")) return;
+    try {
+      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao remover produto.");
+    }
+  }
+
+  async function updateProductCategory(id: string, categoryId: string | null) {
+    try {
+      const updated = await api<Product>(`/products/${id}/category`, {
+        method: "PATCH",
+        body: JSON.stringify({ categoryId }),
+      });
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                category_id: updated.category_id,
+                category_name: updated.category_name,
+                category_slug: updated.category_slug,
+              }
+            : p
+        )
+      );
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao atualizar categoria.");
     }
   }
 
@@ -120,17 +168,34 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        {FILTERS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            className={filter === value ? "tab-active" : "tab"}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              className={filter === value ? "tab-active" : "tab"}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-stone-600">Categoria:</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-800"
           >
-            {label}
-          </button>
-        ))}
+            <option value="">Todas</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <ul className="space-y-4">
@@ -177,8 +242,28 @@ export default function ProductsPage() {
                   <span className="badge bg-amber-100 text-amber-800">{p.discount_pct}% OFF</span>
                 )}
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <StatusBadge status={p.status} />
+                <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                  {p.category_name ?? "Sem categoria"}
+                </span>
+              </div>
+              <div className="mt-2">
+                <label className="mr-2 text-xs text-stone-500">Categoria (canal):</label>
+                <select
+                  value={p.category_id ?? ""}
+                  onChange={(e) =>
+                    updateProductCategory(p.id, e.target.value ? e.target.value : null)
+                  }
+                  className="rounded border border-stone-200 bg-white px-2 py-1 text-xs text-stone-700"
+                >
+                  <option value="">Sem categoria</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -193,7 +278,7 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateStatus(p.id, "rejected")}
+                    onClick={() => rejectProduct(p.id)}
                     className="btn-secondary text-sm"
                   >
                     Reprovar

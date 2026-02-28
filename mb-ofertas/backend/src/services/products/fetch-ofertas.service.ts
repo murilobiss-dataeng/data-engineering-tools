@@ -6,7 +6,9 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { scrapeProductFromUrl, scrapedToProductInput } from "./scrape-url.service.js";
 import { extractProductUrlsFromListing, looksLikeListingPage } from "./scrape-listing.service.js";
+import { inferCategorySlugFromTitle } from "./categorize.service.js";
 import * as productsRepo from "../../repositories/products.repository.js";
+import * as categoriesRepo from "../../repositories/categories.repository.js";
 import { logger } from "../../config/logger.js";
 
 const DEFAULT_DELAY_MS = 2500;
@@ -95,6 +97,9 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
             const scraped = await scrapeProductFromUrl(productUrl);
             const source = getSource(scraped.rawUrl);
             const input = { ...scrapedToProductInput(scraped), source };
+            const categorySlug = inferCategorySlugFromTitle(scraped.title);
+            const category = await categoriesRepo.getCategoryBySlug(categorySlug);
+            if (category) input.categoryId = category.id;
             await productsRepo.insertProduct(input);
             inserted++;
             logger.info({ title: scraped.title.slice(0, 40), source }, "Inserted");
@@ -108,6 +113,9 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         const scraped = await scrapeProductFromUrl(url);
         const source = getSource(scraped.rawUrl);
         const input = { ...scrapedToProductInput(scraped), source };
+        const categorySlug = inferCategorySlugFromTitle(scraped.title);
+        const category = await categoriesRepo.getCategoryBySlug(categorySlug);
+        if (category) input.categoryId = category.id;
         await productsRepo.insertProduct(input);
         inserted++;
         logger.info({ title: scraped.title.slice(0, 40), source }, "Inserted");

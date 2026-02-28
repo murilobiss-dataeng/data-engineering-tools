@@ -1,8 +1,10 @@
 import { Router } from "express";
 import * as productsRepo from "../../repositories/products.repository.js";
+import * as categoriesRepo from "../../repositories/categories.repository.js";
 import { captureAmazonDeals } from "../../services/products/amazon.service.js";
 import { scrapeProductFromUrl } from "../../services/products/scrape-url.service.js";
 import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
+import { inferCategorySlugFromTitle } from "../../services/products/categorize.service.js";
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
 import type { ProductInput } from "../../services/products/types.js";
 
@@ -68,6 +70,30 @@ productsRouter.patch("/:id/status", async (req, res) => {
   }
 });
 
+/** Atualiza a categoria do produto (para segmentação por canal). */
+productsRouter.patch("/:id/category", async (req, res) => {
+  try {
+    const { categoryId } = req.body as { categoryId?: string | null };
+    const updated = await productsRepo.updateProductCategory(req.params.id, categoryId ?? null);
+    if (!updated) return res.status(404).json({ error: "Produto não encontrado" });
+    const row = await productsRepo.getProductById(req.params.id);
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Reprovar = remover o produto do banco (apagar a linha). */
+productsRouter.delete("/:id", async (req, res) => {
+  try {
+    const deleted = await productsRepo.deleteProduct(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Produto não encontrado" });
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 productsRouter.post("/capture", async (req, res) => {
   try {
     const categorySlug = req.body?.categorySlug as string | undefined;
@@ -89,6 +115,12 @@ productsRouter.post("/", async (req, res) => {
     if (!body.title || body.price == null || !body.affiliateLink) {
       return res.status(400).json({ error: "title, price e affiliateLink são obrigatórios" });
     }
+    let categoryId = body.categoryId ?? null;
+    if (!categoryId && body.title) {
+      const slug = inferCategorySlugFromTitle(body.title);
+      const cat = await categoriesRepo.getCategoryBySlug(slug);
+      if (cat) categoryId = cat.id;
+    }
     const id = await productsRepo.insertProduct({
       title: body.title,
       price: Number(body.price),
@@ -96,9 +128,10 @@ productsRouter.post("/", async (req, res) => {
       discountPct: body.discountPct != null ? Number(body.discountPct) : null,
       affiliateLink: body.affiliateLink,
       imageUrl: body.imageUrl ?? null,
+      installments: body.installments ?? null,
       externalId: body.externalId,
       source: body.source ?? "manual",
-      categoryId: body.categoryId,
+      categoryId,
     });
     const row = await productsRepo.getProductById(id);
     res.status(201).json(row);
@@ -118,6 +151,7 @@ productsRouter.get("/:id/preview-message", async (_req, res) => {
       discountPct: row.discount_pct ? parseFloat(row.discount_pct) : null,
       affiliateLink: row.affiliate_link,
       imageUrl: row.image_url,
+      installments: row.installments ?? undefined,
     };
     const message = generateOfferMessage(product);
     res.json({ message });
@@ -126,7 +160,7 @@ productsRouter.get("/:id/preview-message", async (_req, res) => {
   }
 });
 
-/** Conteúdo para post: texto + URL da imagem (copiar/colar). */
+/** Conteúdo para post: texto + URL da imagem. Query: coupon (opcional). */
 productsRouter.get("/:id/post-content", async (req, res) => {
   try {
     const row = await productsRepo.getProductById(req.params.id);
@@ -138,8 +172,10 @@ productsRouter.get("/:id/post-content", async (req, res) => {
       discountPct: row.discount_pct ? parseFloat(row.discount_pct) : null,
       affiliateLink: row.affiliate_link,
       imageUrl: row.image_url,
+      installments: row.installments ?? undefined,
     };
-    const { text, imageUrl } = generatePostContent(product);
+    const coupon = (req.query.coupon as string)?.trim() || undefined;
+    const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -160,7 +196,7 @@ productsRouter.post("/from-url", async (req, res) => {
   }
 });
 
-/** Gera conteúdo para post (texto + imagem) a partir dos dados do produto (não precisa estar salvo). */
+/** Gera conteúdo para post (texto + imagem). Body: coupon (opcional), installments (opcional). */
 productsRouter.post("/post-content", async (req, res) => {
   try {
     const b = req.body as {
@@ -170,6 +206,8 @@ productsRouter.post("/post-content", async (req, res) => {
       discountPct?: number | null;
       affiliateLink?: string;
       imageUrl?: string | null;
+      installments?: string | null;
+      coupon?: string | null;
     };
     if (!b.title || b.price == null || !b.affiliateLink) {
       return res.status(400).json({ error: "title, price e affiliateLink são obrigatórios." });
@@ -181,8 +219,10 @@ productsRouter.post("/post-content", async (req, res) => {
       discountPct: b.discountPct != null ? Number(b.discountPct) : null,
       affiliateLink: b.affiliateLink,
       imageUrl: b.imageUrl ?? null,
+      installments: b.installments ?? undefined,
     };
-    const { text, imageUrl } = generatePostContent(product);
+    const coupon = b.coupon?.trim() || undefined;
+    const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
