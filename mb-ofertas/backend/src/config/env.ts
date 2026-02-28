@@ -4,6 +4,7 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().default(""),
+  DATABASE_POOL_MAX: z.coerce.number().min(1).max(20).optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   API_PORT: z.coerce.number().default(4000),
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error"]).default("info"),
