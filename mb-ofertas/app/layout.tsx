@@ -63,10 +63,11 @@ export default function RootLayout({
         </header>
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
         <footer className="mt-auto border-t border-stone-200 bg-white py-3 text-center text-xs text-stone-400">
-          Última atualização: {process.env.NEXT_PUBLIC_LAST_UPDATED ?? "—"} (UTC-3)
-          {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
-            <> · Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
-          )}
+          Última atualização: {process.env.NEXT_PUBLIC_LAST_UPDATED || "—"} (UTC-3)
+          {typeof process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA === "string" &&
+            process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+              <> · Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
+            )}
         </footer>
       </body>
     </html>

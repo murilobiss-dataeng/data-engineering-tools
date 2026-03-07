@@ -54,6 +54,7 @@ export async function extractProductUrlsFromListing(listingUrl: string): Promise
       "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
     },
     redirect: "follow",
+    cache: "no-store",
   });
 
   if (!res.ok) {

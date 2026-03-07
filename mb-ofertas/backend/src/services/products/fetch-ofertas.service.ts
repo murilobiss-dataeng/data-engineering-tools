@@ -10,6 +10,7 @@ import { inferCategorySlugFromTitle } from "./categorize.service.js";
 import * as productsRepo from "../../repositories/products.repository.js";
 import * as categoriesRepo from "../../repositories/categories.repository.js";
 import { logger } from "../../config/logger.js";
+import { appendLog } from "../../lib/log-buffer.js";
 
 const DEFAULT_DELAY_MS = 2500;
 const DEFAULT_MAX_PER_LISTING = 45;
@@ -121,6 +122,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
             failed++;
             const msg = e instanceof Error ? e.message : String(e);
             logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (ML/Amazon/Shopee)");
+            appendLog("warn", `[ML/Amazon/Shopee] ${productUrl} → ${msg}`);
           }
           await sleep(delayMs);
         }
@@ -137,7 +139,9 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
       }
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       logger.warn({ err: e, url }, "Skip URL");
+      appendLog("warn", `[Listagem] ${url} → ${msg}`);
       failed++;
     }
     await sleep(delayMs);

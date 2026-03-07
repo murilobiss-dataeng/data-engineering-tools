@@ -670,6 +670,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
     },
     redirect: "follow",
+    cache: "no-store",
   });
 
   if (!res.ok) throw new Error(`Falha ao acessar a página (${res.status}). Tente novamente.`);
