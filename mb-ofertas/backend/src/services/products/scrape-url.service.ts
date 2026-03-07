@@ -316,9 +316,8 @@ function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
 
 /**
  * Extrai título, preço e imagem da página do Mercado Livre.
- * ML às vezes coloca no JSON o preço cheio primeiro; o preço promocional aparece no HTML (bloco principal).
- * Prioridade: 1) HTML do bloco principal (preço em destaque = promocional), 2) JSON "amount" (venda), 3) JSON "price".
- * Preço cheio: original_price, list_price, regular_amount ou blocos .ui-pdp-price--original.
+ * Regra definitiva: preço de VENDA = "amount" (ou HTML principal). Preço CHEIO = "original_price"/"regular_amount".
+ * NUNCA usar original_price, list_price ou base_price como preço principal (são o riscado).
  */
 function extractMercadoLivreFromHtml(
   $: cheerio.CheerioAPI,
@@ -334,20 +333,53 @@ function extractMercadoLivreFromHtml(
   let price: number | null = null;
   let listPrice: number | null = null;
 
-  // —— 1) ML: priorizar HTML do preço em destaque (bloco principal = preço promocional) ——
-  const mainPriceSelectors = [
-    ".ui-pdp-price__main-container .andes-money-amount__fraction",
-    ".ui-pdp-price:not(.ui-pdp-price--original) .andes-money-amount__fraction",
-    '[data-testid="price"] .andes-money-amount__fraction',
-    ".andes-money-amount--cents-superscript .andes-money-amount__fraction",
-  ];
-  for (const sel of mainPriceSelectors) {
-    const el = $(sel).first();
-    if (el.length) {
-      const p = parsePrice(el.text().trim());
-      if (p != null && p > 0 && p < 1000000) {
-        price = p;
-        break;
+  // —— 1) JSON: no ML oficial, "amount" = preço de venda, "regular_amount" = preço cheio. Par no mesmo objeto (até ~400 chars). ——
+  const mlAmountThenReg = html.match(/"amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"regular_amount"\s*:\s*([\d.]+)/);
+  const mlRegThenAmount = html.match(/"regular_amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"amount"\s*:\s*([\d.]+)/);
+  if (mlAmountThenReg) {
+    let saleV = parseFloat(mlAmountThenReg[1]);
+    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
+    let regV = parseFloat(mlAmountThenReg[2]);
+    if (regV > 10000 && regV < 100000000) regV = regV / 100;
+    if (saleV > 0 && saleV < 10000000) {
+      price = saleV;
+      if (regV > saleV) listPrice = regV;
+    }
+  } else if (mlRegThenAmount) {
+    let regV = parseFloat(mlRegThenAmount[1]);
+    if (regV > 10000 && regV < 100000000) regV = regV / 100;
+    let saleV = parseFloat(mlRegThenAmount[2]);
+    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
+    if (saleV > 0 && saleV < 10000000) {
+      price = saleV;
+      if (regV > saleV) listPrice = regV;
+    }
+  }
+  if (price == null) {
+    const firstAmount = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])/);
+    if (firstAmount) {
+      let v = parseFloat(firstAmount[1]);
+      if (v > 10000 && v < 100000000) v = v / 100;
+      if (v > 0 && v < 10000000) price = v;
+    }
+  }
+
+  // —— 2) HTML: bloco principal (preço em destaque) = preço promocional ——
+  if (price == null) {
+    const mainPriceSelectors = [
+      ".ui-pdp-price__main-container .andes-money-amount__fraction",
+      ".ui-pdp-price:not(.ui-pdp-price--original) .andes-money-amount__fraction",
+      '[data-testid="price"] .andes-money-amount__fraction',
+      ".andes-money-amount--cents-superscript .andes-money-amount__fraction",
+    ];
+    for (const sel of mainPriceSelectors) {
+      const el = $(sel).first();
+      if (el.length) {
+        const p = parsePrice(el.text().trim());
+        if (p != null && p > 0 && p < 1000000) {
+          price = p;
+          break;
+        }
       }
     }
   }
@@ -359,37 +391,7 @@ function extractMercadoLivreFromHtml(
     }
   }
 
-  // —— 2) JSON: no ML, objeto de preço tem "amount" (venda) e "regular_amount" (cheio); preferir par do mesmo objeto ——
-  const mlAmountFirst = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])[^}]*"regular_amount"\s*:\s*([\d.]+)/);
-  const mlRegFirst = html.match(/"regular_amount"\s*:\s*([\d.]+)(?=\s*[,}])[^}]*"amount"\s*:\s*([\d.]+)/);
-  const mlPriceBlock = mlAmountFirst ?? (mlRegFirst ? [null, mlRegFirst[2], mlRegFirst[1]] : null);
-  if (mlPriceBlock && mlPriceBlock[1]) {
-    let saleV = parseFloat(mlPriceBlock[1]);
-    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
-    const regV = parseFloat(mlPriceBlock[2]);
-    const regularReais = regV > 10000 && regV < 100000000 ? regV / 100 : regV;
-    if (saleV > 0 && saleV < 10000000) {
-      if (price == null) price = saleV;
-      if (listPrice == null && regularReais > saleV) listPrice = regularReais;
-    }
-  }
-  if (price == null) {
-    const amountMatch = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])/);
-    if (amountMatch) {
-      let v = parseFloat(amountMatch[1]);
-      if (v > 10000 && v < 100000000) v = v / 100;
-      if (v > 0 && v < 10000000) price = v;
-    }
-  }
-  if (price == null) {
-    const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
-    if (jsonPrice) {
-      const p = parseFloat(jsonPrice[1]);
-      if (p > 0 && p < 10000000) price = p;
-    }
-  }
-
-  // —— Preço original (cheio/riscado): JSON ou blocos "original" no HTML ——
+  // —— 3) Preço CHEIO (só para listPrice): original_price, list_price, regular_amount, base_price. NUNCA usar como price. ——
   const origPriceMatch = html.match(/"original_price"\s*:\s*([\d.]+)/);
   if (origPriceMatch) {
     const p = parseFloat(origPriceMatch[1]);
@@ -418,13 +420,10 @@ function extractMercadoLivreFromHtml(
       if (v > 0 && v < 10000000 && (price == null || v > price)) listPrice = v;
     }
   }
-
-  // Preço original só de blocos explícitos "original" / "previous"
   if (listPrice == null) {
     const listSelectors = [
       ".ui-pdp-price--original .andes-money-amount__fraction",
       ".ui-pdp-price__original-value .andes-money-amount__fraction",
-      ".andes-money-amount--previous .andes-money-amount__fraction",
       '[data-testid="original-price"] .andes-money-amount__fraction',
     ];
     for (const sel of listSelectors) {
@@ -437,11 +436,21 @@ function extractMercadoLivreFromHtml(
     }
   }
 
+  // —— 4) Último recurso para price: primeiro "price" em JSON só se for menor que listPrice (evita pegar o cheio). ——
+  if (price == null) {
+    const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
+    if (jsonPrice) {
+      const p = parseFloat(jsonPrice[1]);
+      if (p > 0 && p < 10000000 && (listPrice == null || p <= listPrice)) price = p;
+    }
+  }
+
+  // —— 5) Fallback: qualquer R$ X no HTML (página dinâmica) ——
   if (price == null) {
     const reais = html.match(/R\$\s*[\d.,]+/g);
     if (reais && reais.length > 0) {
-      const p = parsePrice(reais[0]);
-      if (p != null && p > 0) price = p;
+      const values = reais.map((r) => parsePrice(r)).filter((p): p is number => p != null && p > 0 && p < 100000);
+      if (values.length > 0) price = Math.min(...values);
     }
   }
 
@@ -452,13 +461,12 @@ function extractMercadoLivreFromHtml(
     null;
 
   const installments = extractInstallmentsML($);
-  // Garantir: price = preço novo (venda), listPrice = preço cheio (só se for maior)
   let finalPrice = price ?? 0;
   let finalListPrice = listPrice;
   if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
-    const tmp = finalPrice;
+    const swap = finalPrice;
     finalPrice = finalListPrice;
-    finalListPrice = tmp;
+    finalListPrice = swap;
   }
   return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments };
 }
@@ -680,11 +688,22 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
 
   if (isMercadoLivreUrl(normalized)) {
     const ml = extractMercadoLivreFromHtml($, html);
-    title = (ml.title || ogTitle).slice(0, 500);
+    title = (ml.title || ogTitle).trim().slice(0, 500);
     price = ml.price;
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;
     installments = ml.installments;
+    if (price <= 0) {
+      const fromLd = extractFromJsonLd(html);
+      if (fromLd?.price != null && Number(fromLd.price) > 0) price = Number(fromLd.price);
+    }
+    if (price <= 0) {
+      const metaAmount = $('meta[property="product:price:amount"]').attr("content") ?? $('meta[property="og:product:price:amount"]').attr("content");
+      if (metaAmount) {
+        const p = parseFloat(metaAmount.replace(",", "."));
+        if (Number.isFinite(p) && p > 0 && p < 10000000) price = p;
+      }
+    }
   } else if (isShopeeUrl(normalized)) {
     const shopee = extractShopeeFromHtml($, html);
     title = (shopee.title || ogTitle).slice(0, 500);

@@ -119,7 +119,8 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
             logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
           } catch (e) {
             failed++;
-            logger.debug({ err: e, url: productUrl }, "Skip product");
+            const msg = e instanceof Error ? e.message : String(e);
+            logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (ML/Amazon/Shopee)");
           }
           await sleep(delayMs);
         }

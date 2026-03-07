@@ -48,6 +48,18 @@ export type WhatsAppChannel = {
   created_at: string;
 };
 
+export type WhatsAppScheduled = {
+  id: string;
+  channel_id: string;
+  message: string;
+  scheduled_at: string;
+  status: string;
+  opened_at: string | null;
+  created_at: string;
+  channel_name?: string;
+  channel_phone?: string;
+};
+
 export type PriceCandidate = { code: string; value: number };
 
 export type ScrapedProduct = {

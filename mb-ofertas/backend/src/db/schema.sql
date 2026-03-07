@@ -126,3 +126,16 @@ CREATE TABLE IF NOT EXISTS short_links (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code);
+
+-- Agendamentos WhatsApp (postagem programada para um canal)
+CREATE TABLE IF NOT EXISTS whatsapp_scheduled (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel_id   UUID NOT NULL REFERENCES whatsapp_channels(id) ON DELETE CASCADE,
+  message      TEXT NOT NULL,
+  scheduled_at  TIMESTAMPTZ NOT NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'pending',
+  opened_at    TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_scheduled_at ON whatsapp_scheduled(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_scheduled_status ON whatsapp_scheduled(status);

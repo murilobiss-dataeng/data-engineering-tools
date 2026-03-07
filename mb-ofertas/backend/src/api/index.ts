@@ -12,6 +12,7 @@ import { productsRouter } from "./routes/products.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { whatsappChannelsRouter } from "./routes/whatsapp-channels.js";
+import { whatsappScheduledRouter } from "./routes/whatsapp-scheduled.js";
 import { shortLinksRouter } from "./routes/short-links.js";
 import { getLongUrlByCode } from "../repositories/short-links.repository.js";
 
@@ -45,6 +46,7 @@ app.use("/api/products", productsRouter);
 app.use("/api/campaigns", campaignsRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/whatsapp/channels", whatsappChannelsRouter);
+app.use("/api/whatsapp/scheduled", whatsappScheduledRouter);
 app.use("/api/short-links", shortLinksRouter);
 
 app.get("/api/health", (_req, res) => {

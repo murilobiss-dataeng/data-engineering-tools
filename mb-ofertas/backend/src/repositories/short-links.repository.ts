@@ -14,10 +14,16 @@ function generateCode(): string {
 }
 
 /**
- * Cria link curto. Se SHORT_LINK_BASE_URL não estiver definido, retorna a URL original.
+ * Cria link curto. Base URL: SHORT_LINK_BASE_URL, ou API_URL, ou NEXT_PUBLIC_APP_URL (para /r/ no app).
+ * Se nenhum estiver definido, retorna a URL original.
  */
 export async function createShortLink(longUrl: string): Promise<{ code: string; shortUrl: string } | { shortUrl: string }> {
-  const base = process.env.SHORT_LINK_BASE_URL?.replace(/\/$/, "") || "";
+  const base = (
+    process.env.SHORT_LINK_BASE_URL ||
+    process.env.API_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ""
+  ).replace(/\/$/, "");
   const url = longUrl.trim();
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     return { shortUrl: url };
