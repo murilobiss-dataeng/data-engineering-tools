@@ -47,6 +47,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/r/")) {
+    return NextResponse.next();
+  }
+
   const loginUser = process.env.LOGIN_USER;
   const loginPassword = process.env.LOGIN_PASSWORD;
   if (!loginUser || !loginPassword) {

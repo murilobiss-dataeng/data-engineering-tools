@@ -64,7 +64,8 @@ campaignsRouter.get("/:id/whatsapp-message", async (req, res) => {
         installments: row.installments ?? undefined,
       };
       p = normalizeProductPrices(p);
-      lines.push(generateOfferMessage(p));
+      const short = await shortLinksRepo.createShortLink(row.affiliate_link);
+      lines.push(generateOfferMessage(p, { shortLink: short.shortUrl }));
     }
     const message = lines.join("\n\n——\n\n");
     res.json({ message });
@@ -131,6 +132,7 @@ campaignsRouter.post("/:id/send-now", async (req, res) => {
     const messageIds: string[] = [];
 
     for (const product of products) {
+      const short = await shortLinksRepo.createShortLink(product.affiliate_link);
       const body = generateOfferMessage({
         title: product.title,
         price: parseFloat(product.price),
@@ -138,7 +140,7 @@ campaignsRouter.post("/:id/send-now", async (req, res) => {
         discountPct: product.discount_pct ? parseFloat(product.discount_pct) : null,
         affiliateLink: product.affiliate_link,
         imageUrl: product.image_url,
-      });
+      }, { shortLink: short.shortUrl });
 
       for (const phone of recipientPhones) {
         const messageId = await campaignsRepo.insertMessage({

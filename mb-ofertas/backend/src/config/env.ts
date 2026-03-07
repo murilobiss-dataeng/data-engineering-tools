@@ -27,6 +27,9 @@ const envSchema = z.object({
   DELAY_BETWEEN_MESSAGES_MS: z.coerce.number().default(6000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
 
+  // Link curto (base URL para /r/CODE; se vazio, mensagens usam link longo)
+  SHORT_LINK_BASE_URL: z.string().optional(),
+
   // Cron
   CRON_ENABLED: z.coerce.boolean().default(true),
 });
