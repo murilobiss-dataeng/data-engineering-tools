@@ -12,12 +12,26 @@ import { productsRouter } from "./routes/products.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { whatsappChannelsRouter } from "./routes/whatsapp-channels.js";
+import { getLongUrlByCode } from "../repositories/short-links.repository.js";
 
 const app = express();
 
 app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
+
+// Redirect de link curto (fora do /api para não consumir rate limit)
+app.get("/r/:code", async (req, res) => {
+  const code = req.params.code?.trim();
+  if (!code || code.length > 20) return res.status(404).send("Link não encontrado");
+  try {
+    const longUrl = await getLongUrlByCode(code);
+    if (!longUrl) return res.status(404).send("Link não encontrado");
+    res.redirect(302, longUrl);
+  } catch {
+    res.status(500).send("Erro ao redirecionar");
+  }
+});
 
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,

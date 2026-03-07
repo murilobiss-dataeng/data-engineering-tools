@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as campaignsRepo from "../../repositories/campaigns.repository.js";
 import * as productsRepo from "../../repositories/products.repository.js";
+import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { generateOfferMessage } from "../../services/messages/copy-generator.js";
 import { addSendJob } from "../../workers/queues.js";
 import type { ProductInput } from "../../services/products/types.js";

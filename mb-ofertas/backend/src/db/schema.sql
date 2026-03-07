@@ -117,3 +117,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_channels (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_whatsapp_channels_phone ON whatsapp_channels(phone);
+
+-- Links curtos (redirect): código único -> URL longa (opensource, self-hosted)
+CREATE TABLE IF NOT EXISTS short_links (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code       VARCHAR(16) NOT NULL UNIQUE,
+  long_url   TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code);

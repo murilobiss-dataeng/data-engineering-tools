@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as productsRepo from "../../repositories/products.repository.js";
 import * as categoriesRepo from "../../repositories/categories.repository.js";
+import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { captureAmazonDeals } from "../../services/products/amazon.service.js";
 import { scrapeProductFromUrl } from "../../services/products/scrape-url.service.js";
 import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
@@ -180,7 +181,8 @@ productsRouter.get("/:id/preview-message", async (_req, res) => {
       installments: row.installments ?? undefined,
     };
     product = normalizeProductPrices(product);
-    const message = generateOfferMessage(product);
+    const short = await shortLinksRepo.createShortLink(row.affiliate_link);
+    const message = generateOfferMessage(product, { shortLink: short.shortUrl });
     res.json({ message });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -202,8 +204,9 @@ productsRouter.get("/:id/post-content", async (req, res) => {
       installments: row.installments ?? undefined,
     };
     product = normalizeProductPrices(product);
+    const short = await shortLinksRepo.createShortLink(row.affiliate_link);
     const coupon = (req.query.coupon as string)?.trim() || undefined;
-    const { text, imageUrl } = generatePostContent(product, { coupon });
+    const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -250,8 +253,9 @@ productsRouter.post("/post-content", async (req, res) => {
       installments: b.installments ?? undefined,
     };
     product = normalizeProductPrices(product);
+    const short = await shortLinksRepo.createShortLink(b.affiliateLink);
     const coupon = b.coupon?.trim() || undefined;
-    const { text, imageUrl } = generatePostContent(product, { coupon });
+    const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
