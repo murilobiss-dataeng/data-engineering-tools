@@ -8,6 +8,21 @@ import { inferCategorySlugFromTitle } from "../../services/products/categorize.s
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
 import type { ProductInput } from "../../services/products/types.js";
 
+/** Garante price = preço novo (menor), previousPrice = preço cheio (maior) para exibição e copy. */
+function normalizeProductPrices(p: ProductInput): ProductInput {
+  const prev = p.previousPrice ?? null;
+  const curr = p.price;
+  if (prev != null && prev > 0 && curr > 0 && prev < curr) {
+    return {
+      ...p,
+      price: prev,
+      previousPrice: curr,
+      discountPct: Math.round(((curr - prev) / curr) * 100),
+    };
+  }
+  return p;
+}
+
 export const productsRouter = Router();
 
 productsRouter.get("/", async (req, res) => {
@@ -144,7 +159,7 @@ productsRouter.get("/:id/preview-message", async (_req, res) => {
   try {
     const row = await productsRepo.getProductById(_req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
-    const product: ProductInput = {
+    let product: ProductInput = {
       title: row.title,
       price: parseFloat(row.price),
       previousPrice: row.previous_price ? parseFloat(row.previous_price) : null,
@@ -153,6 +168,7 @@ productsRouter.get("/:id/preview-message", async (_req, res) => {
       imageUrl: row.image_url,
       installments: row.installments ?? undefined,
     };
+    product = normalizeProductPrices(product);
     const message = generateOfferMessage(product);
     res.json({ message });
   } catch (err) {
@@ -165,7 +181,7 @@ productsRouter.get("/:id/post-content", async (req, res) => {
   try {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
-    const product: ProductInput = {
+    let product: ProductInput = {
       title: row.title,
       price: parseFloat(row.price),
       previousPrice: row.previous_price ? parseFloat(row.previous_price) : null,
@@ -174,6 +190,7 @@ productsRouter.get("/:id/post-content", async (req, res) => {
       imageUrl: row.image_url,
       installments: row.installments ?? undefined,
     };
+    product = normalizeProductPrices(product);
     const coupon = (req.query.coupon as string)?.trim() || undefined;
     const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });
@@ -212,7 +229,7 @@ productsRouter.post("/post-content", async (req, res) => {
     if (!b.title || b.price == null || !b.affiliateLink) {
       return res.status(400).json({ error: "title, price e affiliateLink são obrigatórios." });
     }
-    const product: ProductInput = {
+    let product: ProductInput = {
       title: b.title,
       price: Number(b.price),
       previousPrice: b.previousPrice != null ? Number(b.previousPrice) : null,
@@ -221,6 +238,7 @@ productsRouter.post("/post-content", async (req, res) => {
       imageUrl: b.imageUrl ?? null,
       installments: b.installments ?? undefined,
     };
+    product = normalizeProductPrices(product);
     const coupon = b.coupon?.trim() || undefined;
     const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });

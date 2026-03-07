@@ -72,16 +72,41 @@ export default function ProductDetailPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-stone-900">{product.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-amber-700">R$ {product.price}</span>
-              {product.previous_price && (
-                <span className="text-stone-400 line-through">R$ {product.previous_price}</span>
-              )}
-              {product.discount_pct && (
-                <span className="badge bg-amber-100 text-amber-800">{product.discount_pct}% OFF</span>
-              )}
-              {product.installments && (
-                <span className="text-sm text-stone-600">{product.installments}</span>
-              )}
+              {(() => {
+                const prev = Number(product.previous_price);
+                const curr = Number(product.price);
+                const hasDiscount =
+                  product.previous_price != null && prev > 0 && curr > 0 && prev !== curr;
+                const fullPrice = hasDiscount ? (prev > curr ? prev : curr) : curr;
+                const salePrice = hasDiscount ? (prev > curr ? curr : prev) : curr;
+                if (hasDiscount) {
+                  return (
+                    <>
+                      <span className="text-stone-400 line-through">R$ {fullPrice}</span>
+                      <span className="font-semibold text-amber-700">por R$ {salePrice}</span>
+                      <span className="badge bg-amber-100 text-amber-800">
+                        {Math.round(((fullPrice - salePrice) / fullPrice) * 100)}% OFF
+                      </span>
+                      {product.installments && (
+                        <span className="text-sm text-stone-600">{product.installments}</span>
+                      )}
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <span className="font-semibold text-amber-700">R$ {product.price}</span>
+                    {product.discount_pct && (
+                      <span className="badge bg-amber-100 text-amber-800">
+                        {product.discount_pct}% OFF
+                      </span>
+                    )}
+                    {product.installments && (
+                      <span className="text-sm text-stone-600">{product.installments}</span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             <p className="mt-2 text-sm text-stone-500">
               Status: {product.status}

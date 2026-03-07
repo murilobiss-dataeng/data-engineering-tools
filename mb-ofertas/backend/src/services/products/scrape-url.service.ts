@@ -162,7 +162,14 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
     }
   }
 
-  return { price: price ?? 0, listPrice };
+  let finalPrice = price ?? 0;
+  let finalListPrice = listPrice;
+  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
+    const tmp = finalPrice;
+    finalPrice = finalListPrice;
+    finalListPrice = tmp;
+  }
+  return { price: finalPrice, listPrice: finalListPrice };
 }
 
 /** Tenta extrair oferta de JSON embutido no HTML (Amazon). */
@@ -230,8 +237,15 @@ function extractPriceFromPageJson(html: string): { price: number; listPrice?: nu
       }
     }
   }
-  if (price != null) return { price, listPrice };
-  return null;
+  if (price == null) return null;
+  let finalPrice = price;
+  let finalListPrice = listPrice;
+  if (finalListPrice != null && finalListPrice < finalPrice) {
+    const tmp = finalPrice;
+    finalPrice = finalListPrice;
+    finalListPrice = tmp;
+  }
+  return { price: finalPrice, listPrice: finalListPrice };
 }
 
 /** Extrai texto de parcelamento (ex.: "em 12x de R$ 25,00 sem juros"). */
@@ -387,7 +401,15 @@ function extractMercadoLivreFromHtml(
     null;
 
   const installments = extractInstallmentsML($);
-  return { title, price: price ?? 0, listPrice, imageUrl, installments };
+  // Preço novo deve ser o menor; preço cheio o maior
+  let finalPrice = price ?? 0;
+  let finalListPrice = listPrice;
+  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
+    const tmp = finalPrice;
+    finalPrice = finalListPrice;
+    finalListPrice = tmp;
+  }
+  return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments };
 }
 
 /** Extrai título, preço e imagem da página da Shopee (og + JSON embutido quando disponível). */
@@ -449,7 +471,14 @@ function extractShopeeFromHtml(
     ogImage ||
     null;
 
-  return { title, price: price ?? 0, listPrice, imageUrl, installments: null };
+  let finalPrice = price ?? 0;
+  let finalListPrice = listPrice;
+  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
+    const tmp = finalPrice;
+    finalPrice = finalListPrice;
+    finalListPrice = tmp;
+  }
+  return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments: null };
 }
 
 /**
@@ -538,11 +567,25 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     affiliateLink = ogUrl || normalized;
   }
 
-  const previousPrice = listPrice != null && listPrice > price ? listPrice : null;
+  // Garantir: price = preço novo (menor), previousPrice = preço cheio (riscado, maior)
+  let previousPrice: number | null = null;
+  if (listPrice != null && listPrice > price) {
+    previousPrice = listPrice;
+  } else if (listPrice != null && listPrice < price && listPrice > 0) {
+    // Estavam trocados: listPrice era o promocional, price era o cheio
+    const salePrice = listPrice;
+    const fullPrice = price;
+    price = salePrice;
+    previousPrice = fullPrice;
+  }
+
   const discountPct =
     previousPrice && previousPrice > 0 ? Math.round(((previousPrice - price) / previousPrice) * 100) : null;
 
-  logger.info({ url: normalized, title: title.slice(0, 60), price }, "Scrape product from URL");
+  logger.info(
+    { url: normalized, title: title.slice(0, 60), price, previousPrice, discountPct },
+    "Scrape product from URL"
+  );
 
   return {
     title,

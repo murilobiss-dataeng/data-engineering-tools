@@ -234,13 +234,32 @@ export default function ProductsPage() {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-stone-900 line-clamp-2">{p.title}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-amber-700">R$ {p.price}</span>
-                {p.previous_price && (
-                  <span className="text-sm text-stone-400 line-through">R$ {p.previous_price}</span>
-                )}
-                {p.discount_pct && (
-                  <span className="badge bg-amber-100 text-amber-800">{p.discount_pct}% OFF</span>
-                )}
+                {(() => {
+                  const prev = Number(p.previous_price);
+                  const curr = Number(p.price);
+                  const hasDiscount = p.previous_price != null && prev > 0 && curr > 0 && prev !== curr;
+                  const fullPrice = hasDiscount ? (prev > curr ? prev : curr) : curr;
+                  const salePrice = hasDiscount ? (prev > curr ? curr : prev) : curr;
+                  if (hasDiscount) {
+                    return (
+                      <>
+                        <span className="text-sm text-stone-400 line-through">R$ {fullPrice}</span>
+                        <span className="font-semibold text-amber-700">por R$ {salePrice}</span>
+                        <span className="badge bg-amber-100 text-amber-800">
+                          {Math.round(((fullPrice - salePrice) / fullPrice) * 100)}% OFF
+                        </span>
+                      </>
+                    );
+                  }
+                  return (
+                    <>
+                      <span className="font-semibold text-amber-700">R$ {p.price}</span>
+                      {p.discount_pct && (
+                        <span className="badge bg-amber-100 text-amber-800">{p.discount_pct}% OFF</span>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <StatusBadge status={p.status} />
