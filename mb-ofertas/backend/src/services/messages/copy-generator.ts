@@ -54,7 +54,7 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   lines.push("");
   lines.push(`${EMOJIS.arrow} ${link}`);
   lines.push("");
-  lines.push("⚠️ Valores e disponibilidade podem variar. Confira no site no momento da compra.");
+  lines.push("⚠️ Valores e disponibilidade podem variar.");
 
   return lines.join("\n");
 }
@@ -106,7 +106,7 @@ export function generatePostContent(
   lines.push("");
   lines.push(`${EMOJIS.arrow} ${link}`);
   lines.push("");
-  lines.push("⚠️ Valores e disponibilidade podem variar. Confira no site no momento da compra.");
+  lines.push("⚠️ Valores e disponibilidade podem variar.");
 
   return { text: lines.join("\n"), imageUrl: product.imageUrl ?? null };
 }

@@ -113,9 +113,10 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
             const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
             const category = await categoriesRepo.getCategoryBySlug(categorySlug);
             if (category) input.categoryId = category.id;
-            await productsRepo.insertProduct(input);
-            inserted++;
-            logger.info({ title: scraped.title.slice(0, 40), source }, "Inserted");
+            input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
+            const { isNew } = await productsRepo.insertProduct(input);
+            if (isNew) inserted++;
+            logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
           } catch (e) {
             failed++;
             logger.debug({ err: e, url: productUrl }, "Skip product");
@@ -129,9 +130,10 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
         const category = await categoriesRepo.getCategoryBySlug(categorySlug);
         if (category) input.categoryId = category.id;
-        await productsRepo.insertProduct(input);
-        inserted++;
-        logger.info({ title: scraped.title.slice(0, 40), source }, "Inserted");
+        input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
+        const { isNew } = await productsRepo.insertProduct(input);
+        if (isNew) inserted++;
+        logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
       }
     } catch (e) {
       logger.warn({ err: e, url }, "Skip URL");

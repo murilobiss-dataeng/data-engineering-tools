@@ -1,9 +1,42 @@
 import { query } from "../db/client.js";
 import type { ProductInput } from "../services/products/types.js";
+import { roundToTwoDecimals } from "../utils/price.js";
+
+/** Retorna o id do produto se já existir um com o mesmo link de afiliado (evita duplicata). */
+export async function findProductIdByAffiliateLink(affiliateLink: string): Promise<string | null> {
+  const res = await query<{ id: string }>(
+    `SELECT id FROM products WHERE affiliate_link = $1 LIMIT 1`,
+    [affiliateLink]
+  );
+  return res.rows[0]?.id ?? null;
+}
+
+/** Retorna o id do produto se já existir com o mesmo external_id e source. */
+export async function findProductIdByExternalAndSource(
+  externalId: string,
+  source: string
+): Promise<string | null> {
+  const res = await query<{ id: string }>(
+    `SELECT id FROM products WHERE external_id = $1 AND source = $2 LIMIT 1`,
+    [externalId, source]
+  );
+  return res.rows[0]?.id ?? null;
+}
 
 export async function insertProduct(
   input: ProductInput & { categoryId?: string | null }
-): Promise<string> {
+): Promise<{ id: string; isNew: boolean }> {
+  const existingByLink = await findProductIdByAffiliateLink(input.affiliateLink);
+  if (existingByLink) return { id: existingByLink, isNew: false };
+
+  if (input.externalId && (input.source ?? "amazon")) {
+    const existingByExternal = await findProductIdByExternalAndSource(
+      input.externalId,
+      input.source ?? "amazon"
+    );
+    if (existingByExternal) return { id: existingByExternal, isNew: false };
+  }
+
   const res = await query<{ id: string }>(
     `INSERT INTO products (
       category_id, external_id, title, price, previous_price, discount_pct,
@@ -14,16 +47,16 @@ export async function insertProduct(
       input.categoryId ?? null,
       input.externalId ?? null,
       input.title,
-      input.price,
-      input.previousPrice ?? null,
-      input.discountPct ?? null,
+      roundToTwoDecimals(Number(input.price)),
+      input.previousPrice != null ? roundToTwoDecimals(Number(input.previousPrice)) : null,
+      input.discountPct != null ? roundToTwoDecimals(Number(input.discountPct)) : null,
       input.affiliateLink,
       input.imageUrl ?? null,
       input.source ?? "amazon",
       input.installments ?? null,
     ]
   );
-  return res.rows[0].id;
+  return { id: res.rows[0].id, isNew: true };
 }
 
 export async function listProducts(filters?: {

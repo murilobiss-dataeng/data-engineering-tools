@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, type Product, type Category } from "@/lib/api";
+import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -82,8 +83,8 @@ export default function ProductDetailPage() {
                 if (hasDiscount) {
                   return (
                     <>
-                      <span className="text-stone-400 line-through">R$ {fullPrice}</span>
-                      <span className="font-semibold text-amber-700">por R$ {salePrice}</span>
+                      <span className="text-stone-400 line-through">R$ {formatPriceTwoDecimals(fullPrice)}</span>
+                      <span className="font-semibold text-amber-700">por R$ {formatPriceTwoDecimals(salePrice)}</span>
                       <span className="badge bg-amber-100 text-amber-800">
                         {Math.round(((fullPrice - salePrice) / fullPrice) * 100)}% OFF
                       </span>
@@ -95,7 +96,7 @@ export default function ProductDetailPage() {
                 }
                 return (
                   <>
-                    <span className="font-semibold text-amber-700">R$ {product.price}</span>
+                    <span className="font-semibold text-amber-700">R$ {formatPriceTwoDecimals(product.price)}</span>
                     {product.discount_pct && (
                       <span className="badge bg-amber-100 text-amber-800">
                         {product.discount_pct}% OFF
@@ -112,6 +113,10 @@ export default function ProductDetailPage() {
               Status: {product.status}
               {" · "}
               Categoria (canal): {product.category_name ?? "Sem categoria"}
+              {" · "}
+              <span className="text-stone-400" title="Origem do produto">
+                {product.source === "amazon" ? "Amazon" : product.source === "mercadolivre" ? "Mercado Livre" : product.source === "shopee" ? "Shopee" : product.source}
+              </span>
             </p>
             <div className="mt-2 flex items-center gap-2">
               <label className="text-sm text-stone-500">Alterar categoria:</label>

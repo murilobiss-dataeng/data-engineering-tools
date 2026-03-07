@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { LogoutButton } from "./components/LogoutButton";
 
 export const metadata: Metadata = {
   title: "MB Ofertas - Painel",
@@ -44,6 +45,7 @@ export default function RootLayout({
               >
                 Campanhas
               </a>
+              <LogoutButton />
             </nav>
           </div>
         </header>
@@ -51,6 +53,7 @@ export default function RootLayout({
         <footer className="mt-auto border-t border-stone-200 bg-white py-3 text-center text-xs text-stone-400">
           Última atualização:{" "}
           {process.env.NEXT_PUBLIC_LAST_UPDATED || "18/02/2025 14:30"}
+          {" "}(UTC-3)
           {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
             <> · Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
           )}

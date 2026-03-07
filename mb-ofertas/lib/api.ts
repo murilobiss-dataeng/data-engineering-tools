@@ -23,6 +23,7 @@ export type Product = {
   discount_pct: string | null;
   affiliate_link: string;
   image_url: string | null;
+  source: string;
   status: string;
   created_at: string;
   installments: string | null;

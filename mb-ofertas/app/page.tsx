@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, type Product, type Category } from "@/lib/api";
+import { formatPriceTwoDecimals } from "@/lib/format";
 
 const FILTERS = [
   { value: "", label: "Todos" },
@@ -33,7 +34,16 @@ export default function ProductsPage() {
     if (categoryFilter) params.set("categoryId", categoryFilter);
     params.set("limit", "50");
     return api<{ products: Product[] }>(`/products?${params.toString()}`)
-      .then((data) => setProducts(data.products))
+      .then((data) => {
+        const seen = new Set<string>();
+        const unique = data.products.filter((p) => {
+          const key = p.affiliate_link;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setProducts(unique);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -243,8 +253,8 @@ export default function ProductsPage() {
                   if (hasDiscount) {
                     return (
                       <>
-                        <span className="text-sm text-stone-400 line-through">R$ {fullPrice}</span>
-                        <span className="font-semibold text-amber-700">por R$ {salePrice}</span>
+                        <span className="text-sm text-stone-400 line-through">R$ {formatPriceTwoDecimals(fullPrice)}</span>
+                        <span className="font-semibold text-amber-700">por R$ {formatPriceTwoDecimals(salePrice)}</span>
                         <span className="badge bg-amber-100 text-amber-800">
                           {Math.round(((fullPrice - salePrice) / fullPrice) * 100)}% OFF
                         </span>
@@ -253,7 +263,7 @@ export default function ProductsPage() {
                   }
                   return (
                     <>
-                      <span className="font-semibold text-amber-700">R$ {p.price}</span>
+                      <span className="font-semibold text-amber-700">R$ {formatPriceTwoDecimals(p.price)}</span>
                       {p.discount_pct && (
                         <span className="badge bg-amber-100 text-amber-800">{p.discount_pct}% OFF</span>
                       )}
@@ -265,6 +275,9 @@ export default function ProductsPage() {
                 <StatusBadge status={p.status} />
                 <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                   {p.category_name ?? "Sem categoria"}
+                </span>
+                <span className="text-xs text-stone-400" title={`Origem: ${p.source}`}>
+                  {p.source === "amazon" ? "Amazon" : p.source === "mercadolivre" ? "ML" : p.source === "shopee" ? "Shopee" : p.source}
                 </span>
               </div>
               <div className="mt-2">

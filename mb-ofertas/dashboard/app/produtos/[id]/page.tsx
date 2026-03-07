@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, type Product } from "@/lib/api";
+import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -40,9 +41,9 @@ export default function ProductDetailPage() {
           <div className="flex-1">
             <h1 className="text-lg font-semibold">{product.title}</h1>
             <p className="mt-2 text-slate-600">
-              R$ {product.price}
+              R$ {formatPriceTwoDecimals(product.price)}
               {product.previous_price && (
-                <span className="ml-2 line-through">R$ {product.previous_price}</span>
+                <span className="ml-2 line-through">R$ {formatPriceTwoDecimals(product.previous_price)}</span>
               )}
               {product.discount_pct && (
                 <span className="ml-2 text-green-600">{product.discount_pct}% OFF</span>

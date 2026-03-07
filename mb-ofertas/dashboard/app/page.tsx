@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, type Product } from "@/lib/api";
+import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -79,9 +80,9 @@ export default function ProductsPage() {
             <div className="min-w-0 flex-1">
               <p className="font-medium text-slate-900">{p.title}</p>
               <p className="text-sm text-slate-600">
-                R$ {p.price}
+                R$ {formatPriceTwoDecimals(p.price)}
                 {p.previous_price && (
-                  <span className="ml-2 line-through">R$ {p.previous_price}</span>
+                  <span className="ml-2 line-through">R$ {formatPriceTwoDecimals(p.previous_price)}</span>
                 )}
                 {p.discount_pct && (
                   <span className="ml-2 text-green-600">{p.discount_pct}% OFF</span>

@@ -6,7 +6,18 @@ import { scrapeProductFromUrl } from "../../services/products/scrape-url.service
 import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
 import { inferCategorySlugFromTitle } from "../../services/products/categorize.service.js";
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
+import { toTwoDecimalsString } from "../../utils/price.js";
 import type { ProductInput } from "../../services/products/types.js";
+
+/** Formata preços do row para sempre 2 casas decimais (ex.: 386.1 → "386.10"). */
+function formatProductRow<T extends { price?: unknown; previous_price?: unknown; discount_pct?: unknown }>(row: T): T {
+  return {
+    ...row,
+    price: toTwoDecimalsString(row.price as number | string) ?? row.price,
+    previous_price: row.previous_price != null ? (toTwoDecimalsString(row.previous_price as number | string) ?? row.previous_price) : null,
+    discount_pct: row.discount_pct != null ? (toTwoDecimalsString(row.discount_pct as number | string) ?? row.discount_pct) : null,
+  };
+}
 
 /** Garante price = preço novo (menor), previousPrice = preço cheio (maior) para exibição e copy. */
 function normalizeProductPrices(p: ProductInput): ProductInput {
@@ -32,7 +43,7 @@ productsRouter.get("/", async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const offset = Number(req.query.offset) || 0;
     const rows = await productsRepo.listProducts({ status, categoryId, limit, offset });
-    res.json({ products: rows });
+    res.json({ products: rows.map(formatProductRow) });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -65,7 +76,7 @@ productsRouter.get("/:id", async (req, res) => {
   try {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
-    res.json(row);
+    res.json(formatProductRow(row));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -79,7 +90,7 @@ productsRouter.patch("/:id/status", async (req, res) => {
     }
     await productsRepo.updateProductStatus(req.params.id, status as "approved" | "rejected" | "sent");
     const row = await productsRepo.getProductById(req.params.id);
-    res.json(row);
+    res.json(formatProductRow(row));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -92,7 +103,7 @@ productsRouter.patch("/:id/category", async (req, res) => {
     const updated = await productsRepo.updateProductCategory(req.params.id, categoryId ?? null);
     if (!updated) return res.status(404).json({ error: "Produto não encontrado" });
     const row = await productsRepo.getProductById(req.params.id);
-    res.json(row);
+    res.json(formatProductRow(row));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -115,7 +126,7 @@ productsRouter.post("/capture", async (req, res) => {
     const result = await captureAmazonDeals(categorySlug);
     const ids: string[] = [];
     for (const p of result.products) {
-      const id = await productsRepo.insertProduct({ ...p, categoryId: req.body?.categoryId });
+      const { id } = await productsRepo.insertProduct({ ...p, categoryId: req.body?.categoryId });
       ids.push(id);
     }
     res.json({ captured: result.total, inserted: ids.length, productIds: ids });
@@ -136,7 +147,7 @@ productsRouter.post("/", async (req, res) => {
       const cat = await categoriesRepo.getCategoryBySlug(slug);
       if (cat) categoryId = cat.id;
     }
-    const id = await productsRepo.insertProduct({
+    const { id } = await productsRepo.insertProduct({
       title: body.title,
       price: Number(body.price),
       previousPrice: body.previousPrice != null ? Number(body.previousPrice) : null,
@@ -149,7 +160,7 @@ productsRouter.post("/", async (req, res) => {
       categoryId,
     });
     const row = await productsRepo.getProductById(id);
-    res.status(201).json(row);
+    res.status(201).json(formatProductRow(row));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

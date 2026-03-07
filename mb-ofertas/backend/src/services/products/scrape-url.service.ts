@@ -23,6 +23,8 @@ export type ScrapedProduct = {
   affiliateLink: string;
   rawUrl: string;
   installments: string | null;
+  /** ID externo (ASIN, MLB..., etc.) para evitar duplicatas. */
+  externalId?: string | null;
   /** Todos os preços encontrados na página, com código da origem (para você indicar qual está correto). */
   priceCandidates?: { source: "amazon" | "mercadolivre" | "shopee"; candidates: PriceCandidate[] };
 };
@@ -83,6 +85,30 @@ function extractAmznShortLink(html: string): string | null {
     return raw.startsWith("http") ? raw : `https://${raw}`;
   }
   return null;
+}
+
+/** Extrai ID externo da URL para evitar duplicatas (Amazon ASIN, ML item id, Shopee item). */
+function extractExternalIdFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const path = u.pathname;
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    if (/^amazon\.(com|com\.br)/.test(host)) {
+      const m = path.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+      return m ? m[1].toUpperCase() : null;
+    }
+    if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
+      const m = path.match(/(ML[BUA]\d+)/i) || path.match(/\/([A-Z]{2,3}\d+)/);
+      return m ? m[1].toUpperCase() : null;
+    }
+    if (host.includes("shopee")) {
+      const m = path.match(/-i\.(\d+)\.(\d+)/);
+      return m ? `shopee_${m[1]}_${m[2]}` : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** Extrai preço de string "R$ 99,90" ou "99,90" ou "99.90". */
@@ -288,7 +314,11 @@ function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
   return null;
 }
 
-/** Extrai título, preço e imagem da página do Mercado Livre. */
+/**
+ * Extrai título, preço e imagem da página do Mercado Livre.
+ * Tratamento específico para ML: preço de venda vs preço original (riscado).
+ * Prioridade: JSON com chaves explícitas (price = venda, original_price/regular_amount = cheio).
+ */
 function extractMercadoLivreFromHtml(
   $: cheerio.CheerioAPI,
   html: string
@@ -303,93 +333,98 @@ function extractMercadoLivreFromHtml(
   let price: number | null = null;
   let listPrice: number | null = null;
 
-  // Preço atual — ML: pegar texto do container (ex.: "R$ 1.299" ou "R$ 99,90")
-  const priceSelectors = [
-    ".ui-pdp-price__main-container",
-    ".ui-pdp-price .andes-money-amount",
-    ".ui-pdp-price",
-    '[data-testid="price"]',
-    ".andes-money-amount--cents-superscript",
-    ".price-tag",
-  ];
-  for (const sel of priceSelectors) {
-    const el = $(sel).first();
-    if (el.length) {
-      const full = el.text().trim();
-      const parsed = parsePrice(full);
-      if (parsed != null && parsed > 0 && parsed < 1000000) {
-        price = parsed;
-        break;
-      }
+  // —— ML: priorizar JSON com semântica clara (evitar confusão com HTML) ——
+  // Preço de venda (atual): "price" em reais
+  const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
+  if (jsonPrice) {
+    const p = parseFloat(jsonPrice[1]);
+    if (p > 0 && p < 10000000) price = p;
+  }
+  // amount (pode ser centavos em alguns contextos) — só se price não veio
+  if (price == null) {
+    const amountMatch = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])/);
+    if (amountMatch) {
+      let v = parseFloat(amountMatch[1]);
+      if (v > 10000 && v < 100000000) v = v / 100;
+      if (v > 0 && v < 10000000) price = v;
     }
   }
 
-  // Preço original (riscado) — ML: várias classes possíveis
-  const listSelectors = [
-    ".ui-pdp-price--original .andes-money-amount__fraction",
-    ".ui-pdp-price__original-value .andes-money-amount__fraction",
-    ".andes-money-amount--previous .andes-money-amount__fraction",
-    ".andes-money-amount--previous",
-    ".ui-pdp-price__original-value",
-    '[data-testid="original-price"] .andes-money-amount__fraction',
-    ".ui-pdp-price--secondary .andes-money-amount__fraction",
-    "[class*='original'] .andes-money-amount__fraction",
-  ];
-  for (const sel of listSelectors) {
-    const el = $(sel).first();
-    if (el.length) {
-      const text = el.text().trim();
-      const p = parsePrice(text);
-      if (p != null && p > 0 && (price == null || p > price)) listPrice = p;
-      if (listPrice != null) break;
+  // Preço original (cheio/riscado): original_price, list_price em reais; regular_amount pode ser centavos
+  const origPriceMatch = html.match(/"original_price"\s*:\s*([\d.]+)/);
+  if (origPriceMatch) {
+    const p = parseFloat(origPriceMatch[1]);
+    if (p > 0 && p < 10000000 && (price == null || p > price)) listPrice = p;
+  }
+  if (listPrice == null) {
+    const listPriceMatch = html.match(/"list_price"\s*:\s*([\d.]+)/);
+    if (listPriceMatch) {
+      const p = parseFloat(listPriceMatch[1]);
+      if (p > 0 && p < 10000000 && (price == null || p > price)) listPrice = p;
     }
   }
   if (listPrice == null) {
-    const parent = $(".ui-pdp-price__second-line, .ui-pdp-price--secondary, [class*='original']").first();
-    if (parent.length) {
-      const full = parent.text();
-      const p = parsePrice(full);
-      if (p != null && p > 0 && (price == null || p > price)) listPrice = p;
+    const regAmountMatch = html.match(/"regular_amount"\s*:\s*([\d.]+)/);
+    if (regAmountMatch) {
+      let v = parseFloat(regAmountMatch[1]);
+      if (v > 10000 && v < 100000000) v = v / 100;
+      if (v > 0 && v < 10000000 && (price == null || v > price)) listPrice = v;
+    }
+  }
+  if (listPrice == null) {
+    const basePriceMatch = html.match(/"base_price"\s*:\s*([\d.]+)/);
+    if (basePriceMatch) {
+      let v = parseFloat(basePriceMatch[1]);
+      if (v > 10000 && v < 100000000) v = v / 100;
+      if (v > 0 && v < 10000000 && (price == null || v > price)) listPrice = v;
     }
   }
 
-  // Preço atual e original no JSON (ML: __PRELOADED_STATE__, initial state, API de preços)
-  const jsonPriceMatch = html.match(/"price":\s*([\d.]+)|"amount":\s*([\d.]+)(?=\s*[,}])/);
-  if (jsonPriceMatch && price == null) {
-    const raw = jsonPriceMatch[1] ?? jsonPriceMatch[2];
-    if (raw) {
-      const p = parseFloat(raw);
-      if (p > 0 && p < 1000000) price = p;
-    }
-  }
-  // regular_amount = preço original (API ML); original_price, list_price, previous (HTML/JSON)
-  const jsonOriginalMatch = html.match(
-   /"regular_amount"\s*:\s*([\d.]+)|"original_price"\s*:\s*([\d.]+)|"list_price"\s*:\s*([\d.]+)|"prices"\s*:\s*\{[^}]*"original"\s*:\s*([\d.]+)|"previous"\s*:\s*\{[^}]*"amount"\s*:\s*([\d.]+)|"base_price"\s*:\s*([\d.]+)/
-  );
-  if (jsonOriginalMatch && listPrice == null) {
-    const raw =
-      jsonOriginalMatch[1] ?? jsonOriginalMatch[2] ?? jsonOriginalMatch[3] ?? jsonOriginalMatch[4] ?? jsonOriginalMatch[5] ?? jsonOriginalMatch[6];
-    if (raw) {
-      let p = parseFloat(raw);
-      if (p > 10000 && p < 100000000) p = p / 100;
-      if (p > 0 && p < 1000000 && (price == null || p > price)) listPrice = p;
-    }
-  }
+  // —— HTML: preço atual só de blocos que NÃO são "original" (evitar pegar o riscado como principal) ——
   if (price == null) {
-    const priceInJson = html.match(/"amount":\s*([\d.]+)/g);
-    if (priceInJson) {
-      for (const part of priceInJson) {
-        const m = part.match(/([\d.]+)/);
-        if (m) {
-          const p = parseFloat(m[1]);
-          if (p > 0 && p < 1000000) {
-            price = p;
-            break;
-          }
+    const mainPriceSelectors = [
+      ".ui-pdp-price__main-container .andes-money-amount__fraction",
+      ".ui-pdp-price:not(.ui-pdp-price--original) .andes-money-amount__fraction",
+      '[data-testid="price"] .andes-money-amount__fraction',
+      ".andes-money-amount--cents-superscript .andes-money-amount__fraction",
+    ];
+    for (const sel of mainPriceSelectors) {
+      const el = $(sel).first();
+      if (el.length) {
+        const p = parsePrice(el.text().trim());
+        if (p != null && p > 0 && p < 1000000) {
+          price = p;
+          break;
         }
       }
     }
   }
+  if (price == null) {
+    const mainBlock = $(".ui-pdp-price__main-container").first();
+    if (mainBlock.length) {
+      const p = parsePrice(mainBlock.text().trim());
+      if (p != null && p > 0 && p < 1000000) price = p;
+    }
+  }
+
+  // Preço original só de blocos explícitos "original" / "previous"
+  if (listPrice == null) {
+    const listSelectors = [
+      ".ui-pdp-price--original .andes-money-amount__fraction",
+      ".ui-pdp-price__original-value .andes-money-amount__fraction",
+      ".andes-money-amount--previous .andes-money-amount__fraction",
+      '[data-testid="original-price"] .andes-money-amount__fraction',
+    ];
+    for (const sel of listSelectors) {
+      const el = $(sel).first();
+      if (el.length) {
+        const p = parsePrice(el.text().trim());
+        if (p != null && p > 0 && (price == null || p > price)) listPrice = p;
+        if (listPrice != null) break;
+      }
+    }
+  }
+
   if (price == null) {
     const reais = html.match(/R\$\s*[\d.,]+/g);
     if (reais && reais.length > 0) {
@@ -405,7 +440,7 @@ function extractMercadoLivreFromHtml(
     null;
 
   const installments = extractInstallmentsML($);
-  // Preço novo deve ser o menor; preço cheio o maior
+  // Garantir: price = preço novo (venda), listPrice = preço cheio (só se for maior)
   let finalPrice = price ?? 0;
   let finalListPrice = listPrice;
   if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
@@ -725,6 +760,8 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     );
   }
 
+  const externalId = extractExternalIdFromUrl(normalized) ?? undefined;
+
   return {
     title,
     price,
@@ -735,6 +772,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     rawUrl: normalized,
     installments,
     priceCandidates,
+    externalId,
   };
 }
 
@@ -748,6 +786,7 @@ export function scrapedToProductInput(scraped: ScrapedProduct, categoryId?: stri
     affiliateLink: scraped.affiliateLink,
     imageUrl: scraped.imageUrl,
     installments: scraped.installments ?? undefined,
+    externalId: scraped.externalId ?? undefined,
     source: "amazon",
     categoryId,
   };

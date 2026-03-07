@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type Product, type Category } from "@/lib/api";
+import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function NewCampaignPage() {
   const router = useRouter();
@@ -23,7 +24,15 @@ export default function NewCampaignPage() {
     const params = new URLSearchParams({ status: "approved", limit: "200" });
     if (categoryFilter) params.set("categoryId", categoryFilter);
     api<{ products: Product[] }>(`/products?${params.toString()}`)
-      .then((d) => setProducts(d.products))
+      .then((d) => {
+        const seen = new Set<string>();
+        const unique = d.products.filter((p) => {
+          if (seen.has(p.affiliate_link)) return false;
+          seen.add(p.affiliate_link);
+          return true;
+        });
+        setProducts(unique);
+      })
       .catch(console.error);
   }, [categoryFilter]);
 
@@ -112,7 +121,7 @@ export default function NewCampaignPage() {
                   className="h-4 w-4"
                 />
                 <span className="flex-1 truncate text-sm">{p.title}</span>
-                <span className="text-sm text-slate-500">R$ {p.price}</span>
+                <span className="text-sm text-slate-500">R$ {formatPriceTwoDecimals(p.price)}</span>
               </li>
             ))}
           </ul>
