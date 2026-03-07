@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getLogs, appendLog } from "../lib/log-buffer.js";
+import { getLogs, appendLog } from "../../lib/log-buffer.js";
 
 export const logsRouter = Router();
 
