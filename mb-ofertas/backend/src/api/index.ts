@@ -11,6 +11,7 @@ import { initPool } from "../db/client.js";
 import { productsRouter } from "./routes/products.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { categoriesRouter } from "./routes/categories.js";
+import { whatsappChannelsRouter } from "./routes/whatsapp-channels.js";
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/", limiter);
 app.use("/api/products", productsRouter);
 app.use("/api/campaigns", campaignsRouter);
 app.use("/api/categories", categoriesRouter);
+app.use("/api/whatsapp/channels", whatsappChannelsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

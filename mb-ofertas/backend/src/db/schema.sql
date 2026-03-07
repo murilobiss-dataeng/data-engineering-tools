@@ -108,3 +108,12 @@ BEGIN
     ALTER TABLE products ADD COLUMN installments TEXT;
   END IF;
 END $$;
+
+-- Canais WhatsApp (para botão "Enviar para o WhatsApp" — um canal = um número ou grupo)
+CREATE TABLE IF NOT EXISTS whatsapp_channels (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       VARCHAR(200) NOT NULL,
+  phone      VARCHAR(20) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_channels_phone ON whatsapp_channels(phone);

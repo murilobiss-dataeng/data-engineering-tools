@@ -316,8 +316,9 @@ function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
 
 /**
  * Extrai título, preço e imagem da página do Mercado Livre.
- * Tratamento específico para ML: preço de venda vs preço original (riscado).
- * Prioridade: JSON com chaves explícitas (price = venda, original_price/regular_amount = cheio).
+ * ML às vezes coloca no JSON o preço cheio primeiro; o preço promocional aparece no HTML (bloco principal).
+ * Prioridade: 1) HTML do bloco principal (preço em destaque = promocional), 2) JSON "amount" (venda), 3) JSON "price".
+ * Preço cheio: original_price, list_price, regular_amount ou blocos .ui-pdp-price--original.
  */
 function extractMercadoLivreFromHtml(
   $: cheerio.CheerioAPI,
@@ -333,14 +334,45 @@ function extractMercadoLivreFromHtml(
   let price: number | null = null;
   let listPrice: number | null = null;
 
-  // —— ML: priorizar JSON com semântica clara (evitar confusão com HTML) ——
-  // Preço de venda (atual): "price" em reais
-  const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
-  if (jsonPrice) {
-    const p = parseFloat(jsonPrice[1]);
-    if (p > 0 && p < 10000000) price = p;
+  // —— 1) ML: priorizar HTML do preço em destaque (bloco principal = preço promocional) ——
+  const mainPriceSelectors = [
+    ".ui-pdp-price__main-container .andes-money-amount__fraction",
+    ".ui-pdp-price:not(.ui-pdp-price--original) .andes-money-amount__fraction",
+    '[data-testid="price"] .andes-money-amount__fraction',
+    ".andes-money-amount--cents-superscript .andes-money-amount__fraction",
+  ];
+  for (const sel of mainPriceSelectors) {
+    const el = $(sel).first();
+    if (el.length) {
+      const p = parsePrice(el.text().trim());
+      if (p != null && p > 0 && p < 1000000) {
+        price = p;
+        break;
+      }
+    }
   }
-  // amount (pode ser centavos em alguns contextos) — só se price não veio
+  if (price == null) {
+    const mainBlock = $(".ui-pdp-price__main-container").first();
+    if (mainBlock.length) {
+      const p = parsePrice(mainBlock.text().trim());
+      if (p != null && p > 0 && p < 1000000) price = p;
+    }
+  }
+
+  // —— 2) JSON: no ML, objeto de preço tem "amount" (venda) e "regular_amount" (cheio); preferir par do mesmo objeto ——
+  const mlAmountFirst = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])[^}]*"regular_amount"\s*:\s*([\d.]+)/);
+  const mlRegFirst = html.match(/"regular_amount"\s*:\s*([\d.]+)(?=\s*[,}])[^}]*"amount"\s*:\s*([\d.]+)/);
+  const mlPriceBlock = mlAmountFirst ?? (mlRegFirst ? [null, mlRegFirst[2], mlRegFirst[1]] : null);
+  if (mlPriceBlock && mlPriceBlock[1]) {
+    let saleV = parseFloat(mlPriceBlock[1]);
+    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
+    const regV = parseFloat(mlPriceBlock[2]);
+    const regularReais = regV > 10000 && regV < 100000000 ? regV / 100 : regV;
+    if (saleV > 0 && saleV < 10000000) {
+      if (price == null) price = saleV;
+      if (listPrice == null && regularReais > saleV) listPrice = regularReais;
+    }
+  }
   if (price == null) {
     const amountMatch = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])/);
     if (amountMatch) {
@@ -349,8 +381,15 @@ function extractMercadoLivreFromHtml(
       if (v > 0 && v < 10000000) price = v;
     }
   }
+  if (price == null) {
+    const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
+    if (jsonPrice) {
+      const p = parseFloat(jsonPrice[1]);
+      if (p > 0 && p < 10000000) price = p;
+    }
+  }
 
-  // Preço original (cheio/riscado): original_price, list_price em reais; regular_amount pode ser centavos
+  // —— Preço original (cheio/riscado): JSON ou blocos "original" no HTML ——
   const origPriceMatch = html.match(/"original_price"\s*:\s*([\d.]+)/);
   if (origPriceMatch) {
     const p = parseFloat(origPriceMatch[1]);
@@ -377,33 +416,6 @@ function extractMercadoLivreFromHtml(
       let v = parseFloat(basePriceMatch[1]);
       if (v > 10000 && v < 100000000) v = v / 100;
       if (v > 0 && v < 10000000 && (price == null || v > price)) listPrice = v;
-    }
-  }
-
-  // —— HTML: preço atual só de blocos que NÃO são "original" (evitar pegar o riscado como principal) ——
-  if (price == null) {
-    const mainPriceSelectors = [
-      ".ui-pdp-price__main-container .andes-money-amount__fraction",
-      ".ui-pdp-price:not(.ui-pdp-price--original) .andes-money-amount__fraction",
-      '[data-testid="price"] .andes-money-amount__fraction',
-      ".andes-money-amount--cents-superscript .andes-money-amount__fraction",
-    ];
-    for (const sel of mainPriceSelectors) {
-      const el = $(sel).first();
-      if (el.length) {
-        const p = parsePrice(el.text().trim());
-        if (p != null && p > 0 && p < 1000000) {
-          price = p;
-          break;
-        }
-      }
-    }
-  }
-  if (price == null) {
-    const mainBlock = $(".ui-pdp-price__main-container").first();
-    if (mainBlock.length) {
-      const p = parsePrice(mainBlock.text().trim());
-      if (p != null && p > 0 && p < 1000000) price = p;
     }
   }
 

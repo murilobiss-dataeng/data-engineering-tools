@@ -1,24 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Campaign, type Product } from "@/lib/api";
+import { api, type Campaign, type Product, type WhatsAppChannel } from "@/lib/api";
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [channels, setChannels] = useState<WhatsAppChannel[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendModal, setSendModal] = useState<Campaign | null>(null);
+  const [whatsappModal, setWhatsappModal] = useState<Campaign | null>(null);
   const [phones, setPhones] = useState("");
   const [sending, setSending] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState("");
+  const [openingWhatsapp, setOpeningWhatsapp] = useState(false);
 
   useEffect(() => {
     Promise.all([
       api<{ campaigns: Campaign[] }>("/campaigns?limit=50"),
       api<{ products: Product[] }>("/products?status=approved&limit=100"),
+      api<{ channels: WhatsAppChannel[] }>("/whatsapp/channels"),
     ])
-      .then(([c, p]) => {
+      .then(([c, p, ch]) => {
         setCampaigns(c.campaigns);
         setProducts(p.products);
+        setChannels(ch.channels);
+        if (ch.channels.length > 0 && !selectedChannelId) setSelectedChannelId(ch.channels[0].id);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -50,6 +57,29 @@ export default function CampaignsPage() {
       alert("Erro ao enfileirar envio.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleEnviarParaWhatsApp() {
+    const campaign = whatsappModal;
+    if (!campaign) return;
+    const channel = channels.find((c) => c.id === selectedChannelId);
+    if (!channel) {
+      alert("Selecione um canal. Cadastre em Canais WhatsApp.");
+      return;
+    }
+    setOpeningWhatsapp(true);
+    try {
+      const { message } = await api<{ message: string }>(`/campaigns/${campaign.id}/whatsapp-message`);
+      const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      setWhatsappModal(null);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao gerar mensagem.");
+    } finally {
+      setOpeningWhatsapp(false);
     }
   }
 

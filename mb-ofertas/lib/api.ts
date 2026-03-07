@@ -41,6 +41,13 @@ export type Campaign = {
 
 export type Category = { id: string; name: string; slug: string };
 
+export type WhatsAppChannel = {
+  id: string;
+  name: string;
+  phone: string;
+  created_at: string;
+};
+
 export type PriceCandidate = { code: string; value: number };
 
 export type ScrapedProduct = {
