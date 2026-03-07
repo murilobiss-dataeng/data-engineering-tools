@@ -124,8 +124,8 @@ export async function updateProductStatus(
   approvedBy?: string
 ) {
   await query(
-    `UPDATE products SET status = $1, updated_at = now(), approved_at = CASE WHEN $1 = 'approved' THEN now() ELSE approved_at END, approved_by = $2 WHERE id = $3`,
-    [status, approvedBy ?? null, id]
+    `UPDATE products SET status = $1::varchar(20), updated_at = now(), approved_at = CASE WHEN $2::varchar(20) = 'approved' THEN now() ELSE approved_at END, approved_by = $3::uuid WHERE id = $4::uuid`,
+    [status, status, approvedBy ?? null, id]
   );
 }
 
