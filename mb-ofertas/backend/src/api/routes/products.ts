@@ -85,20 +85,23 @@ productsRouter.get("/:id", async (req, res) => {
 
 productsRouter.patch("/:id/status", async (req, res) => {
   try {
-    const { status } = req.body as { status?: string };
-    if (!status || !["approved", "rejected", "sent"].includes(status)) {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const status = body.status;
+    if (!status || !["approved", "rejected", "sent"].includes(String(status))) {
       return res.status(400).json({ error: "status deve ser approved, rejected ou sent" });
     }
-    const id = req.params.id?.trim();
+    const id = (req.params.id && String(req.params.id).trim()) || "";
     if (!id) return res.status(400).json({ error: "id é obrigatório" });
     const existing = await productsRepo.getProductById(id);
     if (!existing) return res.status(404).json({ error: "Produto não encontrado" });
     await productsRepo.updateProductStatus(id, status as "approved" | "rejected" | "sent");
     const row = await productsRepo.getProductById(id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.json(formatProductRow(row));
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: msg });
   }
 });
 

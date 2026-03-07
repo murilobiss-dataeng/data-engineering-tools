@@ -90,7 +90,8 @@ export default function ProductsPage() {
       setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
     } catch (e) {
       console.error(e);
-      alert("Erro ao atualizar");
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar";
+      alert(msg);
     }
   }
 

@@ -7,9 +7,6 @@ const nextConfig = {
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA || "",
     NEXT_PUBLIC_LAST_UPDATED: process.env.NEXT_PUBLIC_LAST_UPDATED || new Date().toISOString().slice(0, 10),
   },
-  async redirects() {
-    return [{ source: "/Logs", destination: "/logs", permanent: true }];
-  },
   // Evita cache agressivo na edge para ver atualizações logo após o deploy
   async headers() {
     return [
