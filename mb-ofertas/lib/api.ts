@@ -40,6 +40,8 @@ export type Campaign = {
 
 export type Category = { id: string; name: string; slug: string };
 
+export type PriceCandidate = { code: string; value: number };
+
 export type ScrapedProduct = {
   title: string;
   price: number;
@@ -49,4 +51,9 @@ export type ScrapedProduct = {
   affiliateLink: string;
   rawUrl: string;
   installments: string | null;
+  /** Preços encontrados na página (origem: amazon | mercadolivre | shopee) para você indicar qual usar. */
+  priceCandidates?: {
+    source: "amazon" | "mercadolivre" | "shopee";
+    candidates: PriceCandidate[];
+  };
 };

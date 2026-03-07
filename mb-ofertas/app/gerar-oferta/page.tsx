@@ -140,7 +140,36 @@ export default function GerarOfertaPage() {
 
       {product && (
         <>
-<section className="card-flat">
+          {product.priceCandidates && product.priceCandidates.candidates.length > 0 && (
+            <section className="card-flat border-amber-200 bg-amber-50/50">
+              <h2 className="text-lg font-semibold text-stone-800">
+                Preços encontrados na página ({product.priceCandidates.source === "amazon" ? "Amazon" : product.priceCandidates.source === "mercadolivre" ? "Mercado Livre" : "Shopee"})
+              </h2>
+              <p className="mt-1 text-sm text-stone-600">
+                Use a tabela abaixo para indicar qual código é o <strong>preço novo</strong> e qual é o <strong>preço cheio (riscado)</strong>. Atualmente usados: preço novo = {product.price}, preço cheio = {product.previousPrice ?? "—"}.
+              </p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[320px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-200">
+                      <th className="py-2 text-left font-medium text-stone-700">Código</th>
+                      <th className="py-2 text-right font-medium text-stone-700">Valor (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.priceCandidates.candidates.map((c) => (
+                      <tr key={c.code} className="border-b border-stone-100">
+                        <td className="py-1.5 font-mono text-xs text-stone-700">{c.code}</td>
+                        <td className="py-1.5 text-right font-medium text-amber-800">{c.value.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          <section className="card-flat">
         <h2 className="text-lg font-semibold text-stone-800">2. Dados do produto (edite se quiser)</h2>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row">
               {product.imageUrl && (

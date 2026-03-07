@@ -12,6 +12,8 @@ const PARTNER_TAG = env.AMAZON_PARTNER_TAG ?? "";
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+export type PriceCandidate = { code: string; value: number };
+
 export type ScrapedProduct = {
   title: string;
   price: number;
@@ -21,6 +23,8 @@ export type ScrapedProduct = {
   affiliateLink: string;
   rawUrl: string;
   installments: string | null;
+  /** Todos os preços encontrados na página, com código da origem (para você indicar qual está correto). */
+  priceCandidates?: { source: "amazon" | "mercadolivre" | "shopee"; candidates: PriceCandidate[] };
 };
 
 function isAmazonUrl(url: string): boolean {
@@ -481,6 +485,121 @@ function extractShopeeFromHtml(
   return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments: null };
 }
 
+/** Coleta TODOS os preços encontrados na página Amazon com código da origem (para debug). */
+function collectAmazonPriceCandidates(html: string, $: cheerio.CheerioAPI): PriceCandidate[] {
+  const candidates: PriceCandidate[] = [];
+  const add = (code: string, value: number) => {
+    if (Number.isFinite(value) && value > 0 && value < 1000000) candidates.push({ code, value });
+  };
+
+  const priceToPayM = html.match(/priceToPay["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
+  if (priceToPayM) add("amazon_json_priceToPay", parseFloat(priceToPayM[1]));
+
+  const basisM = html.match(/basisPrice["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
+  if (basisM) add("amazon_json_basisPrice", parseFloat(basisM[1]));
+
+  ["savingsBasis", "strikePrice", "wasPrice", "listPrice", "regularPrice"].forEach((name) => {
+    const re = new RegExp(`"${name}"["\\s]*:["\\s]*\\{[^}]*"amount"["\\s]*:["\\s]*([\\d.]+)`);
+    const m = html.match(re);
+    if (m) add(`amazon_json_${name}`, parseFloat(m[1]));
+  });
+
+  const amountM = html.match(/"amount":\s*([\d.]+)/);
+  if (amountM) add("amazon_json_amount_first", parseFloat(amountM[1]));
+
+  const htmlSelectorsPrice = [
+    "#corePrice_feature_div .a-offscreen",
+    ".priceToPay .a-offscreen",
+    "#corePriceDisplay_desktop_feature_div .a-offscreen",
+    ".a-price .a-offscreen",
+    "#priceblock_ourprice",
+    "#priceblock_dealprice",
+    "#priceblock_saleprice",
+    "#priceblock_retailprice",
+    ".a-price.a-text-price .a-offscreen",
+    ".basisPrice .a-offscreen",
+  ];
+  for (const sel of htmlSelectorsPrice) {
+    const el = $(sel).first();
+    if (el.length && !isPerUnitOrPerLiter($, el)) {
+      const p = parsePrice(el.text().trim());
+      if (p != null && p > 0) add(`amazon_html_${sel.replace(/\s+/g, "_").slice(0, 40)}`, p);
+    }
+  }
+
+  return candidates;
+}
+
+/** Coleta TODOS os preços encontrados na página Mercado Livre com código da origem (para debug). */
+function collectMLPriceCandidates($: cheerio.CheerioAPI, html: string): PriceCandidate[] {
+  const candidates: PriceCandidate[] = [];
+  const add = (code: string, value: number) => {
+    if (Number.isFinite(value) && value > 0 && value < 10000000) candidates.push({ code, value });
+  };
+
+  const priceSelectors = [
+    ".ui-pdp-price__main-container",
+    ".ui-pdp-price .andes-money-amount",
+    ".ui-pdp-price",
+    '[data-testid="price"]',
+    ".andes-money-amount--cents-superscript",
+    ".ui-pdp-price--original .andes-money-amount__fraction",
+    ".ui-pdp-price__original-value .andes-money-amount__fraction",
+    ".andes-money-amount--previous .andes-money-amount__fraction",
+    ".ui-pdp-price__second-line",
+    ".ui-pdp-price--secondary .andes-money-amount__fraction",
+  ];
+  for (const sel of priceSelectors) {
+    const text = $(sel).first().text().trim();
+    const p = parsePrice(text);
+    if (p != null && p > 0) add(`ml_html_${sel.replace(/\s+/g, "_").slice(0, 35)}`, p);
+  }
+
+  const jsonCodes = [
+    ["price", /"price":\s*([\d.]+)/],
+    ["amount", /"amount":\s*([\d.]+)(?=\s*[,}])/],
+    ["regular_amount", /"regular_amount"\s*:\s*([\d.]+)/],
+    ["original_price", /"original_price"\s*:\s*([\d.]+)/],
+    ["list_price", /"list_price"\s*:\s*([\d.]+)/],
+    ["base_price", /"base_price"\s*:\s*([\d.]+)/],
+  ];
+  for (const [name, re] of jsonCodes) {
+    const m = html.match(re);
+    if (m) {
+      let v = parseFloat(m[1]);
+      if (name === "regular_amount" && v > 10000 && v < 100000000) v = v / 100;
+      if (v > 0) add(`ml_json_${name}`, v);
+    }
+  }
+
+  return candidates;
+}
+
+/** Coleta TODOS os preços encontrados na página Shopee com código da origem (para debug). */
+function collectShopeePriceCandidates($: cheerio.CheerioAPI, html: string): PriceCandidate[] {
+  const candidates: PriceCandidate[] = [];
+  const add = (code: string, value: number) => {
+    if (Number.isFinite(value) && value > 0 && value < 10000000) candidates.push({ code, value });
+  };
+
+  const saleM = html.match(/"sale_price"\s*:\s*([\d.]+)/);
+  if (saleM) add("shopee_json_sale_price", parseFloat(saleM[1]));
+  const minM = html.match(/"min_price"\s*:\s*([\d.]+)/);
+  if (minM) add("shopee_json_min_price", parseFloat(minM[1]));
+  const priceM = html.match(/"price"\s*:\s*([\d.]+)/);
+  if (priceM) add("shopee_json_price", parseFloat(priceM[1]));
+  const beforeM = html.match(/"price_before_discount"\s*:\s*([\d.]+)/);
+  if (beforeM) add("shopee_json_price_before_discount", parseFloat(beforeM[1]));
+  const origM = html.match(/"original_price"\s*:\s*([\d.]+)/);
+  if (origM) add("shopee_json_original_price", parseFloat(origM[1]));
+
+  const priceText = $(".shopee-product-info__price__current, [data-sqe='price'], .pqTWkA").first().text().trim();
+  const p = parsePrice(priceText);
+  if (p != null && p > 0) add("shopee_html_price_current", p);
+
+  return candidates;
+}
+
 /**
  * Busca dados do produto na URL (Amazon, Mercado Livre ou Shopee).
  * Retorna dados para preencher ProductInput; falha se não conseguir título ou preço.
@@ -582,10 +701,29 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
   const discountPct =
     previousPrice && previousPrice > 0 ? Math.round(((previousPrice - price) / previousPrice) * 100) : null;
 
-  logger.info(
-    { url: normalized, title: title.slice(0, 60), price, previousPrice, discountPct },
-    "Scrape product from URL"
-  );
+  let priceCandidates: ScrapedProduct["priceCandidates"] | undefined;
+  if (isAmazonUrl(normalized)) {
+    const candidates = collectAmazonPriceCandidates(html, $);
+    priceCandidates = { source: "amazon", candidates };
+    logger.info(
+      { source: "amazon", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice } },
+      "Preços encontrados (Amazon) — use os códigos para indicar qual é preço novo e qual é preço cheio"
+    );
+  } else if (isMercadoLivreUrl(normalized)) {
+    const candidates = collectMLPriceCandidates($, html);
+    priceCandidates = { source: "mercadolivre", candidates };
+    logger.info(
+      { source: "mercadolivre", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice } },
+      "Preços encontrados (Mercado Livre) — use os códigos para indicar qual é preço novo e qual é preço cheio"
+    );
+  } else if (isShopeeUrl(normalized)) {
+    const candidates = collectShopeePriceCandidates($, html);
+    priceCandidates = { source: "shopee", candidates };
+    logger.info(
+      { source: "shopee", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice } },
+      "Preços encontrados (Shopee) — use os códigos para indicar qual é preço novo e qual é preço cheio"
+    );
+  }
 
   return {
     title,
@@ -596,6 +734,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     affiliateLink,
     rawUrl: normalized,
     installments,
+    priceCandidates,
   };
 }
 

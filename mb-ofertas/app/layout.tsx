@@ -49,7 +49,11 @@ export default function RootLayout({
         </header>
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
         <footer className="mt-auto border-t border-stone-200 bg-white py-3 text-center text-xs text-stone-400">
-          Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local"}
+          Última atualização:{" "}
+          {process.env.NEXT_PUBLIC_LAST_UPDATED || "18/02/2025 14:30"}
+          {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+            <> · Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}</>
+          )}
         </footer>
       </body>
     </html>
