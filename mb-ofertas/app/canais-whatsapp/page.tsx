@@ -8,6 +8,7 @@ export default function CanaisWhatsAppPage() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [channelLink, setChannelLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -19,19 +20,26 @@ export default function CanaisWhatsAppPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) {
-      alert("Preencha nome e número.");
+    const link = channelLink.trim() || null;
+    const num = phone.trim() || null;
+    if (!name.trim()) {
+      alert("Preencha o nome do canal.");
+      return;
+    }
+    if (!num && !link) {
+      alert("Preencha o número ou o link do canal (ex.: canal público mb.OFERTAS).");
       return;
     }
     setSubmitting(true);
     try {
       const created = await api<WhatsAppChannel>("/whatsapp/channels", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+        body: JSON.stringify({ name: name.trim(), phone: num ?? "", channelLink: link }),
       });
       setChannels((prev) => [...prev, created]);
       setName("");
       setPhone("");
+      setChannelLink("");
     } catch (err) {
       console.error(err);
       alert("Erro ao adicionar canal.");
@@ -84,7 +92,7 @@ export default function CanaisWhatsAppPage() {
             />
           </div>
           <div className="min-w-[180px]">
-            <label className="mb-1 block text-sm font-medium text-stone-600">Número (DDD + número)</label>
+            <label className="mb-1 block text-sm font-medium text-stone-600">Número (opcional)</label>
             <input
               type="tel"
               value={phone}
@@ -92,6 +100,17 @@ export default function CanaisWhatsAppPage() {
               placeholder="11999999999"
               className="input w-full"
             />
+          </div>
+          <div className="min-w-[280px]">
+            <label className="mb-1 block text-sm font-medium text-stone-600">Link do canal (opcional)</label>
+            <input
+              type="url"
+              value={channelLink}
+              onChange={(e) => setChannelLink(e.target.value)}
+              placeholder="https://whatsapp.com/channel/..."
+              className="input w-full"
+            />
+            <p className="mt-1 text-xs text-stone-500">Para canal público (ex.: mb.OFERTAS), use o link do canal.</p>
           </div>
           <button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">
             {submitting ? "Salvando…" : "Adicionar"}
@@ -109,7 +128,7 @@ export default function CanaisWhatsAppPage() {
           <li key={c.id} className="card flex items-center justify-between p-4">
             <div>
               <p className="font-medium text-stone-900">{c.name}</p>
-              <p className="text-sm text-stone-500">{c.phone}</p>
+              <p className="text-sm text-stone-500">{c.channel_link ? c.channel_link : c.phone || "—"}</p>
             </div>
             <button
               type="button"

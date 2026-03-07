@@ -12,7 +12,7 @@ import * as categoriesRepo from "../../repositories/categories.repository.js";
 import { logger } from "../../config/logger.js";
 
 const DEFAULT_DELAY_MS = 2500;
-const DEFAULT_MAX_PER_LISTING = 15;
+const DEFAULT_MAX_PER_LISTING = 45;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

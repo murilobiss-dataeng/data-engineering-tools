@@ -67,8 +67,14 @@ export default function ProductDetailPage() {
     }
     setOpeningWhatsapp(true);
     try {
-      const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+      if (channel.channel_link) {
+        await navigator.clipboard.writeText(message);
+        window.open(channel.channel_link, "_blank", "noopener,noreferrer");
+        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
+      } else {
+        const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+      }
     } finally {
       setOpeningWhatsapp(false);
     }

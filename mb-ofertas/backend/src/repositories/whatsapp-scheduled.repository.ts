@@ -37,9 +37,10 @@ export async function listScheduled(limit = 50): Promise<WhatsAppScheduled[]> {
   return res.rows;
 }
 
-export async function getScheduledById(id: string): Promise<(WhatsAppScheduled & { channel_phone: string }) | null> {
-  const res = await query<WhatsAppScheduled & { channel_phone: string }>(
-    `SELECT s.id, s.channel_id, s.message, s.scheduled_at, s.status, s.opened_at, s.created_at, c.phone AS channel_phone
+export async function getScheduledById(id: string): Promise<(WhatsAppScheduled & { channel_phone: string; channel_link?: string | null }) | null> {
+  const res = await query<WhatsAppScheduled & { channel_phone: string; channel_link?: string | null }>(
+    `SELECT s.id, s.channel_id, s.message, s.scheduled_at, s.status, s.opened_at, s.created_at,
+            c.phone AS channel_phone, c.channel_link AS channel_link
      FROM whatsapp_scheduled s
      JOIN whatsapp_channels c ON c.id = s.channel_id
      WHERE s.id = $1`,

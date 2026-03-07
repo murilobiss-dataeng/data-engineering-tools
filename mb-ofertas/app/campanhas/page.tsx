@@ -19,6 +19,11 @@ export default function CampaignsPage() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [scheduling, setScheduling] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false);
+  const [bulkStartDate, setBulkStartDate] = useState("");
+  const [bulkStartTime, setBulkStartTime] = useState("");
+  const [bulkScheduling, setBulkScheduling] = useState(false);
 
   function loadScheduled() {
     api<{ scheduled: WhatsAppScheduled[] }>("/whatsapp/scheduled")
@@ -83,9 +88,14 @@ export default function CampaignsPage() {
     setOpeningWhatsapp(true);
     try {
       const { message } = await api<{ message: string }>(`/campaigns/${campaign.id}/whatsapp-message`);
-      const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (channel.channel_link) {
+        await navigator.clipboard.writeText(message);
+        window.open(channel.channel_link, "_blank", "noopener,noreferrer");
+        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
+      } else {
+        const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+      }
       setWhatsappModal(null);
     } catch (e) {
       console.error(e);
@@ -128,10 +138,70 @@ export default function CampaignsPage() {
     }
   }
 
+  function toggleBulkSelect(id: string) {
+    setSelectedForBulk((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkSchedule() {
+    const channel = channels.find((c) => c.id === selectedChannelId);
+    if (!channel) {
+      alert("Selecione um canal.");
+      return;
+    }
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) {
+      alert("Selecione ao menos uma campanha.");
+      return;
+    }
+    if (!bulkStartDate || !bulkStartTime) {
+      alert("Informe data e hora de início.");
+      return;
+    }
+    const startAt = `${bulkStartDate}T${bulkStartTime}:00`;
+    setBulkScheduling(true);
+    try {
+      const data = await api<{ created: number; ids: string[] }>("/whatsapp/scheduled/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          channelId: channel.id,
+          campaignIds: ids,
+          startAt,
+          intervalMinutes: 10,
+        }),
+      });
+      loadScheduled();
+      setSelectedForBulk(new Set());
+      setBulkScheduleOpen(false);
+      setBulkStartDate("");
+      setBulkStartTime("");
+      alert(`${data.created} agendamento(s) criado(s). Abra em Agendamentos no horário de cada um.`);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao programar em massa.");
+    } finally {
+      setBulkScheduling(false);
+    }
+  }
+
   async function handleAbrirAgendado(item: WhatsAppScheduled) {
     try {
-      const { url } = await api<{ url: string }>(`/whatsapp/scheduled/${item.id}/open`, { method: "POST" });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const data = await api<{ message: string; channelPhone: string; channelLink: string | null; url: string | null }>(
+        `/whatsapp/scheduled/${item.id}/open`,
+        { method: "POST" }
+      );
+      if (data.channelLink) {
+        await navigator.clipboard.writeText(data.message);
+        window.open(data.channelLink, "_blank", "noopener,noreferrer");
+        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
+      } else {
+        const url = `https://wa.me/${data.channelPhone}?text=${encodeURIComponent(data.message)}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
       loadScheduled();
     } catch (e) {
       console.error(e);
@@ -158,9 +228,24 @@ export default function CampaignsPage() {
           <h1 className="page-title">Campanhas</h1>
           <p className="page-subtitle">Envie ofertas por WhatsApp para sua lista.</p>
         </div>
-        <a href="/campanhas/nova" className="btn-primary">
-          Nova campanha
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedForBulk.size > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setBulkScheduleOpen(true);
+                setBulkStartDate(today);
+                setBulkStartTime(defaultTime);
+              }}
+              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+            >
+              Programar em massa ({selectedForBulk.size})
+            </button>
+          )}
+          <a href="/campanhas/nova" className="btn-primary">
+            Nova campanha
+          </a>
+        </div>
       </div>
 
       <ul className="space-y-4">
@@ -171,13 +256,24 @@ export default function CampaignsPage() {
         )}
         {campaigns.map((c) => (
           <li key={c.id} className="card flex items-center justify-between p-5">
-            <div>
-              <p className="font-semibold text-stone-900">{c.name}</p>
-              <p className="text-sm text-stone-500">
-                Status: {c.status} • {c.product_ids?.length ?? 0} produto(s)
-              </p>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <label className="flex shrink-0 items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedForBulk.has(c.id)}
+                  onChange={() => toggleBulkSelect(c.id)}
+                  className="h-4 w-4 rounded border-stone-300"
+                />
+                <span className="sr-only">Selecionar para programar em massa</span>
+              </label>
+              <div className="min-w-0">
+                <p className="font-semibold text-stone-900">{c.name}</p>
+                <p className="text-sm text-stone-500">
+                  Status: {c.status} • {c.product_ids?.length ?? 0} produto(s)
+                </p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
               {["draft", "scheduled"].includes(c.status) && (
                 <button onClick={() => setSendModal(c)} className="btn-primary text-sm">
                   Enviar agora
@@ -280,7 +376,7 @@ export default function CampaignsPage() {
                 {channels.length === 0 && <option value="">Cadastre canais em Canais WhatsApp</option>}
                 {channels.map((ch) => (
                   <option key={ch.id} value={ch.id}>
-                    {ch.name} ({ch.phone})
+                    {ch.name} {ch.channel_link ? "(canal)" : `(${ch.phone})`}
                   </option>
                 ))}
               </select>
@@ -317,7 +413,7 @@ export default function CampaignsPage() {
               >
                 {channels.map((ch) => (
                   <option key={ch.id} value={ch.id}>
-                    {ch.name} ({ch.phone})
+                    {ch.name} {ch.channel_link ? "(canal)" : `(${ch.phone})`}
                   </option>
                 ))}
               </select>
@@ -352,6 +448,64 @@ export default function CampaignsPage() {
                 className="btn-primary disabled:opacity-50"
               >
                 {scheduling ? "Salvando…" : "Programar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkScheduleOpen && (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50">
+          <div className="card-flat w-full max-w-md p-6 shadow-xl">
+            <h3 className="mb-2 font-semibold text-stone-900">Programar em massa</h3>
+            <p className="mb-4 text-sm text-stone-600">
+              {selectedForBulk.size} campanha(s) selecionada(s). Será criado um agendamento a cada 10 minutos, na ordem da lista.
+            </p>
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-stone-700">Canal</label>
+              <select
+                value={selectedChannelId}
+                onChange={(e) => setSelectedChannelId(e.target.value)}
+                className="input w-full"
+              >
+                {channels.map((ch) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.name} {ch.channel_link ? "(canal)" : `(${ch.phone})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Data início</label>
+                <input
+                  type="date"
+                  value={bulkStartDate}
+                  onChange={(e) => setBulkStartDate(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Horário início</label>
+                <input
+                  type="time"
+                  value={bulkStartTime}
+                  onChange={(e) => setBulkStartTime(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <p className="mb-4 text-xs text-stone-500">Intervalo: 10 minutos entre cada post.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setBulkScheduleOpen(false)} className="btn-secondary">
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkSchedule}
+                disabled={bulkScheduling}
+                className="btn-primary disabled:opacity-50"
+              >
+                {bulkScheduling ? "Criando…" : "Criar agendamentos"}
               </button>
             </div>
           </div>

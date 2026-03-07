@@ -14,6 +14,7 @@ import { categoriesRouter } from "./routes/categories.js";
 import { whatsappChannelsRouter } from "./routes/whatsapp-channels.js";
 import { whatsappScheduledRouter } from "./routes/whatsapp-scheduled.js";
 import { shortLinksRouter } from "./routes/short-links.js";
+import { logsRouter } from "./routes/logs.js";
 import { getLongUrlByCode } from "../repositories/short-links.repository.js";
 
 const app = express();
@@ -48,6 +49,7 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/whatsapp/channels", whatsappChannelsRouter);
 app.use("/api/whatsapp/scheduled", whatsappScheduledRouter);
 app.use("/api/short-links", shortLinksRouter);
+app.use("/api/logs", logsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

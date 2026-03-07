@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as campaignsRepo from "../../repositories/campaigns.repository.js";
 import * as productsRepo from "../../repositories/products.repository.js";
 import * as shortLinksRepo from "../../repositories/short-links.repository.js";
+import { getCampaignWhatsAppMessage } from "../../services/campaigns/campaign-whatsapp-message.service.js";
 import { generateOfferMessage } from "../../services/messages/copy-generator.js";
 import { addSendJob } from "../../workers/queues.js";
 import type { ProductInput } from "../../services/products/types.js";
@@ -43,34 +44,17 @@ campaignsRouter.get("/:id", async (req, res) => {
   }
 });
 
-/** Mensagem pronta para colar no WhatsApp (todos os produtos da campanha). */
+/** Mensagem pronta para colar no WhatsApp (todos os produtos da campanha). Aceita header X-Short-Link-Base para link curto. */
 campaignsRouter.get("/:id/whatsapp-message", async (req, res) => {
   try {
-    const campaign = await campaignsRepo.getCampaignById(req.params.id);
-    if (!campaign) return res.status(404).json({ error: "Campanha não encontrada" });
-    const productIds = (campaign.product_ids as string[]) ?? [];
-    const products = await Promise.all(
-      productIds.map((id) => productsRepo.getProductById(id))
-    ).then((rows) => rows.filter(Boolean));
-    const lines: string[] = [];
-    for (const row of products) {
-      let p: ProductInput = {
-        title: row.title,
-        price: parseFloat(row.price),
-        previousPrice: row.previous_price ? parseFloat(row.previous_price) : null,
-        discountPct: row.discount_pct != null ? parseFloat(row.discount_pct) : null,
-        affiliateLink: row.affiliate_link,
-        imageUrl: row.image_url,
-        installments: row.installments ?? undefined,
-      };
-      p = normalizeProductPrices(p);
-      const short = await shortLinksRepo.createShortLink(row.affiliate_link);
-      lines.push(generateOfferMessage(p, { shortLink: short.shortUrl }));
-    }
-    const message = lines.join("\n\n——\n\n");
+    const shortLinkBaseUrl = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
+    const message = await getCampaignWhatsAppMessage(req.params.id, { shortLinkBaseUrl });
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.json({ message });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    const e = err as Error;
+    if (e.message === "Campanha não encontrada") return res.status(404).json({ error: e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 

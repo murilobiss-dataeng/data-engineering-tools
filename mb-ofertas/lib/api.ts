@@ -1,9 +1,20 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+/** Base URL para link curto (fallback para encurtar e esconder tag). Enviado no header quando disponível. */
+function getShortLinkBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return (process.env.NEXT_PUBLIC_APP_URL || (window as Window & { __APP_URL?: string }).__APP_URL || window.location.origin).replace(/\/$/, "");
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+}
+
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
+  const base = getShortLinkBaseUrl();
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(options?.headers as Record<string, string>) };
+  if (base) headers["X-Short-Link-Base"] = base;
   const res = await fetch(`${API_URL}/api${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -45,6 +56,7 @@ export type WhatsAppChannel = {
   id: string;
   name: string;
   phone: string;
+  channel_link: string | null;
   created_at: string;
 };
 

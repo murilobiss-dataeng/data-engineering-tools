@@ -14,11 +14,11 @@ whatsappChannelsRouter.get("/", async (_req, res) => {
 
 whatsappChannelsRouter.post("/", async (req, res) => {
   try {
-    const { name, phone } = req.body as { name?: string; phone?: string };
-    if (!name?.trim() || !phone?.trim()) {
-      return res.status(400).json({ error: "name e phone são obrigatórios" });
+    const { name, phone, channelLink } = req.body as { name?: string; phone?: string; channelLink?: string | null };
+    if (!name?.trim()) {
+      return res.status(400).json({ error: "name é obrigatório" });
     }
-    const id = await channelsRepo.insertChannel(name.trim(), phone.trim());
+    const id = await channelsRepo.insertChannel(name.trim(), (phone || "").trim(), channelLink?.trim() || undefined);
     const channel = await channelsRepo.getChannelById(id);
     res.status(201).json(channel);
   } catch (err) {
