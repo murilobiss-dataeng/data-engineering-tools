@@ -55,6 +55,17 @@ function isMercadoLivreUrl(url: string): boolean {
   }
 }
 
+/** URLs do ML que são tracking/redirect/ofertas, não página de produto. */
+function isMercadoLivreNonProductUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return /^click\d*\.(mercadolivre|mercadolibre)/i.test(host) || /^(tracking|redirect|auth)\.(mercadolivre|mercadolibre)/i.test(host) || /\/mclics\/clicks\//i.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function isShopeeUrl(url: string): boolean {
   try {
     const u = new URL(url);
@@ -662,6 +673,7 @@ function collectShopeePriceCandidates($: cheerio.CheerioAPI, html: string): Pric
 export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct> {
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("URL inválida.");
+  if (isMercadoLivreNonProductUrl(normalized)) throw new Error("URL não é página de produto (tracking/ofertas).");
 
   const res = await fetch(normalized, {
     headers: {
@@ -690,6 +702,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
   if (isMercadoLivreUrl(normalized)) {
     const ml = extractMercadoLivreFromHtml($, html);
     title = (ml.title || ogTitle).trim().slice(0, 500);
+    if (title === "Mercado Livre" || title === "Mercado Libre") title = "";
     price = ml.price;
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;

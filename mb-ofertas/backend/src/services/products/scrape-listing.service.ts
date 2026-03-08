@@ -13,6 +13,9 @@ const AMAZON_PRODUCT_PATH = /^\/(dp|gp\/product)\/[A-Z0-9]{10}/i;
 const ML_PRODUCT_PATH = /\/p\/[A-Z0-9]+|(?:listado|item)\.mercadolivre\.com\.br\/[^/]+_[A-Z0-9]+/i;
 const SHOPEE_PRODUCT_PATH = /\/[^/]+-i\.(\d+)\.(\d+)/i;
 
+/** Subdomínios do ML que NUNCA são página de produto (tracking, redirect, ofertas). */
+const ML_NON_PRODUCT_HOSTS = /^(click\d*|tracking|redirect|ofertas|auth)\.(mercadolivre|mercadolibre)(\.com\.br)?$/i;
+
 function normalizeUrl(href: string, baseUrl: string): string | null {
   try {
     const u = new URL(href, baseUrl);
@@ -25,10 +28,13 @@ function normalizeUrl(href: string, baseUrl: string): string | null {
       if (match) return `https://www.amazon.com.br/dp/${match[2]}`;
       return null;
     }
-    // Mercado Livre: URL canônica do item
+    // Mercado Livre: só aceitar páginas de produto (www ou produto), nunca click/tracking
     if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
-      if (/\/p\/[A-Z0-9]+/.test(path)) return u.origin + path;
-      if (path.includes("MLB") && path.length < 200) return u.origin + path;
+      if (ML_NON_PRODUCT_HOSTS.test(host)) return null;
+      const isProductHost = host === "mercadolivre.com.br" || host === "mercadolibre.com.br" || host === "produto.mercadolivre.com.br" || host === "produto.mercadolibre.com.br" || /^(listado|item)\.(mercadolivre|mercadolibre)\.com\.br$/.test(host);
+      if (!isProductHost) return null;
+      if (/\/p\/[A-Z0-9]+/.test(path)) return u.origin + path.split("?")[0];
+      if (/\/MLB\d+/.test(path) && path.length < 200) return u.origin + path.split("?")[0];
       return null;
     }
     // Shopee: produto -i.shopid.itemid

@@ -15,6 +15,15 @@ import { appendLog } from "../../config/log-buffer.js";
 const DEFAULT_DELAY_MS = 2500;
 const DEFAULT_MAX_PER_LISTING = 45;
 
+/** Títulos que são do site, não de produto — não inserir. */
+const GENERIC_TITLES = new Set(["mercado livre", "mercadolivre", "mercado libre", "amazon", "shopee", "oferta", "ofertas"]);
+
+function isGenericProductTitle(title: string): boolean {
+  const t = title.trim().toLowerCase().slice(0, 100);
+  if (t.length < 12) return true;
+  return GENERIC_TITLES.has(t) || GENERIC_TITLES.has(t.replace(/\s+/g, ""));
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -109,6 +118,10 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         for (const productUrl of toFetch) {
           try {
             const scraped = await scrapeProductFromUrl(productUrl);
+            if (isGenericProductTitle(scraped.title)) {
+              logger.info({ url: productUrl, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
+              continue;
+            }
             const source = getSource(scraped.rawUrl);
             const input = { ...scrapedToProductInput(scraped), source };
             const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
@@ -128,15 +141,19 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         }
       } else {
         const scraped = await scrapeProductFromUrl(url);
-        const source = getSource(scraped.rawUrl);
-        const input = { ...scrapedToProductInput(scraped), source };
-        const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
-        const category = await categoriesRepo.getCategoryBySlug(categorySlug);
-        if (category) input.categoryId = category.id;
-        input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
-        const { isNew } = await productsRepo.insertProduct(input);
-        if (isNew) inserted++;
-        logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
+        if (isGenericProductTitle(scraped.title)) {
+          logger.info({ url, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
+        } else {
+          const source = getSource(scraped.rawUrl);
+          const input = { ...scrapedToProductInput(scraped), source };
+          const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
+          const category = await categoriesRepo.getCategoryBySlug(categorySlug);
+          if (category) input.categoryId = category.id;
+          input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
+          const { isNew } = await productsRepo.insertProduct(input);
+          if (isNew) inserted++;
+          logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
