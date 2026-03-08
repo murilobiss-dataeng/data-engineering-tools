@@ -325,10 +325,16 @@ function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
   return null;
 }
 
+/** Rejeita valor que parece ser contagem (opiniões, avaliações) e não preço. */
+function mlLooksLikeCount(value: number, html: string): boolean {
+  const s = String(Math.round(value));
+  return new RegExp(`${s.replace(/\./g, "\\.")}\\s*(opiniões|avaliações|reviews)`).test(html);
+}
+
 /**
  * Extrai título, preço e imagem da página do Mercado Livre.
- * Regra definitiva: preço de VENDA = "amount" (ou HTML principal). Preço CHEIO = "original_price"/"regular_amount".
- * NUNCA usar original_price, list_price ou base_price como preço principal (são o riscado).
+ * Regra: preço de VENDA = "price" ou "amount" (no contexto de preço). Preço CHEIO = "original_price"/"regular_amount".
+ * Evita pegar "2612 opiniões" ou outros números que não são preço.
  */
 function extractMercadoLivreFromHtml(
   $: cheerio.CheerioAPI,
@@ -344,38 +350,64 @@ function extractMercadoLivreFromHtml(
   let price: number | null = null;
   let listPrice: number | null = null;
 
-  // —— 1) JSON: no ML oficial, "amount" = preço de venda, "regular_amount" = preço cheio. Par no mesmo objeto (até ~400 chars). ——
-  const mlAmountThenReg = html.match(/"amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"regular_amount"\s*:\s*([\d.]+)/);
-  const mlRegThenAmount = html.match(/"regular_amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"amount"\s*:\s*([\d.]+)/);
-  if (mlAmountThenReg) {
-    let saleV = parseFloat(mlAmountThenReg[1]);
-    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
-    let regV = parseFloat(mlAmountThenReg[2]);
-    if (regV > 10000 && regV < 100000000) regV = regV / 100;
-    if (saleV > 0 && saleV < 10000000) {
-      price = saleV;
-      if (regV > saleV) listPrice = regV;
+  // —— 1) JSON no contexto de preço do produto: "price" + "original_price" (estrutura comum do ML) ——
+  const priceThenOrig = html.match(/"price"\s*:\s*([\d.]+)[\s\S]{0,300}?"original_price"\s*:\s*([\d.]+)/);
+  const origThenPrice = html.match(/"original_price"\s*:\s*([\d.]+)[\s\S]{0,300}?"price"\s*:\s*([\d.]+)/);
+  if (priceThenOrig) {
+    let p = parseFloat(priceThenOrig[1]);
+    let orig = parseFloat(priceThenOrig[2]);
+    if (p > 10000 && p < 100000000) p = p / 100;
+    if (orig > 10000 && orig < 100000000) orig = orig / 100;
+    if (p > 0 && p < 10000000 && !mlLooksLikeCount(p, html)) {
+      price = p;
+      if (orig > p) listPrice = orig;
     }
-  } else if (mlRegThenAmount) {
-    let regV = parseFloat(mlRegThenAmount[1]);
-    if (regV > 10000 && regV < 100000000) regV = regV / 100;
-    let saleV = parseFloat(mlRegThenAmount[2]);
-    if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
-    if (saleV > 0 && saleV < 10000000) {
-      price = saleV;
-      if (regV > saleV) listPrice = regV;
+  } else if (origThenPrice) {
+    let orig = parseFloat(origThenPrice[1]);
+    let p = parseFloat(origThenPrice[2]);
+    if (orig > 10000 && orig < 100000000) orig = orig / 100;
+    if (p > 10000 && p < 100000000) p = p / 100;
+    if (p > 0 && p < 10000000 && !mlLooksLikeCount(p, html)) {
+      price = p;
+      if (orig > p) listPrice = orig;
     }
   }
+
+  // —— 2) JSON: "amount" + "regular_amount" no mesmo bloco (preço em centavos quando > 10000) ——
+  if (price == null) {
+    const mlAmountThenReg = html.match(/"amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"regular_amount"\s*:\s*([\d.]+)/);
+    const mlRegThenAmount = html.match(/"regular_amount"\s*:\s*([\d.]+)[\s\S]{0,400}?"amount"\s*:\s*([\d.]+)/);
+    if (mlAmountThenReg) {
+      let saleV = parseFloat(mlAmountThenReg[1]);
+      if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
+      let regV = parseFloat(mlAmountThenReg[2]);
+      if (regV > 10000 && regV < 100000000) regV = regV / 100;
+      if (saleV > 0 && saleV < 10000000 && !mlLooksLikeCount(saleV, html)) {
+        price = saleV;
+        if (regV > saleV) listPrice = regV;
+      }
+    } else if (mlRegThenAmount) {
+      let regV = parseFloat(mlRegThenAmount[1]);
+      if (regV > 10000 && regV < 100000000) regV = regV / 100;
+      let saleV = parseFloat(mlRegThenAmount[2]);
+      if (saleV > 10000 && saleV < 100000000) saleV = saleV / 100;
+      if (saleV > 0 && saleV < 10000000 && !mlLooksLikeCount(saleV, html)) {
+        price = saleV;
+        if (regV > saleV) listPrice = regV;
+      }
+    }
+  }
+  // Não usar primeiro "amount" solto da página (pode ser "amount" de opiniões/avaliações)
   if (price == null) {
     const firstAmount = html.match(/"amount"\s*:\s*([\d.]+)(?=\s*[,}])/);
     if (firstAmount) {
       let v = parseFloat(firstAmount[1]);
       if (v > 10000 && v < 100000000) v = v / 100;
-      if (v > 0 && v < 10000000) price = v;
+      if (v > 0 && v < 10000000 && !mlLooksLikeCount(v, html)) price = v;
     }
   }
 
-  // —— 2) HTML: bloco principal (preço em destaque) = preço promocional ——
+  // —— 3) HTML: bloco principal (preço em destaque). Ignorar nós que contêm "opiniões"/"avaliações". ——
   if (price == null) {
     const mainPriceSelectors = [
       ".ui-pdp-price__main-container .andes-money-amount__fraction",
@@ -386,8 +418,10 @@ function extractMercadoLivreFromHtml(
     for (const sel of mainPriceSelectors) {
       const el = $(sel).first();
       if (el.length) {
-        const p = parsePrice(el.text().trim());
-        if (p != null && p > 0 && p < 1000000) {
+        const text = el.text().trim();
+        if (/opiniões|avaliações|reviews/i.test(text)) continue;
+        const p = parsePrice(text);
+        if (p != null && p > 0 && p < 1000000 && !mlLooksLikeCount(p, html)) {
           price = p;
           break;
         }
@@ -397,12 +431,15 @@ function extractMercadoLivreFromHtml(
   if (price == null) {
     const mainBlock = $(".ui-pdp-price__main-container").first();
     if (mainBlock.length) {
-      const p = parsePrice(mainBlock.text().trim());
-      if (p != null && p > 0 && p < 1000000) price = p;
+      const text = mainBlock.text().trim();
+      if (!/opiniões|avaliações|reviews/i.test(text)) {
+        const p = parsePrice(text);
+        if (p != null && p > 0 && p < 1000000 && !mlLooksLikeCount(p, html)) price = p;
+      }
     }
   }
 
-  // —— 3) Preço CHEIO (só para listPrice): original_price, list_price, regular_amount, base_price. NUNCA usar como price. ——
+  // —— 4) Preço CHEIO (só para listPrice): original_price, list_price, regular_amount, base_price. NUNCA usar como price. ——
   const origPriceMatch = html.match(/"original_price"\s*:\s*([\d.]+)/);
   if (origPriceMatch) {
     const p = parseFloat(origPriceMatch[1]);
@@ -447,20 +484,23 @@ function extractMercadoLivreFromHtml(
     }
   }
 
-  // —— 4) Último recurso para price: primeiro "price" em JSON só se for menor que listPrice (evita pegar o cheio). ——
+  // —— 5) Último recurso para price: "price" em JSON (evitar usar "amount" solto que pode ser opiniões). ——
   if (price == null) {
     const jsonPrice = html.match(/"price"\s*:\s*([\d.]+)/);
     if (jsonPrice) {
-      const p = parseFloat(jsonPrice[1]);
-      if (p > 0 && p < 10000000 && (listPrice == null || p <= listPrice)) price = p;
+      let p = parseFloat(jsonPrice[1]);
+      if (p > 10000 && p < 100000000) p = p / 100;
+      if (p > 0 && p < 10000000 && (listPrice == null || p <= listPrice) && !mlLooksLikeCount(p, html)) price = p;
     }
   }
 
-  // —— 5) Fallback: qualquer R$ X no HTML (página dinâmica) ——
+  // —— 6) Fallback: R$ X no HTML. Descartar valores que parecem contagem. ——
   if (price == null) {
     const reais = html.match(/R\$\s*[\d.,]+/g);
     if (reais && reais.length > 0) {
-      const values = reais.map((r) => parsePrice(r)).filter((p): p is number => p != null && p > 0 && p < 100000);
+      const values = reais
+        .map((r) => parsePrice(r))
+        .filter((p): p is number => p != null && p > 0 && p < 100000 && !mlLooksLikeCount(p, html));
       if (values.length > 0) price = Math.min(...values);
     }
   }
@@ -703,6 +743,18 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     const ml = extractMercadoLivreFromHtml($, html);
     title = (ml.title || ogTitle).trim().slice(0, 500);
     if (title === "Mercado Livre" || title === "Mercado Libre") title = "";
+    if (!title && ogTitle.trim().length > 20 && !/^mercado\s+livre$/i.test(ogTitle.trim())) title = ogTitle.trim().slice(0, 500);
+    if (!title) {
+      try {
+        const u = new URL(normalized);
+        const pathMatch = u.pathname.match(/^\/([^/]+)(?:\/p\/|$)/);
+        if (pathMatch && pathMatch[1].length > 5) {
+          title = pathMatch[1].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 500);
+        }
+      } catch {
+        // ignore
+      }
+    }
     price = ml.price;
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;
@@ -720,7 +772,8 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     }
   } else if (isShopeeUrl(normalized)) {
     const shopee = extractShopeeFromHtml($, html);
-    title = (shopee.title || ogTitle).slice(0, 500);
+    title = (shopee.title || ogTitle).trim().slice(0, 500);
+    if (!title && ogTitle.trim().length > 10 && !/^shopee$/i.test(ogTitle.trim())) title = ogTitle.trim().slice(0, 500);
     price = shopee.price;
     listPrice = shopee.listPrice;
     imageUrl = shopee.imageUrl || ogImage || null;
