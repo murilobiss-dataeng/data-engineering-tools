@@ -10,7 +10,7 @@ import { inferCategorySlugFromTitle } from "./categorize.service.js";
 import * as productsRepo from "../../repositories/products.repository.js";
 import * as categoriesRepo from "../../repositories/categories.repository.js";
 import { logger } from "../../config/logger.js";
-import { appendLog } from "../../lib/log-buffer.js";
+import { appendLog } from "../../config/log-buffer.js";
 
 const DEFAULT_DELAY_MS = 2500;
 const DEFAULT_MAX_PER_LISTING = 45;

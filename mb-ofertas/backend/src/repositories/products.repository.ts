@@ -123,9 +123,10 @@ export async function updateProductStatus(
   status: "approved" | "rejected" | "sent",
   approvedBy?: string
 ) {
+  const statusVal = String(status);
   await query(
-    `UPDATE products SET status = $1::varchar(20), updated_at = now(), approved_at = CASE WHEN $2::varchar(20) = 'approved' THEN now() ELSE approved_at END, approved_by = $3::uuid WHERE id = $4::uuid`,
-    [status, status, approvedBy ?? null, id]
+    `UPDATE products SET status = CAST($1 AS character varying(20)), updated_at = now(), approved_at = CASE WHEN CAST($2 AS character varying(20)) = 'approved' THEN now() ELSE approved_at END, approved_by = $3 WHERE id = $4`,
+    [statusVal, statusVal, approvedBy ?? null, id]
   );
 }
 
