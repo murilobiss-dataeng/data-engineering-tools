@@ -26,6 +26,17 @@ whatsappChannelsRouter.post("/", async (req, res) => {
   }
 });
 
+whatsappChannelsRouter.patch("/:id", async (req, res) => {
+  try {
+    const { name, phone, channelLink } = req.body as { name?: string; phone?: string; channelLink?: string | null };
+    const channel = await channelsRepo.updateChannel(req.params.id, { name, phone, channelLink });
+    if (!channel) return res.status(404).json({ error: "Canal não encontrado" });
+    res.json(channel);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 whatsappChannelsRouter.delete("/:id", async (req, res) => {
   try {
     const deleted = await channelsRepo.deleteChannel(req.params.id);

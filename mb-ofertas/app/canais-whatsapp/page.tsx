@@ -10,6 +10,11 @@ export default function CanaisWhatsAppPage() {
   const [phone, setPhone] = useState("");
   const [channelLink, setChannelLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState<WhatsAppChannel | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editChannelLink, setEditChannelLink] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     api<{ channels: WhatsAppChannel[] }>("/whatsapp/channels")
@@ -45,6 +50,42 @@ export default function CanaisWhatsAppPage() {
       alert("Erro ao adicionar canal.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openEdit(c: WhatsAppChannel) {
+    setEditing(c);
+    setEditName(c.name);
+    setEditPhone(c.phone || "");
+    setEditChannelLink(c.channel_link || "");
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editing) return;
+    const link = editChannelLink.trim() || null;
+    const num = editPhone.trim() || null;
+    if (!link && (!num || num.replace(/\D/g, "").length < 10)) {
+      alert("Preencha o número (DDD + número) ou o link do canal.");
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      const updated = await api<WhatsAppChannel>(`/whatsapp/channels/${editing.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: editName.trim(),
+          phone: num ?? "",
+          channelLink: link,
+        }),
+      });
+      setChannels((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      setEditing(null);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao atualizar canal.");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -130,16 +171,73 @@ export default function CanaisWhatsAppPage() {
               <p className="font-medium text-stone-900">{c.name}</p>
               <p className="text-sm text-stone-500">{c.channel_link ? c.channel_link : c.phone || "—"}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => handleDelete(c.id)}
-              className="rounded px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-            >
-              Remover
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => openEdit(c)}
+                className="rounded px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(c.id)}
+                className="rounded px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+              >
+                Remover
+              </button>
+            </div>
           </li>
         ))}
       </ul>
+
+      {editing && (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50">
+          <div className="card-flat w-full max-w-md p-6 shadow-xl">
+            <h2 className="mb-4 font-semibold text-stone-900">Editar canal: {editing.name}</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-600">Nome</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-600">Número (opcional)</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="11999999999"
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-600">Link do canal (para publicar no canal)</label>
+                <input
+                  type="url"
+                  value={editChannelLink}
+                  onChange={(e) => setEditChannelLink(e.target.value)}
+                  placeholder="https://whatsapp.com/channel/..."
+                  className="input w-full"
+                />
+                <p className="mt-1 text-xs text-stone-500">Preencha para que &quot;Enviar para WhatsApp&quot; abra o canal em vez do número.</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setEditing(null)} className="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={editSubmitting} className="btn-primary disabled:opacity-50">
+                  {editSubmitting ? "Salvando…" : "Salvar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

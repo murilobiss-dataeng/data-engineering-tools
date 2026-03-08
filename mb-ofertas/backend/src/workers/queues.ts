@@ -16,14 +16,25 @@ function isRedisConfigured(): boolean {
   }
 }
 
-function getRedisOptions(): { host: string; port: number; password?: string } {
+function getRedisOptions(): {
+  host: string;
+  port: number;
+  password?: string;
+  username?: string;
+  tls?: object;
+} {
   try {
     const u = new URL(env.REDIS_URL || "redis://localhost:6379");
-    return {
+    const port = parseInt(u.port || "6379", 10);
+    const opts: { host: string; port: number; password?: string; username?: string; tls?: object } = {
       host: u.hostname,
-      port: parseInt(u.port || "6379", 10),
-      ...(u.password ? { password: u.password } : {}),
+      port,
     };
+    // Redis 6+ ACL / Upstash: username (e.g. "default") + password
+    if (u.username) opts.username = decodeURIComponent(u.username);
+    if (u.password) opts.password = decodeURIComponent(u.password);
+    if (u.protocol === "rediss:") opts.tls = {};
+    return opts;
   } catch {
     return { host: "localhost", port: 6379 };
   }

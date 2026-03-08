@@ -60,6 +60,12 @@ export default function ProductDetailPage() {
       alert("Selecione um canal. Cadastre em Canais WhatsApp.");
       return;
     }
+    if (!channel.channel_link?.trim()) {
+      alert(
+        "Para publicar no canal, configure o link do canal. Vá em Canais WhatsApp, edite este canal e preencha \"Link do canal\" (ex.: link do mb.OFERTAS)."
+      );
+      return;
+    }
     const message = preview ?? postContent?.text;
     if (!message) {
       alert("Gere o conteúdo do post ou aguarde o preview.");
@@ -67,14 +73,9 @@ export default function ProductDetailPage() {
     }
     setOpeningWhatsapp(true);
     try {
-      if (channel.channel_link) {
-        await navigator.clipboard.writeText(message);
-        window.open(channel.channel_link, "_blank", "noopener,noreferrer");
-        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
-      } else {
-        const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-      }
+      await navigator.clipboard.writeText(message);
+      window.open(channel.channel_link, "_blank", "noopener,noreferrer");
+      alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
     } finally {
       setOpeningWhatsapp(false);
     }
@@ -237,10 +238,18 @@ export default function ProductDetailPage() {
             <button
               type="button"
               onClick={handleEnviarParaWhatsApp}
-              disabled={openingWhatsapp}
+              disabled={
+                openingWhatsapp ||
+                !channels.find((c) => c.id === selectedChannelId)?.channel_link?.trim()
+              }
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              title={
+                !channels.find((c) => c.id === selectedChannelId)?.channel_link?.trim()
+                  ? "Selecione um canal com link configurado (edite em Canais WhatsApp)"
+                  : undefined
+              }
             >
-              {openingWhatsapp ? "Abrindo…" : "Abrir no WhatsApp"}
+              {openingWhatsapp ? "Abrindo…" : "Abrir canal"}
             </button>
           </div>
         )}

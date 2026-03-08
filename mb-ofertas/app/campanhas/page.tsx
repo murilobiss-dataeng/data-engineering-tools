@@ -85,17 +85,18 @@ export default function CampaignsPage() {
       alert("Selecione um canal. Cadastre em Canais WhatsApp.");
       return;
     }
+    if (!channel.channel_link?.trim()) {
+      alert(
+        "Para publicar no canal, configure o link do canal. Vá em Canais WhatsApp, edite este canal e preencha \"Link do canal\" (ex.: link do mb.OFERTAS)."
+      );
+      return;
+    }
     setOpeningWhatsapp(true);
     try {
       const { message } = await api<{ message: string }>(`/campaigns/${campaign.id}/whatsapp-message`);
-      if (channel.channel_link) {
-        await navigator.clipboard.writeText(message);
-        window.open(channel.channel_link, "_blank", "noopener,noreferrer");
-        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
-      } else {
-        const phone = channel.phone.startsWith("55") ? channel.phone : "55" + channel.phone;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-      }
+      await navigator.clipboard.writeText(message);
+      window.open(channel.channel_link, "_blank", "noopener,noreferrer");
+      alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
       setWhatsappModal(null);
     } catch (e) {
       console.error(e);
@@ -194,14 +195,13 @@ export default function CampaignsPage() {
         `/whatsapp/scheduled/${item.id}/open`,
         { method: "POST" }
       );
-      if (data.channelLink) {
-        await navigator.clipboard.writeText(data.message);
-        window.open(data.channelLink, "_blank", "noopener,noreferrer");
-        alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
-      } else {
-        const url = `https://wa.me/${data.channelPhone}?text=${encodeURIComponent(data.message)}`;
-        window.open(url, "_blank", "noopener,noreferrer");
+      if (!data.channelLink?.trim()) {
+        alert("Este agendamento está vinculado a um canal sem link. Edite o canal em Canais WhatsApp e adicione o \"Link do canal\".");
+        return;
       }
+      await navigator.clipboard.writeText(data.message);
+      window.open(data.channelLink, "_blank", "noopener,noreferrer");
+      alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
       loadScheduled();
     } catch (e) {
       console.error(e);
@@ -387,10 +387,19 @@ export default function CampaignsPage() {
               </button>
               <button
                 onClick={handleEnviarParaWhatsApp}
-                disabled={openingWhatsapp || channels.length === 0}
+                disabled={
+                  openingWhatsapp ||
+                  channels.length === 0 ||
+                  !channels.find((c) => c.id === selectedChannelId)?.channel_link?.trim()
+                }
                 className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                title={
+                  !channels.find((c) => c.id === selectedChannelId)?.channel_link?.trim()
+                    ? "Selecione um canal com link configurado (edite em Canais WhatsApp)"
+                    : undefined
+                }
               >
-                {openingWhatsapp ? "Abrindo…" : "Abrir WhatsApp"}
+                {openingWhatsapp ? "Abrindo…" : "Abrir canal"}
               </button>
             </div>
           </div>

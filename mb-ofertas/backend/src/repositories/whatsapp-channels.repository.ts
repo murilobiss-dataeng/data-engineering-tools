@@ -26,6 +26,23 @@ export async function insertChannel(name: string, phone: string, channelLink?: s
   return res.rows[0].id;
 }
 
+export async function updateChannel(
+  id: string,
+  data: { name?: string; phone?: string; channelLink?: string | null }
+): Promise<WhatsAppChannel | null> {
+  const current = await getChannelById(id);
+  if (!current) return null;
+  const name = data.name?.trim() ?? current.name;
+  const phone = data.phone !== undefined ? (data.phone || "").replace(/\D/g, "").trim() : current.phone;
+  const channelLink = data.channelLink !== undefined ? (data.channelLink?.trim() || null) : current.channel_link;
+  if (!channelLink && phone.length < 10) throw new Error("Informe um número (DDD + número) ou link do canal.");
+  await query(
+    `UPDATE whatsapp_channels SET name = $1, phone = $2, channel_link = $3 WHERE id = $4`,
+    [name, phone, channelLink, id]
+  );
+  return getChannelById(id);
+}
+
 export async function deleteChannel(id: string): Promise<boolean> {
   const res = await query(`DELETE FROM whatsapp_channels WHERE id = $1`, [id]);
   return (res.rowCount ?? 0) > 0;
