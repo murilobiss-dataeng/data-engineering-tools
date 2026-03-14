@@ -34,6 +34,8 @@ Variáveis no `.env`:
 | `DATA_PATH` | Pasta para sessão e arquivo de enviados (padrão: `./data`) |
 | `AUTH_CLIENT_ID` | Id da sessão LocalAuth (padrão: `channel_bot`) |
 
+**Patch:** é aplicado um patch em `whatsapp-web.js` (via `patch-package`) para evitar erro ao enviar para canal público quando `channelMetadata.description` não vem na resposta (`Cannot read properties of undefined (reading 'description')`). O `postinstall` aplica o patch após `npm install`.
+
 ### Formato da API / Feed mb-ofertas
 
 O endpoint **GET /api/products/feed** da API mb-ofertas (backend no Render) retorna os produtos aprovados no formato esperado pelo bot:
