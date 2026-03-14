@@ -1,0 +1,43 @@
+# Envia produtos aprovados (feed da API) para o canal WhatsApp a cada 10 minutos.
+# Secrets necessários: API_URL, CHAT_IDS (configurados no repositório).
+# Na primeira vez: rode o workflow "Init WhatsApp" para escanear o QR e gerar a sessão.
+
+name: WhatsApp Bot (postar ofertas)
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # a cada 10 minutos
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        id: session
+        with:
+          path: whatsapp-channel-bot/data
+          key: whatsapp-session-${{ runner.os }}-v1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências do bot
+        run: |
+          cd whatsapp-channel-bot
+          npm install
+
+      - name: Rodar bot (single-run)
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CHAT_IDS: ${{ secrets.CHAT_IDS }}
+          SINGLE_RUN: "true"
+          GITHUB_ACTIONS: "true"
+        run: |
+          cd whatsapp-channel-bot
+          node src/index.js

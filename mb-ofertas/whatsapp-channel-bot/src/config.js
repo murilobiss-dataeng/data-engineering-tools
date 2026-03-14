@@ -17,4 +17,6 @@ export const config = {
   dataPath: process.env.DATA_PATH || "./data",
   /** clientId para LocalAuth (apenas alfanumérico, _ e -) */
   authClientId: process.env.AUTH_CLIENT_ID || "channel_bot",
+  /** Em true: conecta, envia uma vez e encerra (uso no GitHub Actions) */
+  singleRun: process.env.SINGLE_RUN === "true" || process.env.SINGLE_RUN === "1" || process.env.GITHUB_ACTIONS === "true",
 };

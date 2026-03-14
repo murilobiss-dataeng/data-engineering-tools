@@ -2,7 +2,7 @@
 
 Bot em Node.js que consulta uma API e envia os posts automaticamente para um ou mais canais/grupos do WhatsApp, usando **whatsapp-web.js** com sessão persistente (LocalAuth).
 
-**Integração com o projeto mb-ofertas:** o site (frontend) fica na **Vercel**; a **API** e este **bot** precisam rodar em um host **sempre ligado** (ex.: **Render**), pois o bot usa Puppeteer/Chromium e sessão em disco — não funciona em serverless (Vercel). Configure a API do mb-ofertas no Render e o bot em outro serviço (ou no mesmo) com `API_URL=https://sua-api.onrender.com/api/products/feed` para postar os **produtos aprovados** no canal.
+**Integração com o projeto mb-ofertas:** o site (frontend) fica na **Vercel**; a **API** no Render (ou outro host). O bot pode rodar via **GitHub Actions** (agendado a cada 10 min) ou em um host sempre ligado (Render). Veja a seção **GitHub Actions** abaixo.
 
 ## Requisitos
 
@@ -98,14 +98,32 @@ Na primeira execução será exibido um **QR Code** no terminal. Abra o WhatsApp
 - `src/sender.js` – Envio para WhatsApp (texto e imagem, múltiplos chats)
 - `src/index.js` – Cliente WhatsApp (LocalAuth), cron e reconexão
 
-## Onde rodar o bot (não pode ser na Vercel)
+## GitHub Actions (recomendado)
 
-| Onde        | Serve para                          |
-|------------|--------------------------------------|
-| **Vercel** | Só o frontend (site) do mb-ofertas   |
-| **Render** | API mb-ofertas + **este bot** (Background Worker ou Web Service sempre ligado) |
+O bot pode rodar no **GitHub Actions** com execução a cada 10 minutos. A sessão do WhatsApp fica no **cache** do GHA.
 
-O bot precisa de processo contínuo e armazenamento local (sessão WhatsApp). Crie no Render um **Background Worker** (ou um segundo Web Service) com este repositório, configure `API_URL` para a URL da sua API (ex.: `https://mb-ofertas-api.onrender.com/api/products/feed`) e `CHAT_IDS`. Na primeira vez você precisará escanear o QR (logs do worker no Render); depois a sessão fica salva.
+### Secrets no repositório
+
+Em **Settings → Secrets and variables → Actions** adicione:
+
+- **`API_URL`** — URL do feed (ex.: `https://mb-ofertas-api.onrender.com/api/products/feed`)
+- **`CHAT_IDS`** — ID(s) do(s) canal(is)/grupo(s), separados por vírgula
+
+### Primeira vez: criar sessão (escanear QR)
+
+1. No GitHub: **Actions** → **Init WhatsApp (escanear QR)** → **Run workflow**.
+2. Quando o job gerar o QR (em ~1 min), abra a execução e baixe o **artifact** `whatsapp-qr`.
+3. Descompacte e abra o arquivo no **navegador** (é uma URL de imagem; copie o conteúdo e cole na barra de endereço se necessário).
+4. Escaneie com o WhatsApp no celular: **Aparelhos conectados** → **Conectar um aparelho**.
+5. O job deve concluir em até ~10 min e a sessão fica salva no cache. Nas próximas execuções do workflow agendado não será preciso escanear de novo.
+
+### Workflow agendado
+
+O workflow **WhatsApp Bot (postar ofertas)** roda **a cada 10 minutos** e envia os novos produtos do feed para o(s) canal(is). Não é preciso fazer nada além de manter os secrets configurados.
+
+### Rodar localmente (alternativa)
+
+Se preferir rodar o bot na sua máquina ou em um servidor (ex.: Render), use `npm start` e escaneie o QR no terminal. A sessão fica em `data/`.
 
 ## Aviso
 

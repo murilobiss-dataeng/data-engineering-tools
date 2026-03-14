@@ -1,5 +1,6 @@
 import { Client, LocalAuth } from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
+import QRCode from "qrcode";
 import cron from "node-cron";
 import path from "path";
 import fs from "fs";
@@ -7,6 +8,8 @@ import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { fetchPosts } from "./api.js";
 import { processPosts } from "./sender.js";
+
+const isGHA = process.env.GITHUB_ACTIONS === "true";
 
 if (!fs.existsSync(config.dataPath)) {
   fs.mkdirSync(config.dataPath, { recursive: true });
@@ -38,9 +41,21 @@ function createClient() {
     },
   });
 
-  c.on("qr", (qr) => {
+  c.on("qr", async (qr) => {
     logger.info("Escaneie o QR Code abaixo com o WhatsApp (Aparelhos conectados):");
     qrcode.generate(qr, { small: true });
+    if (isGHA) {
+      try {
+        const qrDataUrl = await QRCode.toDataURL(qr);
+        fs.writeFileSync(path.join(config.dataPath, "qr-url.txt"), qrDataUrl, "utf-8");
+        logger.info("Copie a linha abaixo (URL do QR) e abra no navegador para escanear com o WhatsApp:");
+        console.log("QR_DATA_URL_START");
+        console.log(qrDataUrl);
+        console.log("QR_DATA_URL_END");
+      } catch (e) {
+        logger.warn("Não foi possível salvar QR em arquivo:", e.message);
+      }
+    }
   });
 
   c.on("ready", () => {
@@ -85,20 +100,28 @@ async function runJob() {
 }
 
 async function start() {
-  logger.info("Iniciando bot. Intervalo:", config.cronIntervalMinutes, "minutos");
+  logger.info("Iniciando bot. Modo:", config.singleRun ? "single-run (GHA)" : `intervalo ${config.cronIntervalMinutes} min`);
   logger.info("API:", config.apiUrl || "(não configurada)");
   logger.info("Chats:", config.chatIds.length ? config.chatIds : "(nenhum)");
 
   client = createClient();
 
-  c.on("ready", async () => {
-    const chats = await c.getChats();
-    logger.info("Chats disponíveis (use o id no .env CHAT_IDS):");
+  client.on("ready", async () => {
+    const chats = await client.getChats();
+    logger.info("Chats disponíveis (use o id no CHAT_IDS):");
     for (const chat of chats.slice(0, 20)) {
       const idStr = chat.id?._serialized || chat.id || "";
       logger.info(`  ${chat.name || idStr}: ${idStr}`);
     }
     if (chats.length > 20) logger.info(`  ... e mais ${chats.length - 20} chat(s).`);
+    if (config.singleRun) {
+      await runJob();
+      logger.info("Single-run: envio concluído. Encerrando.");
+      try {
+        await client.destroy();
+      } catch (_) {}
+      process.exit(0);
+    }
     if (!cronScheduled) {
       cron.schedule(CRON_EXPR, runJob, { timezone: "America/Sao_Paulo" });
       cronScheduled = true;
@@ -107,15 +130,17 @@ async function start() {
     await runJob();
   });
 
-  c.on("disconnected", () => {
-    logger.info("Tentando reconectar em 30s...");
-    setTimeout(() => {
-      if (!isRunning) {
-        client = createClient();
-        client.initialize().catch((e) => logger.error("Erro ao reconectar:", e.message));
-      }
-    }, 30000);
-  });
+  if (!config.singleRun) {
+    client.on("disconnected", () => {
+      logger.info("Tentando reconectar em 30s...");
+      setTimeout(() => {
+        if (!isRunning) {
+          client = createClient();
+          client.initialize().catch((e) => logger.error("Erro ao reconectar:", e.message));
+        }
+      }, 30000);
+    });
+  }
 
   try {
     await client.initialize();
