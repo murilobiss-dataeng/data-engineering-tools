@@ -31,6 +31,7 @@ Variáveis no `.env`:
 | `API_URL` | URL do **feed** da API. No mb-ofertas use: `https://SUA-API.onrender.com/api/products/feed` (produtos aprovados) |
 | `CHAT_ID` | ID do canal (ex.: `120363405814099508@newsletter`). Única variável de destino. |
 | `CRON_INTERVAL_MINUTES` | Intervalo em minutos entre cada verificação (padrão: 10) |
+| `DELAY_BETWEEN_POSTS_MINUTES` | Pausa em minutos entre cada post enviado (padrão: 10). Evita flood no canal. |
 | `DATA_PATH` | Pasta para sessão e arquivo de enviados (padrão: `./data`) |
 | `AUTH_CLIENT_ID` | Id da sessão LocalAuth (padrão: `channel_bot`) |
 | `SKIP_POSTS_WITHOUT_IMAGE` | Se `true` (padrão), não envia posts sem imagem. Use `false` para enviar também só texto. |

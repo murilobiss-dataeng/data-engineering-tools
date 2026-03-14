@@ -21,4 +21,6 @@ export const config = {
   singleRun: process.env.SINGLE_RUN === "true" || process.env.SINGLE_RUN === "1" || process.env.GITHUB_ACTIONS === "true",
   /** Em true: não envia posts sem imagem (só envia quando tiver imageUrl) — bom para engajamento */
   skipPostsWithoutImage: process.env.SKIP_POSTS_WITHOUT_IMAGE !== "false" && process.env.SKIP_POSTS_WITHOUT_IMAGE !== "0",
+  /** Pausa em minutos entre cada post enviado (evita flood no canal). Padrão: 10. */
+  delayBetweenPostsMinutes: Math.max(0, parseInt(process.env.DELAY_BETWEEN_POSTS_MINUTES || "10", 10)),
 };

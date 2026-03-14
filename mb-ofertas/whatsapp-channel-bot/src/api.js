@@ -37,3 +37,29 @@ export async function fetchPosts(apiUrl, options = {}) {
   if (lastErr?.response) logger.error("Status:", lastErr.response.status, "Data:", lastErr.response?.data);
   return [];
 }
+
+/**
+ * Marca o produto como postado na API (status = 'sent'). Remove da lista de aprovados.
+ * apiUrl = URL do feed (ex.: https://xxx.com/api/products/feed). Chama POST .../feed/mark-posted.
+ */
+export async function markPostAsPosted(apiUrl, postUrl) {
+  if (!apiUrl || !postUrl) return false;
+  const markPostedUrl = apiUrl.replace(/\/feed\/?$/i, "/feed/mark-posted");
+  try {
+    const { status } = await axios.post(
+      markPostedUrl,
+      { url: postUrl },
+      { timeout: 15000, headers: { "Content-Type": "application/json" }, validateStatus: () => true }
+    );
+    if (status >= 200 && status < 300) {
+      logger.info("Produto removido da lista de aprovados (mark-posted).");
+      return true;
+    }
+    if (status === 404) logger.warn("mark-posted: produto não encontrado na API.");
+    else logger.warn("mark-posted: API retornou", status);
+    return false;
+  } catch (err) {
+    logger.warn("mark-posted falhou:", err.message);
+    return false;
+  }
+}

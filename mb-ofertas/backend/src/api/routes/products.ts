@@ -85,6 +85,23 @@ productsRouter.get("/feed", async (req, res) => {
   }
 });
 
+/**
+ * Marca produto como postado (status = 'sent'). Chamado pelo bot após enviar ao canal.
+ * Body: { url: string } (affiliate_link do produto). Remove da lista de aprovados.
+ */
+productsRouter.post("/feed/mark-posted", async (req, res) => {
+  try {
+    const url = (req.body?.url ?? "").trim();
+    if (!url) return res.status(400).json({ error: "url é obrigatório" });
+    const id = await productsRepo.findProductIdByAffiliateLink(url);
+    if (!id) return res.status(404).json({ error: "Produto não encontrado" });
+    await productsRepo.updateProductStatus(id, "sent");
+    res.json({ ok: true, id });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 /** Busca ofertas automaticamente (Amazon + ML) — acionado pela UI ou por integração. */
 productsRouter.post("/fetch-ofertas", async (req, res) => {
   try {

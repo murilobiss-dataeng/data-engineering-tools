@@ -4,6 +4,7 @@ import axios from "axios";
 import { logger } from "./logger.js";
 import { formatMessage } from "./formatter.js";
 import { loadSentIds, markAsSent, postKey } from "./storage.js";
+import { markPostAsPosted } from "./api.js";
 import { config } from "./config.js";
 
 /** URL da imagem: aceita imageUrl, image_url ou image (formato da API). */
@@ -132,18 +133,27 @@ export async function sendPost(client, post) {
 
   if (sent) {
     markAsSent(config.dataPath, key);
+    if (post.url) await markPostAsPosted(config.apiUrl, post.url);
   }
   return sent;
 }
 
 /**
  * Processa lista de posts: filtra já enviados e envia os novos.
+ * Entre cada envio bem-sucedido aguarda config.delayBetweenPostsMinutes (padrão 10 min).
  */
 export async function processPosts(client, posts) {
+  const delayMs = config.delayBetweenPostsMinutes * 60 * 1000;
   let sentCount = 0;
-  for (const post of posts) {
-    const ok = await sendPost(client, post);
-    if (ok) sentCount++;
+  for (let i = 0; i < posts.length; i++) {
+    const ok = await sendPost(client, posts[i]);
+    if (ok) {
+      sentCount++;
+      if (delayMs > 0 && i < posts.length - 1) {
+        logger.info(`Aguardando ${config.delayBetweenPostsMinutes} min antes do próximo envio...`);
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
   }
   return sentCount;
 }

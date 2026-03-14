@@ -1,21 +1,7 @@
 /**
- * Monta a mensagem formatada para WhatsApp.
- *
- * 🙏 *{title}*
- *
- * {text}
- *
- * Leia completo:
- * {url}
+ * Monta a mensagem para WhatsApp: apenas o texto do post (já vem com título, preço e link da API).
+ * Sem título duplicado e sem bloco "Leia completo".
  */
 export function formatMessage(post) {
-  const title = post.title || "Post";
-  const text = post.text || "";
-  const url = post.url || "";
-  const parts = [`🙏 *${title}*`, "", text.trim(), ""];
-  if (url) {
-    parts.push("Leia completo:");
-    parts.push(url);
-  }
-  return parts.join("\n").trim();
+  return (post.text || "").trim();
 }
