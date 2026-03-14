@@ -5,8 +5,35 @@ import { formatMessage } from "./formatter.js";
 import { loadSentIds, markAsSent, postKey } from "./storage.js";
 import { config } from "./config.js";
 
+/** Extrai o código de convite do canal a partir da URL ou devolve o valor se já for código/ID. */
+function normalizeChatId(value) {
+  const s = (value || "").trim();
+  const match = s.match(/whatsapp\.com\/channel\/([A-Za-z0-9_-]+)/);
+  return match ? match[1] : s;
+}
+
+/** Retorna true se o valor parece ID interno (ex.: 120363xxx@g.us). */
+function isInternalChatId(value) {
+  return /@(g\.us|newsletter|c\.us)/.test(value);
+}
+
+/**
+ * Resolve chat ou canal: ID interno -> getChatById; código de canal (ou URL) -> getChannelByInviteCode.
+ */
+async function getChatOrChannel(client, rawId) {
+  const normalized = normalizeChatId(rawId);
+  if (isInternalChatId(normalized)) {
+    return client.getChatById(normalized);
+  }
+  if (typeof client.getChannelByInviteCode === "function") {
+    return client.getChannelByInviteCode(normalized);
+  }
+  return client.getChatById(normalized);
+}
+
 /**
  * Envia um post para todos os CHAT_IDS configurados.
+ * CHAT_IDS pode ser: ID interno (ex.: 120363xxx@g.us), código do canal (ex.: 0029VbBg6l4DDmFNz3FmUe2T) ou URL (https://whatsapp.com/channel/...).
  * Retorna true se enviou com sucesso em pelo menos um chat.
  */
 export async function sendPost(client, post) {
@@ -26,9 +53,9 @@ export async function sendPost(client, post) {
   }
 
   let sent = false;
-  for (const chatId of chatIds) {
+  for (const rawId of chatIds) {
     try {
-      const chat = await client.getChatById(chatId);
+      const chat = await getChatOrChannel(client, rawId);
       if (post.imageUrl) {
         try {
           const media = await MessageMedia.fromUrl(post.imageUrl, { unsafeMime: true });
@@ -40,10 +67,11 @@ export async function sendPost(client, post) {
       } else {
         await chat.sendMessage(body);
       }
-      logger.info(`Enviado para ${chatId}: ${(post.title || post.url || "").slice(0, 40)}`);
+      const label = chat.name || chat.id?._serialized || rawId;
+      logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);
       sent = true;
     } catch (err) {
-      logger.error(`Erro ao enviar para ${chatId}:`, err.message);
+      logger.error(`Erro ao enviar para ${rawId}:`, err.message);
     }
   }
 
