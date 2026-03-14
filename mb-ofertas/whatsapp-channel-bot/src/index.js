@@ -120,7 +120,7 @@ async function start() {
 
   client.on("ready", async () => {
     const chats = await client.getChats();
-    logger.info("Chats disponíveis (use o id no CHAT_IDS):");
+    logger.info("Chats disponíveis (use o id no CHAT_ID):");
     for (const chat of chats.slice(0, 20)) {
       const idStr = chat.id?._serialized || chat.id || "";
       logger.info(`  ${chat.name || idStr}: ${idStr}`);
@@ -141,15 +141,15 @@ async function start() {
       try {
         const channels = await client.getChannels();
         if (channels.length > 0) {
-          logger.info("Canais — use o ID abaixo no CHAT_IDS (não use o link de convite):");
+          logger.info("Canais — use o ID abaixo no CHAT_ID:");
           for (const ch of channels.slice(0, 10)) {
             const idStr = ch.id?._serialized || ch.id || "";
             logger.info(`  ${ch.name || idStr}: ${idStr}`);
           }
           if (channels.length > 10) logger.info(`  ... e mais ${channels.length - 10} canal(is).`);
-          logger.info("Exemplo CHAT_IDS: 12345678901234567@newsletter");
+          logger.info("Exemplo CHAT_ID: 12345678901234567@newsletter");
         } else {
-          logger.info("Nenhum canal na lista do WhatsApp Web. Tentando resolver pelo CHAT_IDS (URL/código)...");
+          logger.info("Nenhum canal na lista do WhatsApp Web.");
         }
       } catch (e) {
         logger.warn("Listagem de canais falhou:", e.message);
@@ -165,7 +165,7 @@ async function start() {
         const idStr = channel?.id?._serialized || channel?.id || "";
         const name = channel?.name || "Canal";
         logger.info(`Canal resolvido pelo link: ${name} -> ${idStr}`);
-        logger.info(`Use no CHAT_IDS (recomendado): ${idStr}`);
+        logger.info(`Use em CHAT_ID: ${idStr}`);
       } catch (e) {
         logger.warn(`Não foi possível resolver o canal (${code.slice(0, 20)}...):`, e.message);
       }

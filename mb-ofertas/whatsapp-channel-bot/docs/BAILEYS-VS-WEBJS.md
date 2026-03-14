@@ -17,7 +17,7 @@ Comparação objetiva para o uso neste projeto: **postar ofertas em canal públi
 
 **Recomendação: manter whatsapp-web.js.**
 
-1. **Canal por link já resolvido:** o bot aceita a URL do canal (ex.: `https://whatsapp.com/channel/0029VbBg6l4DDmFNz3FmUe2T`) ou o código no `CHAT_IDS` e usa `getChannelByInviteCode()` — fluxo estável e documentado.
+1. **Canal por ID:** o bot usa `CHAT_ID` (ex.: `120363405814099508@newsletter`) e envia com `client.sendMessage(chatId, ...)` — fluxo estável.
 2. **Stack atual estável:** QR + LocalAuth + cache no GHA já estão integrados e testados; migrar para Baileys exige outro fluxo de auth e armazenamento de credenciais.
 3. **Baileys:** suporte a canal (newsletter) existe no main, mas há relatos de imagens em branco em alguns dispositivos e de desconexões/websocket; para “postar no canal de forma confiável” hoje, whatsapp-web.js ainda é a opção mais previsível.
 4. **Se no futuro** o peso do Puppeteer no GHA ou limites do WhatsApp forem um problema, vale reavaliar Baileys (auth por socket, sem browser) e conferir o estado atual do suporte a newsletter e da estabilidade.

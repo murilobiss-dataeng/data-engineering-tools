@@ -65,9 +65,8 @@ function getSendableChatId(chat, rawId) {
 }
 
 /**
- * Envia um post para todos os CHAT_IDS configurados.
- * CHAT_IDS pode ser: ID interno (ex.: 120363xxx@g.us), código do canal (ex.: 0029VbBg6l4DDmFNz3FmUe2T) ou URL (https://whatsapp.com/channel/...).
- * Retorna true se enviou com sucesso em pelo menos um chat.
+ * Envia um post para o destino configurado em CHAT_ID (ex.: 120363405814099508@newsletter).
+ * Retorna true se enviou com sucesso.
  */
 export async function sendPost(client, post) {
   const key = postKey(post);
@@ -87,7 +86,7 @@ export async function sendPost(client, post) {
   const chatIds = config.chatIds;
 
   if (chatIds.length === 0) {
-    logger.warn("Nenhum CHAT_ID configurado. Configure CHAT_IDS no .env.");
+    logger.warn("Nenhum CHAT_ID configurado. Configure CHAT_ID no .env.");
     return false;
   }
 
@@ -97,7 +96,7 @@ export async function sendPost(client, post) {
       const chat = await getChatOrChannel(client, rawId);
       const chatId = getSendableChatId(chat, rawId);
       if (!chatId) {
-        logger.warn(`Não foi possível resolver canal/chat para ${rawId.slice(0, 40)}... Use o ID do canal no CHAT_IDS (ex.: 120363405814099508@newsletter).`);
+        logger.warn(`Não foi possível resolver canal/chat para ${rawId.slice(0, 40)}... Use o ID do canal em CHAT_ID (ex.: 120363405814099508@newsletter).`);
         continue;
       }
       if (imageUrl) {
@@ -126,7 +125,7 @@ export async function sendPost(client, post) {
     } catch (err) {
       logger.error(`Erro ao enviar para ${rawId}:`, err.message);
       if (!isInternalChatId(normalizeChatId(rawId))) {
-        logger.error("Canal: use no CHAT_IDS o ID (ex.: 120363405814099508@newsletter), não o link. Obtenha o ID rodando o bot e vendo 'Canal resolvido pelo link'.");
+        logger.error("Canal: use em CHAT_ID o ID (ex.: 120363405814099508@newsletter). Obtenha o ID rodando o bot e vendo 'Canal resolvido pelo link'.");
       }
     }
   }
