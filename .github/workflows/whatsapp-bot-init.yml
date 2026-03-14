@@ -32,7 +32,7 @@ jobs:
         id: qr
         env:
           API_URL: ${{ secrets.API_URL }}
-          CHAT_IDS: ${{ secrets.CHAT_IDS }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
         run: |
