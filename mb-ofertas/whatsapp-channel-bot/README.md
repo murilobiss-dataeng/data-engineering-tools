@@ -33,6 +33,7 @@ Variáveis no `.env`:
 | `CRON_INTERVAL_MINUTES` | Intervalo em minutos entre cada verificação (padrão: 10) |
 | `DATA_PATH` | Pasta para sessão e arquivo de enviados (padrão: `./data`) |
 | `AUTH_CLIENT_ID` | Id da sessão LocalAuth (padrão: `channel_bot`) |
+| `SKIP_POSTS_WITHOUT_IMAGE` | Se `true` (padrão), não envia posts sem imagem. Use `false` para enviar também só texto. |
 
 **Patch:** é aplicado um patch em `whatsapp-web.js` (via `patch-package`) para evitar erro ao enviar para canal público quando `channelMetadata.description` não vem na resposta (`Cannot read properties of undefined (reading 'description')`). O `postinstall` aplica o patch após `npm install`.
 
@@ -51,7 +52,7 @@ O endpoint **GET /api/products/feed** da API mb-ofertas (backend no Render) reto
 ]
 ```
 
-- `imageUrl` é opcional; se existir, a imagem é enviada junto com a mensagem.
+- **Imagem é prioridade:** o feed da API mb-ofertas retorna **apenas produtos que têm imagem** (`image_url`). O bot aceita `imageUrl`, `image_url` ou `image` e, por padrão, não envia posts sem imagem (`SKIP_POSTS_WITHOUT_IMAGE=true`). Se o envio por URL falhar (ex.: em GitHub Actions), o bot tenta baixar a imagem com axios e reenvia — assim o canal sempre envia ofertas com imagem para engajar.
 - No mb-ofertas, aprovando produtos na interface (site na Vercel), eles entram nesse feed e o bot envia para o canal.
 
 ### Como obter o CHAT_ID
@@ -85,7 +86,7 @@ Na primeira execução será exibido um **QR Code** no terminal. Abra o WhatsApp
    {url}
    ```
 4. Envia para todos os `CHAT_IDS` (suporte a múltiplos canais).
-5. Se o post tiver `imageUrl`, envia a imagem com a mensagem como legenda.
+5. Se o post tiver imagem (`imageUrl` / `image_url` / `image`), envia a imagem com a mensagem como legenda (com fallback por download direto se necessário). Por padrão, posts sem imagem são ignorados.
 6. Se o WhatsApp desconectar, o bot tenta **reconectar** automaticamente após 30 segundos.
 
 ## Logs

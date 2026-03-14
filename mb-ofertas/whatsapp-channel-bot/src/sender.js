@@ -1,9 +1,33 @@
 import pkg from "whatsapp-web.js";
 const { MessageMedia } = pkg;
+import axios from "axios";
 import { logger } from "./logger.js";
 import { formatMessage } from "./formatter.js";
 import { loadSentIds, markAsSent, postKey } from "./storage.js";
 import { config } from "./config.js";
+
+/** URL da imagem: aceita imageUrl, image_url ou image (formato da API). */
+function getImageUrl(post) {
+  const url = post.imageUrl ?? post.image_url ?? post.image ?? "";
+  return typeof url === "string" ? url.trim() : "";
+}
+
+/**
+ * Baixa a imagem e retorna MessageMedia (fallback quando fromUrl falha, ex. em GHA).
+ */
+async function downloadImageAsMedia(imageUrl) {
+  const res = await axios.get(imageUrl, {
+    responseType: "arraybuffer",
+    timeout: 20000,
+    maxRedirects: 5,
+    headers: { "User-Agent": "WhatsAppChannelBot/1.0" },
+    validateStatus: (s) => s === 200,
+  });
+  const contentType = res.headers["content-type"] || "image/jpeg";
+  const mimetype = contentType.split(";")[0].trim().toLowerCase() || "image/jpeg";
+  const base64 = Buffer.from(res.data).toString("base64");
+  return new MessageMedia(mimetype, base64);
+}
 
 /** Extrai o código de convite do canal a partir da URL ou devolve o valor se já for código/ID. */
 function normalizeChatId(value) {
@@ -44,6 +68,12 @@ export async function sendPost(client, post) {
     return false;
   }
 
+  const imageUrl = getImageUrl(post);
+  if (config.skipPostsWithoutImage && !imageUrl) {
+    logger.info(`Post sem imagem (ignorado por SKIP_POSTS_WITHOUT_IMAGE): ${(post.title || post.url || "").slice(0, 50)}...`);
+    return false;
+  }
+
   const body = formatMessage(post);
   const chatIds = config.chatIds;
 
@@ -56,12 +86,21 @@ export async function sendPost(client, post) {
   for (const rawId of chatIds) {
     try {
       const chat = await getChatOrChannel(client, rawId);
-      if (post.imageUrl) {
+      if (imageUrl) {
+        let media = null;
         try {
-          const media = await MessageMedia.fromUrl(post.imageUrl, { unsafeMime: true });
+          media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
+        } catch (fromUrlErr) {
+          logger.warn("fromUrl falhou, tentando download com axios:", fromUrlErr.message);
+          try {
+            media = await downloadImageAsMedia(imageUrl);
+          } catch (axiosErr) {
+            logger.warn("Falha ao baixar imagem, enviando só texto:", axiosErr.message);
+          }
+        }
+        if (media) {
           await chat.sendMessage(media, { caption: body });
-        } catch (imgErr) {
-          logger.warn("Falha ao baixar/enviar imagem, enviando só texto:", imgErr.message);
+        } else {
           await chat.sendMessage(body);
         }
       } else {

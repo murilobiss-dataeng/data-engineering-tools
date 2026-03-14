@@ -59,7 +59,9 @@ productsRouter.get("/feed", async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const rows = await productsRepo.getApprovedProducts(limit);
-    const feed = rows.map((p) => {
+    // Só incluir produtos com imagem (essencial para engajamento no canal)
+    const withImage = rows.filter((p) => p.image_url && p.image_url.trim() !== "");
+    const feed = withImage.map((p) => {
       const text = generateOfferMessage({
         title: p.title,
         price: Number(p.price),
