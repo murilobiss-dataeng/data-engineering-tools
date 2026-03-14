@@ -59,8 +59,8 @@ O endpoint **GET /api/products/feed** da API mb-ofertas (backend no Render) reto
 
 1. Inicie o bot: `npm start`
 2. Escaneie o QR Code com o WhatsApp (Aparelhos conectados)
-3. Depois de conectado, o bot lista "Chats disponíveis" (grupos/contatos). **Canais não aparecem nessa lista** — para canal use no `CHAT_IDS` a **URL** (ex.: `https://whatsapp.com/channel/0029VbBg6l4DDmFNz3FmUe2T`) ou só o **código** (`0029VbBg6l4DDmFNz3FmUe2T`). A conta precisa ser **admin do canal** para enviar.
-4. Coloque no `.env`: `CHAT_IDS=https://whatsapp.com/channel/SEU_CODIGO` ou para grupo `CHAT_IDS=120363XXXXXXXX@g.us`
+3. Depois de conectado, o bot lista "Chats disponíveis" e **Canais** com o **ID interno** (ex.: `12345678901234567@newsletter`). **Use esse ID no CHAT_IDS**, não o link de convite. Copie o valor da coluna da direita (o `id._serialized`) e coloque no `.env`. A conta precisa ser **admin do canal** para enviar.
+4. Coloque no `.env`: `CHAT_IDS=12345678901234567@newsletter` (canal) ou `CHAT_IDS=120363XXXXXXXX@g.us` (grupo).
 
 ## Uso
 

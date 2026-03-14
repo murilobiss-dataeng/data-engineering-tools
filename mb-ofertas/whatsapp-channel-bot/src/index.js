@@ -126,22 +126,49 @@ async function start() {
       logger.info(`  ${chat.name || idStr}: ${idStr}`);
     }
     if (chats.length > 20) logger.info(`  ... e mais ${chats.length - 20} chat(s).`);
+    const isInvite = (v) => {
+      const s = (v || "").trim();
+      if (/@(g\.us|newsletter|c\.us)/.test(s)) return false;
+      return s.length > 0;
+    };
+    const inviteCode = (v) => {
+      const s = (v || "").trim();
+      const m = s.match(/whatsapp\.com\/channel\/([A-Za-z0-9_-]+)/);
+      return m ? m[1] : s;
+    };
+
     if (typeof client.getChannels === "function") {
       try {
         const channels = await client.getChannels();
         if (channels.length > 0) {
-          logger.info("Canais (ou use no CHAT_IDS a URL do canal, ex.: https://whatsapp.com/channel/CODIGO):");
+          logger.info("Canais — use o ID abaixo no CHAT_IDS (não use o link de convite):");
           for (const ch of channels.slice(0, 10)) {
             const idStr = ch.id?._serialized || ch.id || "";
             logger.info(`  ${ch.name || idStr}: ${idStr}`);
           }
           if (channels.length > 10) logger.info(`  ... e mais ${channels.length - 10} canal(is).`);
+          logger.info("Exemplo CHAT_IDS: 12345678901234567@newsletter");
+        } else {
+          logger.info("Nenhum canal na lista do WhatsApp Web. Tentando resolver pelo CHAT_IDS (URL/código)...");
         }
       } catch (e) {
-        logger.warn("(Listagem de canais não disponível; use no CHAT_IDS a URL ou código do canal.)");
+        logger.warn("Listagem de canais falhou:", e.message);
       }
-    } else {
-      logger.info("Para canal: use no CHAT_IDS a URL (ex.: https://whatsapp.com/channel/CODIGO) ou só o código.");
+    }
+
+    for (const rawId of config.chatIds) {
+      if (!isInvite(rawId)) continue;
+      if (typeof client.getChannelByInviteCode !== "function") continue;
+      const code = inviteCode(rawId);
+      try {
+        const channel = await client.getChannelByInviteCode(code);
+        const idStr = channel?.id?._serialized || channel?.id || "";
+        const name = channel?.name || "Canal";
+        logger.info(`Canal resolvido pelo link: ${name} -> ${idStr}`);
+        logger.info(`Use no CHAT_IDS (recomendado): ${idStr}`);
+      } catch (e) {
+        logger.warn(`Não foi possível resolver o canal (${code.slice(0, 20)}...):`, e.message);
+      }
     }
     if (config.singleRun) {
       await runJob();
