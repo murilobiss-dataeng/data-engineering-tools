@@ -101,7 +101,8 @@ async function runJob() {
   }
 
   logger.info("Buscando novos posts na API...");
-  const posts = await fetchPosts(config.apiUrl);
+  const apiOptions = config.singleRun ? { timeout: 60000, retries: 2 } : { timeout: 30000, retries: 1 };
+  const posts = await fetchPosts(config.apiUrl, apiOptions);
   if (posts.length === 0) return;
 
   const sent = await processPosts(client, posts);
@@ -125,6 +126,23 @@ async function start() {
       logger.info(`  ${chat.name || idStr}: ${idStr}`);
     }
     if (chats.length > 20) logger.info(`  ... e mais ${chats.length - 20} chat(s).`);
+    if (typeof client.getChannels === "function") {
+      try {
+        const channels = await client.getChannels();
+        if (channels.length > 0) {
+          logger.info("Canais (ou use no CHAT_IDS a URL do canal, ex.: https://whatsapp.com/channel/CODIGO):");
+          for (const ch of channels.slice(0, 10)) {
+            const idStr = ch.id?._serialized || ch.id || "";
+            logger.info(`  ${ch.name || idStr}: ${idStr}`);
+          }
+          if (channels.length > 10) logger.info(`  ... e mais ${channels.length - 10} canal(is).`);
+        }
+      } catch (e) {
+        logger.warn("(Listagem de canais não disponível; use no CHAT_IDS a URL ou código do canal.)");
+      }
+    } else {
+      logger.info("Para canal: use no CHAT_IDS a URL (ex.: https://whatsapp.com/channel/CODIGO) ou só o código.");
+    }
     if (config.singleRun) {
       await runJob();
       logger.info("Single-run: envio concluído. Encerrando.");

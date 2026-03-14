@@ -111,6 +111,9 @@ export async function sendPost(client, post) {
       sent = true;
     } catch (err) {
       logger.error(`Erro ao enviar para ${rawId}:`, err.message);
+      if (!isInternalChatId(normalizeChatId(rawId))) {
+        logger.error("Canal: confira se CHAT_IDS tem a URL (https://whatsapp.com/channel/CODIGO) ou o código e se esta conta é admin do canal.");
+      }
     }
   }
 
