@@ -6,11 +6,17 @@ import "dotenv/config";
 export const config = {
   /** URL da API que retorna array de posts: [{ title, text, url, imageUrl? }] */
   apiUrl: process.env.API_URL || "",
-  /** IDs dos chats (grupos/canais) separados por vírgula */
-  chatIds: (process.env.CHAT_IDS || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
+  /** IDs dos chats: CHAT_IDS (vírgula) ou fallback CHAT_ID (singular). Aceita ID (ex.: 120363@newsletter) ou URL (https://whatsapp.com/channel/CODIGO). */
+  chatIds: (() => {
+    const fromIds = (process.env.CHAT_IDS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const fromId = (process.env.CHAT_ID || "").trim();
+    const combined = fromIds.length ? fromIds : (fromId ? [fromId] : []);
+    if (fromId && !fromIds.includes(fromId)) combined.push(fromId);
+    return [...new Set(combined)];
+  })(),
   /** Intervalo em minutos entre cada verificação */
   cronIntervalMinutes: Math.max(1, parseInt(process.env.CRON_INTERVAL_MINUTES || "10", 10)),
   /** Pasta para sessão (LocalAuth) e arquivo de enviados */

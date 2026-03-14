@@ -29,7 +29,8 @@ Variáveis no `.env`:
 | Variável | Descrição |
 |----------|-----------|
 | `API_URL` | URL do **feed** da API. No mb-ofertas use: `https://SUA-API.onrender.com/api/products/feed` (produtos aprovados) |
-| `CHAT_IDS` | IDs ou links dos destinos, separados por vírgula. Para **canal público**: use a URL do canal (ex.: `https://whatsapp.com/channel/0029VbBg6l4DDmFNz3FmUe2T`) ou só o código (`0029VbBg6l4DDmFNz3FmUe2T`). Para grupos/chats: use o ID interno (ex.: `120363xxx@g.us`) — o bot loga "Chats disponíveis" ao conectar. |
+| `CHAT_ID` | ID do canal (ex.: `120363405814099508@newsletter`). Recomendado — use este quando souber o ID. |
+| `CHAT_IDS` | Fallback: URL do canal (ex.: `https://whatsapp.com/channel/CODIGO`) ou vários IDs/URLs separados por vírgula. Se `CHAT_ID` não estiver definido, usa `CHAT_IDS`. Pode usar os dois (lista é unida). |
 | `CRON_INTERVAL_MINUTES` | Intervalo em minutos entre cada verificação (padrão: 10) |
 | `DATA_PATH` | Pasta para sessão e arquivo de enviados (padrão: `./data`) |
 | `AUTH_CLIENT_ID` | Id da sessão LocalAuth (padrão: `channel_bot`) |

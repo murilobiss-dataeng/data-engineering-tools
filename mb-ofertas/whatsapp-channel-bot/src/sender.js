@@ -43,6 +43,7 @@ function isInternalChatId(value) {
 
 /**
  * Resolve chat ou canal: ID interno -> getChatById; código de canal (ou URL) -> getChannelByInviteCode.
+ * Pode retornar undefined se a lib não resolver (ex.: canal por link em alguns ambientes).
  */
 async function getChatOrChannel(client, rawId) {
   const normalized = normalizeChatId(rawId);
@@ -53,6 +54,14 @@ async function getChatOrChannel(client, rawId) {
     return client.getChannelByInviteCode(normalized);
   }
   return client.getChatById(normalized);
+}
+
+/** Obtém o ID serializado para envio (client.sendMessage). Se chat for undefined mas rawId for ID interno, usa rawId. */
+function getSendableChatId(chat, rawId) {
+  if (chat?.id?._serialized) return chat.id._serialized;
+  const normalized = normalizeChatId(rawId);
+  if (isInternalChatId(normalized)) return normalized;
+  return null;
 }
 
 /**
@@ -86,6 +95,11 @@ export async function sendPost(client, post) {
   for (const rawId of chatIds) {
     try {
       const chat = await getChatOrChannel(client, rawId);
+      const chatId = getSendableChatId(chat, rawId);
+      if (!chatId) {
+        logger.warn(`Não foi possível resolver canal/chat para ${rawId.slice(0, 40)}... Use o ID do canal no CHAT_IDS (ex.: 120363405814099508@newsletter).`);
+        continue;
+      }
       if (imageUrl) {
         let media = null;
         try {
@@ -99,20 +113,20 @@ export async function sendPost(client, post) {
           }
         }
         if (media) {
-          await chat.sendMessage(media, { caption: body });
+          await client.sendMessage(chatId, media, { caption: body });
         } else {
-          await chat.sendMessage(body);
+          await client.sendMessage(chatId, body);
         }
       } else {
-        await chat.sendMessage(body);
+        await client.sendMessage(chatId, body);
       }
-      const label = chat.name || chat.id?._serialized || rawId;
+      const label = chat?.name || chatId;
       logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);
       sent = true;
     } catch (err) {
       logger.error(`Erro ao enviar para ${rawId}:`, err.message);
       if (!isInternalChatId(normalizeChatId(rawId))) {
-        logger.error("Canal: confira se CHAT_IDS tem a URL (https://whatsapp.com/channel/CODIGO) ou o código e se esta conta é admin do canal.");
+        logger.error("Canal: use no CHAT_IDS o ID (ex.: 120363405814099508@newsletter), não o link. Obtenha o ID rodando o bot e vendo 'Canal resolvido pelo link'.");
       }
     }
   }

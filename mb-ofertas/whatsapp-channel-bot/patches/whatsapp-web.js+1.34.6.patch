@@ -12,15 +12,20 @@ index f7ed110..18331f8 100644
          /**
           * Indicates if it is a Channel
 diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-index 4fdc45d..120601a 100644
+index 4fdc45d..28d549e 100644
 --- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 +++ b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-@@ -27,6 +27,10 @@ exports.LoadUtils = () => {
+@@ -27,6 +27,15 @@ exports.LoadUtils = () => {
          const isChannel = window.Store.ChatGetters.getIsNewsletter(chat);
          const isStatus = window.Store.ChatGetters.getIsBroadcast(chat);
  
-+        if (isChannel && typeof chat.getLastMsgKeyForAction !== 'function') {
-+            chat.getLastMsgKeyForAction = () => null;
++        if (isChannel) {
++            const noop = () => null;
++            if (typeof chat.getLastMsgKeyForAction !== 'function') chat.getLastMsgKeyForAction = noop;
++            const proto = Object.getPrototypeOf(chat);
++            if (proto && typeof proto.getLastMsgKeyForAction !== 'function') proto.getLastMsgKeyForAction = noop;
++            const Ctor = chat.constructor;
++            if (Ctor && Ctor.prototype && typeof Ctor.prototype.getLastMsgKeyForAction !== 'function') Ctor.prototype.getLastMsgKeyForAction = noop;
 +        }
 +
          let mediaOptions = {};
