@@ -51,13 +51,21 @@ function createClient() {
     if (isGHA) {
       try {
         const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
-        fs.writeFileSync(path.join(config.dataPath, "qr-url.txt"), qrDataUrl, "utf-8");
-        logger.info("Arquivo qr-url.txt gerado. Use o artifact do workflow para abrir o QR no navegador.");
+        const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
+        fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
+        logger.info("QR salvo em:", qrFilePath);
+        logger.info("No GHA: baixe o artifact 'whatsapp-qr' (qr.html) na página da execução do workflow.");
       } catch (e) {
         logger.warn("Não foi possível salvar QR:", e.message);
       }
     } else {
       qrcode.generate(qr, { small: true });
+      const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
+      try {
+        const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
+        fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
+        logger.info("QR também salvo em:", qrFilePath);
+      } catch (_) {}
     }
   });
 

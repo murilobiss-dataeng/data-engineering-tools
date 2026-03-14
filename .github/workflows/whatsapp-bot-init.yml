@@ -1,5 +1,5 @@
 # Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
-# Depois que escanear, a sessão fica no cache e o workflow main.yml passa a funcionar.
+# O QR aparece no Resumo do job (Summary) — abra a execução e veja o QR na página.
 
 name: Init WhatsApp (escanear QR)
 
@@ -28,7 +28,8 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           npm install
 
-      - name: Iniciar bot e aguardar escaneamento do QR
+      - name: Gerar QR (bot em background)
+        id: qr
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_IDS: ${{ secrets.CHAT_IDS }}
@@ -38,20 +39,46 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           node src/index.js &
           BOT_PID=$!
-          echo "Aguardando geração do QR (até 90s)..."
-          for i in $(seq 1 18); do
+          for i in $(seq 1 24); do
             sleep 5
             if [ -f data/qr-url.txt ]; then
-              cp data/qr-url.txt ../../qr-for-scan.txt
-              URL=$(cat ../../qr-for-scan.txt | tr -d '\n')
-              echo "<!DOCTYPE html><html><body style=\"margin:20px\"><p>Escaneie com o WhatsApp (Aparelhos conectados)</p><img src=\"$URL\" alt=\"QR\" style=\"max-width:300px\"/></body></html>" > ../../qr.html
-              echo "QR gerado. Baixe o artifact 'whatsapp-qr', abra qr.html no navegador e escaneie."
+              echo "qr_path=data/qr-url.txt" >> $GITHUB_OUTPUT
+              echo "QR gerado." >> $GITHUB_STEP_SUMMARY
               break
             fi
           done
           wait $BOT_PID || true
 
-      - name: Upload QR (abrir qr.html no navegador para escanear)
+      - name: Mostrar QR no resumo do job
+        run: |
+          cd mb-ofertas/whatsapp-channel-bot
+          if [ -f data/qr-url.txt ]; then
+            URL=$(cat data/qr-url.txt | tr -d '\n')
+            {
+              echo "## Escaneie o QR com o WhatsApp"
+              echo ""
+              echo "Abra **Aparelhos conectados** no celular e escaneie:"
+              echo ""
+              echo "<img src=\"$URL\" width=\"280\" alt=\"QR Code\"/>"
+              echo ""
+              echo "Se a imagem não aparecer, baixe o artifact **whatsapp-qr** (final da página) e abra o qr.html no navegador."
+              echo ""
+              echo "Aguarde o job concluir após escanear (sessão será salva no cache)."
+            } >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## QR não gerado" >> $GITHUB_STEP_SUMMARY
+            echo "Rode o workflow novamente." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload qr.html (alternativa)
+        run: |
+          cd mb-ofertas/whatsapp-channel-bot
+          if [ -f data/qr-url.txt ]; then
+            URL=$(cat data/qr-url.txt | tr -d '\n')
+            echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>QR WhatsApp</title></head><body style=\"margin:20px;font-family:sans-serif\"><h2>Escaneie com o WhatsApp</h2><p>Aparelhos conectados → Conectar um aparelho</p><img src=\"$URL\" width=\"280\" alt=\"QR\"/></body></html>" > "$GITHUB_WORKSPACE/qr.html"
+          fi
+
+      - name: Fazer upload do QR
         if: hashFiles('qr.html') != ''
         uses: actions/upload-artifact@v4
         with:

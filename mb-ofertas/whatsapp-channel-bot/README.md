@@ -67,6 +67,8 @@ npm start
 
 Na primeira execução será exibido um **QR Code** no terminal. Abra o WhatsApp no celular → Aparelhos conectados → Conectar um aparelho e escaneie. A sessão fica salva em `DATA_PATH`; nas próximas vezes o bot pode conectar sem novo QR.
 
+**Onde fica o QR em arquivo (local):** o bot salva também em `DATA_PATH/qr-url.txt` (por padrão `whatsapp-channel-bot/data/qr-url.txt`). O caminho completo aparece no log. Você pode abrir esse arquivo no navegador (copie o conteúdo e cole na barra de endereço) para ver o QR em tela cheia.
+
 ## Comportamento
 
 1. A cada **N minutos** (configurável), o bot chama a `API_URL`.
@@ -112,10 +114,13 @@ Em **Settings → Secrets and variables → Actions** adicione:
 ### Primeira vez: criar sessão (escanear QR)
 
 1. No GitHub: **Actions** → **Init WhatsApp (escanear QR)** → **Run workflow**.
-2. Quando o job gerar o QR (em ~1 min), abra a execução e baixe o **artifact** `whatsapp-qr`.
-3. Descompacte e abra o arquivo no **navegador** (é uma URL de imagem; copie o conteúdo e cole na barra de endereço se necessário).
-4. Escaneie com o WhatsApp no celular: **Aparelhos conectados** → **Conectar um aparelho**.
-5. O job deve concluir em até ~10 min e a sessão fica salva no cache. Nas próximas execuções do workflow agendado não será preciso escanear de novo.
+2. Abra a **execução** (clique no run que está rodando).
+3. Clique no **job “init”** e depois no step **“Mostrar QR no resumo do job”**. O **QR aparece direto na página** do GHA (no resumo do job).
+4. Se o QR não aparecer no resumo (limite de tamanho), baixe o **artifact “whatsapp-qr”** no final da página e abra o **qr.html** no navegador.
+5. Escaneie com o WhatsApp no celular: **Aparelhos conectados** → **Conectar um aparelho**.
+6. Aguarde o job concluir (até ~10 min). A sessão fica no cache e o workflow agendado passa a funcionar sem novo QR.
+
+**Observação:** O arquivo `qr-url.txt` existe só dentro do runner do GHA e não vira link público. O QR é exibido no **resumo do job** do GitHub Actions ou no artifact **whatsapp-qr** (qr.html).
 
 ### Workflow agendado
 
