@@ -12,7 +12,7 @@ index f7ed110..18331f8 100644
          /**
           * Indicates if it is a Channel
 diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-index 4fdc45d..86424dd 100644
+index 4fdc45d..d2075cd 100644
 --- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 +++ b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 @@ -2,6 +2,16 @@
@@ -48,6 +48,15 @@ index 4fdc45d..86424dd 100644
          let mediaOptions = {};
          if (options.media) {
              mediaOptions =  options.sendMediaAsSticker && !isChannel && !isStatus
+@@ -304,7 +323,7 @@ exports.LoadUtils = () => {
+             const msgDataFromMsgModel = window.Store.SendChannelMessage.msgDataFromMsgModel(msg);
+             const isMedia = Object.keys(mediaOptions).length > 0;
+             await window.Store.SendChannelMessage.addNewsletterMsgsRecords([msgDataFromMsgModel]);
+-            chat.msgs.add(msg);
++            if (chat.msgs) chat.msgs.add(msg);
+             chat.t = msg.t;
+ 
+             const sendChannelMsgResponse = await window.Store.SendChannelMessage.sendNewsletterMessageJob({
 @@ -577,6 +596,13 @@ exports.LoadUtils = () => {
                      await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId);
                      chat = await window.Store.WAWebNewsletterMetadataCollection.find(chatWid);

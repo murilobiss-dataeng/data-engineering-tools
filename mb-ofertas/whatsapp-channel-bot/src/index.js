@@ -149,7 +149,7 @@ async function start() {
           if (channels.length > 10) logger.info(`  ... e mais ${channels.length - 10} canal(is).`);
           logger.info("Exemplo CHAT_ID: 12345678901234567@newsletter");
         } else {
-          logger.info("Nenhum canal na lista do WhatsApp Web.");
+          logger.info("Nenhum canal na lista (normal no GHA/headless). Use CHAT_ID com o ID do canal (ex.: 120363405814099508@newsletter).");
         }
       } catch (e) {
         logger.warn("Listagem de canais falhou:", e.message);
