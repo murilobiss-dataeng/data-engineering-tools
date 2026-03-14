@@ -11,3 +11,18 @@ index f7ed110..18331f8 100644
  
          /**
           * Indicates if it is a Channel
+diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
+index 4fdc45d..120601a 100644
+--- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
++++ b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
+@@ -27,6 +27,10 @@ exports.LoadUtils = () => {
+         const isChannel = window.Store.ChatGetters.getIsNewsletter(chat);
+         const isStatus = window.Store.ChatGetters.getIsBroadcast(chat);
+ 
++        if (isChannel && typeof chat.getLastMsgKeyForAction !== 'function') {
++            chat.getLastMsgKeyForAction = () => null;
++        }
++
+         let mediaOptions = {};
+         if (options.media) {
+             mediaOptions =  options.sendMediaAsSticker && !isChannel && !isStatus

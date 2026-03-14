@@ -59,8 +59,8 @@ O endpoint **GET /api/products/feed** da API mb-ofertas (backend no Render) reto
 
 1. Inicie o bot: `npm start`
 2. Escaneie o QR Code com o WhatsApp (Aparelhos conectados)
-3. Depois de conectado, o bot envia a primeira leva de posts. Nos logs ou no código você pode listar os chats: no WhatsApp Web, grupos e canais têm IDs no formato `XXXXXXXXXX@g.us` (grupos) ou do contato. Uma forma é usar um script que lista os chats após `ready` e logar os IDs.
-4. Coloque o(s) ID(s) no `.env`: `CHAT_IDS=120363XXXXXXXX@c.us,YYYYYY@g.us`
+3. Depois de conectado, o bot lista "Chats disponíveis" (grupos/contatos). **Canais não aparecem nessa lista** — para canal use no `CHAT_IDS` a **URL** (ex.: `https://whatsapp.com/channel/0029VbBg6l4DDmFNz3FmUe2T`) ou só o **código** (`0029VbBg6l4DDmFNz3FmUe2T`). A conta precisa ser **admin do canal** para enviar.
+4. Coloque no `.env`: `CHAT_IDS=https://whatsapp.com/channel/SEU_CODIGO` ou para grupo `CHAT_IDS=120363XXXXXXXX@g.us`
 
 ## Uso
 
@@ -111,8 +111,8 @@ O bot pode rodar no **GitHub Actions** com execução a cada 10 minutos. A sess�
 
 Em **Settings → Secrets and variables → Actions** adicione:
 
-- **`API_URL`** — URL do feed (ex.: `https://mb-ofertas-api.onrender.com/api/products/feed`)
-- **`CHAT_IDS`** — ID(s) do(s) canal(is)/grupo(s), separados por vírgula
+- **`API_URL`** — URL do feed (ex.: `https://mb-ofertas-api.onrender.com/api/products/feed`). Em free tier (ex.: Render) a API pode demorar ~1 min no primeiro request (cold start); o bot usa timeout 60s e 2 retries no GHA.
+- **`CHAT_IDS`** — Para **canal**: use a URL (ex.: `https://whatsapp.com/channel/0029VbBg6l4DDmFNz3FmUe2T`) ou só o código. Para grupo: use o ID `XXX@g.us`. A conta que escaneou o QR deve ser **admin do canal**.
 
 ### Primeira vez: criar sessão (escanear QR)
 
