@@ -22,6 +22,7 @@ const CRON_EXPR = `*/${config.cronIntervalMinutes} * * * *`; // a cada N minutos
 let client = null;
 let isRunning = false;
 let cronScheduled = false;
+let qrAlreadyShown = false;
 
 function createClient() {
   const auth = new LocalAuth({
@@ -43,19 +44,20 @@ function createClient() {
   });
 
   c.on("qr", async (qr) => {
-    logger.info("Escaneie o QR Code abaixo com o WhatsApp (Aparelhos conectados):");
-    qrcode.generate(qr, { small: true });
+    if (qrAlreadyShown) return;
+    qrAlreadyShown = true;
+
+    logger.info("Escaneie o QR Code com o WhatsApp (Aparelhos conectados):");
     if (isGHA) {
       try {
-        const qrDataUrl = await QRCode.toDataURL(qr);
+        const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
         fs.writeFileSync(path.join(config.dataPath, "qr-url.txt"), qrDataUrl, "utf-8");
-        logger.info("Copie a linha abaixo (URL do QR) e abra no navegador para escanear com o WhatsApp:");
-        console.log("QR_DATA_URL_START");
-        console.log(qrDataUrl);
-        console.log("QR_DATA_URL_END");
+        logger.info("Arquivo qr-url.txt gerado. Use o artifact do workflow para abrir o QR no navegador.");
       } catch (e) {
-        logger.warn("Não foi possível salvar QR em arquivo:", e.message);
+        logger.warn("Não foi possível salvar QR:", e.message);
       }
+    } else {
+      qrcode.generate(qr, { small: true });
     }
   });
 
