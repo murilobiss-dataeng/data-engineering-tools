@@ -1,5 +1,5 @@
 # Envia produtos aprovados (feed da API) para o canal WhatsApp a cada 10 minutos.
-# Secrets: API_URL, CHAT_IDS. Na primeira vez rode "Init WhatsApp (escanear QR)".
+# Secrets: API_URL, CHAT_ID (recomendado) ou CHAT_IDS. Na primeira vez rode "Init WhatsApp (escanear QR)".
 
 name: WhatsApp Bot (postar ofertas)
 
@@ -46,6 +46,7 @@ jobs:
         if: steps.session.outputs.session_ok == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           CHAT_IDS: ${{ secrets.CHAT_IDS }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
