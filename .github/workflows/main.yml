@@ -32,6 +32,11 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           npm install
 
+      - name: Verificar patch getLastMsgKeyForAction
+        run: |
+          cd mb-ofertas/whatsapp-channel-bot
+          grep -q "getLastMsgKeyForAction" node_modules/whatsapp-web.js/src/util/Injected/Utils.js && echo "Patch do canal aplicado." || echo "::warning::Patch do canal não encontrado em Utils.js"
+
       - name: Verificar sessão (rodar Init se não existir)
         id: session
         run: |

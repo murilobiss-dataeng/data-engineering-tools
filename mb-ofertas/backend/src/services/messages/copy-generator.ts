@@ -21,8 +21,6 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
 
-  lines.push("* OFERTA DO DIA *");
-  lines.push("");
   lines.push(product.title);
   lines.push("");
 
@@ -66,8 +64,6 @@ export function generatePostContent(
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
 
-  lines.push("* OFERTA DO DIA *");
-  lines.push("");
   lines.push(product.title);
   lines.push("");
 

@@ -46,7 +46,7 @@ O endpoint **GET /api/products/feed** da API mb-ofertas (backend no Render) reto
 [
   {
     "title": "Nome do produto",
-    "text": "* OFERTA DO DIA *\n\n... preço, link ...",
+    "text": "Nome do produto\n\n... preço, link ...",
     "url": "https://...",
     "imageUrl": "https://..."
   }

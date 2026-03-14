@@ -12,10 +12,27 @@ index f7ed110..18331f8 100644
          /**
           * Indicates if it is a Channel
 diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-index 4fdc45d..28d549e 100644
+index 4fdc45d..86424dd 100644
 --- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 +++ b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-@@ -27,6 +27,15 @@ exports.LoadUtils = () => {
+@@ -2,6 +2,16 @@
+ 
+ exports.LoadUtils = () => {
+     window.WWebJS = {};
++    try {
++        const noop = () => null;
++        const chats = window.Store?.Chat?.getModelsArray?.() || [];
++        const newsletterChat = chats.find(c => window.Store.ChatGetters.getIsNewsletter(c));
++        if (newsletterChat) {
++            const Ctor = newsletterChat.constructor;
++            if (Ctor?.prototype && typeof Ctor.prototype.getLastMsgKeyForAction !== 'function')
++                Ctor.prototype.getLastMsgKeyForAction = noop;
++        }
++    } catch (_) {}
+ 
+     window.WWebJS.forwardMessage = async (chatId, msgId) => {
+         const msg = window.Store.Msg.get(msgId) || (await window.Store.Msg.getMessagesById([msgId]))?.messages?.[0];
+@@ -27,6 +37,15 @@ exports.LoadUtils = () => {
          const isChannel = window.Store.ChatGetters.getIsNewsletter(chat);
          const isStatus = window.Store.ChatGetters.getIsBroadcast(chat);
  
@@ -31,3 +48,17 @@ index 4fdc45d..28d549e 100644
          let mediaOptions = {};
          if (options.media) {
              mediaOptions =  options.sendMediaAsSticker && !isChannel && !isStatus
+@@ -577,6 +596,13 @@ exports.LoadUtils = () => {
+                     await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId);
+                     chat = await window.Store.WAWebNewsletterMetadataCollection.find(chatWid);
+                 }
++                if (chat && typeof chat.getLastMsgKeyForAction !== 'function') {
++                    const noop = () => null;
++                    chat.getLastMsgKeyForAction = noop;
++                    const proto = Object.getPrototypeOf(chat);
++                    if (proto) proto.getLastMsgKeyForAction = noop;
++                    if (chat.constructor?.prototype) chat.constructor.prototype.getLastMsgKeyForAction = noop;
++                }
+             } catch (err) {
+                 chat = null;
+             }
