@@ -33,7 +33,8 @@ function getRedisOptions(): {
     // Redis 6+ ACL / Upstash: username (e.g. "default") + password
     if (u.username) opts.username = decodeURIComponent(u.username);
     if (u.password) opts.password = decodeURIComponent(u.password);
-    if (u.protocol === "rediss:") opts.tls = {};
+    // Só usa TLS se a URL for rediss:// e REDIS_TLS não for false (Redis Cloud às vezes expõe porta TCP sem TLS → ERR_SSL_PACKET_LENGTH_TOO_LONG)
+    if (u.protocol === "rediss:" && env.REDIS_TLS !== false) opts.tls = {};
     return opts;
   } catch {
     return { host: "localhost", port: 6379 };

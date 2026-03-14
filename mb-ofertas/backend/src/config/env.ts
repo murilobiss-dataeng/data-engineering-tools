@@ -6,6 +6,15 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default(""),
   DATABASE_POOL_MAX: z.coerce.number().min(1).max(20).optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
+  /** Se false/0/no, conecta sem TLS mesmo com rediss:// (evita ERR_SSL_PACKET_LENGTH_TOO_LONG no Redis Cloud quando a porta é TCP). */
+  REDIS_TLS: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (v === undefined || v === "") return undefined;
+      const lower = String(v).toLowerCase();
+      return lower !== "0" && lower !== "false" && lower !== "no";
+    }),
   API_PORT: z.coerce.number().default(4000),
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error"]).default("info"),
 
@@ -32,6 +41,11 @@ const envSchema = z.object({
 
   // Cron
   CRON_ENABLED: z.coerce.boolean().default(true),
+  /** Excluir automaticamente ofertas aprovadas há mais de N horas (0 = desativado). */
+  OFFER_EXPIRY_HOURS: z.coerce.number().min(0).max(720).default(24),
+
+  /** Se true, em falha de preço/título usa Playwright (Chromium) para obter HTML. Requer: yarn add playwright && npx playwright install chromium. */
+  USE_BROWSER_SCRAPER: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;

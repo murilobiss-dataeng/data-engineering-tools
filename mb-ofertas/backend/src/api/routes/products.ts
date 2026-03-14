@@ -3,7 +3,7 @@ import * as productsRepo from "../../repositories/products.repository.js";
 import * as categoriesRepo from "../../repositories/categories.repository.js";
 import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { captureAmazonDeals } from "../../services/products/amazon.service.js";
-import { scrapeProductFromUrl } from "../../services/products/scrape-url.service.js";
+import { scrapeProductFromUrlWithFallback } from "../../services/products/scrape-url.service.js";
 import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
 import { inferCategorySlugFromTitle } from "../../services/products/categorize.service.js";
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
@@ -45,6 +45,39 @@ productsRouter.get("/", async (req, res) => {
     const offset = Number(req.query.offset) || 0;
     const rows = await productsRepo.listProducts({ status, categoryId, limit, offset });
     res.json({ products: rows.map(formatProductRow) });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * Feed para o bot WhatsApp (whatsapp-channel-bot): retorna produtos aprovados no formato
+ * [{ title, text, url, imageUrl }]. O bot usa API_URL apontando para a base da API (ex. https://sua-api.onrender.com)
+ * com path /api/products/feed.
+ */
+productsRouter.get("/feed", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const rows = await productsRepo.getApprovedProducts(limit);
+    const feed = rows.map((p) => {
+      const text = generateOfferMessage({
+        title: p.title,
+        price: Number(p.price),
+        previousPrice: p.previous_price != null ? Number(p.previous_price) : null,
+        discountPct: p.discount_pct != null ? Number(p.discount_pct) : null,
+        affiliateLink: p.affiliate_link,
+        imageUrl: p.image_url ?? undefined,
+        installments: p.installments ?? undefined,
+      });
+      return {
+        title: p.title,
+        text,
+        url: p.affiliate_link,
+        imageUrl: p.image_url ?? undefined,
+      };
+    });
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json(feed);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -230,7 +263,7 @@ productsRouter.post("/from-url", async (req, res) => {
     if (!url || typeof url !== "string" || !url.trim()) {
       return res.status(400).json({ error: "Envie a URL do produto (campo url)." });
     }
-    const scraped = await scrapeProductFromUrl(url.trim());
+    const scraped = await scrapeProductFromUrlWithFallback(url.trim());
     res.json(scraped);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

@@ -4,7 +4,7 @@
  */
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
-import { scrapeProductFromUrl, scrapedToProductInput } from "./scrape-url.service.js";
+import { scrapeProductFromUrlWithFallback, scrapedToProductInput } from "./scrape-url.service.js";
 import { extractProductUrlsFromListing, looksLikeListingPage } from "./scrape-listing.service.js";
 import { inferCategorySlugFromTitle } from "./categorize.service.js";
 import * as productsRepo from "../../repositories/products.repository.js";
@@ -42,13 +42,11 @@ function getBackendRoot(): string {
   return join(cwd, "backend");
 }
 
-/** URLs padrão de listagem para busca automática (Amazon, ML, Shopee). */
+/** URLs padrão de listagem para busca automática (Amazon, ML). Shopee não incluído: listagem é carregada por JS e não retorna links no HTML. */
 export function getDefaultListingUrls(): string[] {
   return [
     "https://www.amazon.com.br/deals",
     "https://www.mercadolivre.com.br/ofertas",
-    "https://shopee.com.br/flash-sale",
-    "https://shopee.com.br/",
   ];
 }
 
@@ -117,7 +115,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
         const toFetch = productUrls.slice(0, maxPerListing);
         for (const productUrl of toFetch) {
           try {
-            const scraped = await scrapeProductFromUrl(productUrl);
+            const scraped = await scrapeProductFromUrlWithFallback(productUrl);
             if (isGenericProductTitle(scraped.title)) {
               logger.info({ url: productUrl, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
               continue;
@@ -140,7 +138,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
           await sleep(delayMs);
         }
       } else {
-        const scraped = await scrapeProductFromUrl(url);
+        const scraped = await scrapeProductFromUrlWithFallback(url);
         if (isGenericProductTitle(scraped.title)) {
           logger.info({ url, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
         } else {

@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api, type Product, type Category, type WhatsAppChannel } from "@/lib/api";
 import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [product, setProduct] = useState<Product | null>(null);
+  const [excluding, setExcluding] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [channels, setChannels] = useState<WhatsAppChannel[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
@@ -78,6 +80,20 @@ export default function ProductDetailPage() {
       alert("Canal aberto. A mensagem foi copiada — cole no canal e envie.");
     } finally {
       setOpeningWhatsapp(false);
+    }
+  }
+
+  async function handleExcluirOferta() {
+    if (!confirm("Excluir esta oferta? Ela será removida do banco (oferta temporária).")) return;
+    setExcluding(true);
+    try {
+      await api(`/products/${id}`, { method: "DELETE" });
+      router.push("/");
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao excluir oferta.");
+    } finally {
+      setExcluding(false);
     }
   }
 
@@ -283,6 +299,22 @@ export default function ProductDetailPage() {
           </div>
         )}
       </div>
+
+      {product.status === "approved" && (
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4">
+          <p className="mb-2 text-sm text-stone-600">
+            Oferta temporária. Exclua quando não for mais usar ou ela será removida automaticamente após 24h.
+          </p>
+          <button
+            type="button"
+            onClick={handleExcluirOferta}
+            disabled={excluding}
+            className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
+          >
+            {excluding ? "Excluindo…" : "Excluir oferta"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

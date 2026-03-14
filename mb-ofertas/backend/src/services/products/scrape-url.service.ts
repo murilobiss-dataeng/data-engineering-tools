@@ -709,24 +709,32 @@ function collectShopeePriceCandidates($: cheerio.CheerioAPI, html: string): Pric
 /**
  * Busca dados do produto na URL (Amazon, Mercado Livre ou Shopee).
  * Retorna dados para preencher ProductInput; falha se não conseguir título ou preço.
+ * Se options.html for passado (ex.: HTML do Playwright), usa em vez de fetch.
  */
-export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct> {
+export async function scrapeProductFromUrl(
+  url: string,
+  options?: { html?: string }
+): Promise<ScrapedProduct> {
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("URL inválida.");
   if (isMercadoLivreNonProductUrl(normalized)) throw new Error("URL não é página de produto (tracking/ofertas).");
 
-  const res = await fetch(normalized, {
-    headers: {
-      "User-Agent": BROWSER_UA,
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-    },
-    redirect: "follow",
-    cache: "no-store",
-  });
-
-  if (!res.ok) throw new Error(`Falha ao acessar a página (${res.status}). Tente novamente.`);
-  const html = await res.text();
+  let html: string;
+  if (options?.html) {
+    html = options.html;
+  } else {
+    const res = await fetch(normalized, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+      },
+      redirect: "follow",
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Falha ao acessar a página (${res.status}). Tente novamente.`);
+    html = await res.text();
+  }
 
   const $ = cheerio.load(html);
   const ogTitle = $('meta[property="og:title"]').attr("content")?.trim() ?? "";
@@ -872,6 +880,27 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     priceCandidates,
     externalId,
   };
+}
+
+/**
+ * Tenta scrape com fetch; se falhar por preço/título e USE_BROWSER_SCRAPER=true, usa Playwright e repete.
+ */
+export async function scrapeProductFromUrlWithFallback(url: string): Promise<ScrapedProduct> {
+  try {
+    return await scrapeProductFromUrl(url);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (
+      env.USE_BROWSER_SCRAPER &&
+      (msg.includes("Não foi possível obter o preço") || msg.includes("Não foi possível obter o título"))
+    ) {
+      logger.info({ url: url.slice(0, 60) }, "Fallback: obtendo HTML com browser (Playwright)");
+      const { getHtmlWithBrowser } = await import("./browser-scraper.service.js");
+      const html = await getHtmlWithBrowser(url);
+      return scrapeProductFromUrl(url, { html });
+    }
+    throw e;
+  }
 }
 
 /** Converte resultado do scrape para ProductInput (opcional: salvar no banco). */

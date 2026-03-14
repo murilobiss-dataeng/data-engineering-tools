@@ -107,6 +107,18 @@ export default function ProductsPage() {
     }
   }
 
+  /** Excluir oferta aprovada (oferta temporária). */
+  async function excludeOferta(id: string) {
+    if (!confirm("Excluir esta oferta? Ela será removida do banco (oferta temporária).")) return;
+    try {
+      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao excluir oferta.");
+    }
+  }
+
   async function updateProductCategory(id: string, categoryId: string | null) {
     try {
       const updated = await api<Product>(`/products/${id}/category`, {
@@ -317,6 +329,15 @@ export default function ProductsPage() {
                     Reprovar
                   </button>
                 </>
+              )}
+              {p.status === "approved" && (
+                <button
+                  type="button"
+                  onClick={() => excludeOferta(p.id)}
+                  className="rounded bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
+                >
+                  Excluir oferta
+                </button>
               )}
               <a href={`/produtos/${p.id}`} className="btn-secondary text-sm">
                 Ver / Gerar post

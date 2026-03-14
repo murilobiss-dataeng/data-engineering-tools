@@ -16,6 +16,7 @@ import { whatsappScheduledRouter } from "./routes/whatsapp-scheduled.js";
 import { shortLinksRouter } from "./routes/short-links.js";
 import { logsRouter } from "./routes/logs.js";
 import { getLongUrlByCode } from "../repositories/short-links.repository.js";
+import * as productsRepo from "../repositories/products.repository.js";
 
 const app = express();
 
@@ -60,11 +61,29 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Erro interno do servidor" });
 });
 
+function runExpiryJob() {
+  return productsRepo
+    .expireApprovedOlderThanHours(env.OFFER_EXPIRY_HOURS)
+    .then((deleted) => {
+      if (deleted > 0) logger.info({ deleted, hours: env.OFFER_EXPIRY_HOURS }, "Ofertas expiradas (timeout)");
+    })
+    .catch((err) => logger.error({ err }, "Erro ao expirar ofertas"));
+}
+
+function startExpiryJob() {
+  if (!env.CRON_ENABLED || env.OFFER_EXPIRY_HOURS <= 0) return;
+  runExpiryJob(); // uma vez ao subir
+  const intervalMs = 60 * 60 * 1000; // depois a cada 1 hora
+  setInterval(runExpiryJob, intervalMs);
+  logger.info({ hours: env.OFFER_EXPIRY_HOURS }, "Job de expiração de ofertas ativo (a cada 1h)");
+}
+
 const port = env.API_PORT;
 initPool()
   .then(() => {
     app.listen(port, () => {
       logger.info({ port }, "API listening");
+      startExpiryJob();
     });
   })
   .catch((err) => {

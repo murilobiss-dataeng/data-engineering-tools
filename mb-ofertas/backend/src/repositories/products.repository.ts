@@ -144,3 +144,19 @@ export async function getApprovedProducts(limit = 20) {
   );
   return res.rows;
 }
+
+/**
+ * Exclui ofertas aprovadas há mais de X horas (timeout automático).
+ * Retorna quantos foram excluídos.
+ */
+export async function expireApprovedOlderThanHours(hours: number): Promise<number> {
+  const res = await query<{ id: string }>(
+    `SELECT id FROM products
+     WHERE status = 'approved' AND approved_at IS NOT NULL AND approved_at < now() - ($1 || ' hours')::interval`,
+    [hours]
+  );
+  for (const row of res.rows) {
+    await query(`DELETE FROM products WHERE id = $1`, [row.id]);
+  }
+  return res.rows.length;
+}
