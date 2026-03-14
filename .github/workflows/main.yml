@@ -32,7 +32,18 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           npm install
 
+      - name: Verificar sessão (rodar Init se não existir)
+        id: session
+        run: |
+          cd mb-ofertas/whatsapp-channel-bot
+          if [ -d data/.wwebjs_auth ] && [ -n "$(ls -A data/.wwebjs_auth 2>/dev/null)" ]; then
+            echo "session_ok=true" >> $GITHUB_OUTPUT
+          else
+            echo "session_ok=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Rodar bot (single-run)
+        if: steps.session.outputs.session_ok == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_IDS: ${{ secrets.CHAT_IDS }}
@@ -41,3 +52,9 @@ jobs:
         run: |
           cd mb-ofertas/whatsapp-channel-bot
           node src/index.js
+
+      - name: Sessão não encontrada
+        if: steps.session.outputs.session_ok != 'true'
+        run: |
+          echo "::error::Nenhuma sessão do WhatsApp no cache. Rode o workflow **Init WhatsApp (escanear QR)** uma vez, escaneie o QR e depois este job voltará a funcionar."
+          exit 1

@@ -115,11 +115,11 @@ Em **Settings → Secrets and variables → Actions** adicione:
 
 1. No GitHub: **Actions** → **Init WhatsApp (escanear QR)** → **Run workflow**.
 2. Abra a **execução** (clique no run).
-3. Clique no job **“init”**. No **resumo do job** (parte superior) aparece o link **“Clique aqui para abrir o QR em nova aba”** — clique para abrir a imagem do QR.
+3. Clique no job **“Gerar QR, link e aguardar escaneamento”**. O **QR aparece direto no resumo do job** (imagem na própria página do GHA). Não é preciso baixar artifact.
 4. Escaneie com o WhatsApp no celular: **Aparelhos conectados** → **Conectar um aparelho**.
 5. Aguarde o job concluir (até ~10 min). A sessão fica no cache e o workflow agendado passa a funcionar sem novo QR.
 
-**Se o link não aparecer:** baixe o **artifact “whatsapp-qr”** no final da página da execução (contém **qr.png** e **qr.html**). Abra o PNG ou o HTML no navegador.
+**Se a imagem do QR não carregar no resumo:** baixe o artifact **whatsapp-qr** (um único arquivo **qr.html**) no final da página e abra no navegador.
 
 ### Workflow agendado
 

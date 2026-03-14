@@ -1,6 +1,5 @@
 # Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
-# O step "Gerar QR" só espera o arquivo aparecer e termina; link e artifact são gerados em seguida.
-# O bot continua rodando em background até você escanear (último step aguarda).
+# Um único step inicia o bot, gera o link do QR (visível no resumo) e só termina quando você escanear (ou após 8 min).
 
 name: Init WhatsApp (escanear QR)
 
@@ -29,7 +28,7 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           npm install
 
-      - name: Gerar QR (bot em background, não espera escanear)
+      - name: Gerar QR, link e aguardar escaneamento
         id: qr
         env:
           API_URL: ${{ secrets.API_URL }}
@@ -38,72 +37,46 @@ jobs:
           GITHUB_ACTIONS: "true"
         run: |
           cd mb-ofertas/whatsapp-channel-bot
-          nohup node src/index.js > bot.log 2>&1 &
+          node src/index.js &
           BOT_PID=$!
-          echo $BOT_PID > $GITHUB_WORKSPACE/bot.pid
           echo "Aguardando arquivo do QR (até 2 min)..."
           for i in $(seq 1 24); do
             sleep 5
-            if [ -f data/qr-url.txt ]; then
-              echo "qr_generated=true" >> $GITHUB_OUTPUT
-              echo "QR gerado. Próximos steps vão gerar o link e o artifact."
-              exit 0
-            fi
+            [ -f data/qr-url.txt ] && break
           done
-          echo "qr_generated=false" >> $GITHUB_OUTPUT
-          echo "Timeout: arquivo do QR não apareceu. Rode o workflow de novo."
-
-      - name: Gerar link do QR e resumo
-        id: link
-        run: |
-          cd mb-ofertas/whatsapp-channel-bot
           if [ ! -f data/qr-url.txt ]; then
-            echo "## QR não gerado" >> $GITHUB_STEP_SUMMARY
-            exit 0
+            echo "qr_generated=false" >> $GITHUB_OUTPUT
+            kill $BOT_PID 2>/dev/null || true
+            echo "Timeout: arquivo do QR não apareceu. Rode o workflow de novo."
+            exit 1
           fi
+          echo "qr_generated=true" >> $GITHUB_OUTPUT
           DATAURL=$(cat data/qr-url.txt | tr -d '\n')
-          echo "$DATAURL" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "$GITHUB_WORKSPACE/qr.png"
-          QR_LINK=$(curl -s -T "$GITHUB_WORKSPACE/qr.png" "https://transfer.sh/qr.png" || echo "")
-          if [ -n "$QR_LINK" ]; then
-            {
-              echo "## Escaneie o QR com o WhatsApp"
-              echo ""
-              echo "### [Clique aqui para abrir o QR em nova aba]($QR_LINK)"
-              echo ""
-              echo "Abra **Aparelhos conectados** no celular, escaneie e aguarde o último step concluir para salvar a sessão."
-            } >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## Escaneie o QR" >> $GITHUB_STEP_SUMMARY
-            echo "Baixe o artifact **whatsapp-qr** no final da página." >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Criar qr.html para artifact
-        if: steps.qr.outputs.qr_generated == 'true'
-        run: |
-          cd mb-ofertas/whatsapp-channel-bot
-          URL=$(cat data/qr-url.txt | tr -d '\n')
-          echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>QR WhatsApp</title></head><body style=\"margin:20px;font-family:sans-serif\"><h2>Escaneie com o WhatsApp</h2><p><a href=\"$URL\">Abrir QR</a></p><img src=\"$URL\" width=\"280\" alt=\"QR\"/></body></html>" > "$GITHUB_WORKSPACE/qr.html"
-
-      - name: Upload artifact (qr.html + qr.png)
-        if: steps.qr.outputs.qr_generated == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: whatsapp-qr
-          path: |
-            qr.html
-            qr.png
-
-      - name: Aguardar você escanear (bot salva sessão)
-        if: steps.qr.outputs.qr_generated == 'true'
-        run: |
-          if [ ! -f "$GITHUB_WORKSPACE/bot.pid" ]; then exit 0; fi
-          PID=$(cat "$GITHUB_WORKSPACE/bot.pid")
-          echo "Aguardando você escanear o QR... O bot vai encerrar sozinho e salvar a sessão no cache (até 8 min)."
+          # QR direto no resumo do job (sem precisar baixar nada)
+          {
+            echo "## Escaneie o QR com o WhatsApp"
+            echo ""
+            echo "Abra **Aparelhos conectados** no celular e escaneie. Este step termina quando o bot salvar a sessão (ou em até 8 min)."
+            echo ""
+            printf '![QR](%s)\n' "$DATAURL"
+          } >> $GITHUB_STEP_SUMMARY
+          # Um único HTML com o QR (artifact opcional)
+          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
+          cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
+          printf '%s' '" width="280" alt="QR"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+          echo "Aguardando você escanear... (até 8 min)"
           for i in $(seq 1 48); do
-            if ! kill -0 $PID 2>/dev/null; then
-              echo "Bot encerrou. Sessão salva."
+            if ! kill -0 $BOT_PID 2>/dev/null; then
+              echo "Bot encerrou. Sessão salva no cache."
               exit 0
             fi
             sleep 10
           done
           echo "Timeout. Se já escaneou, a sessão pode ter sido salva. Rode o workflow agendado para testar."
+
+      - name: Upload artifact (qr.html único)
+        if: steps.qr.outputs.qr_generated == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: whatsapp-qr
+          path: qr.html

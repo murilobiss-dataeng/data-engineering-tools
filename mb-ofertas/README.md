@@ -101,6 +101,7 @@ npm run worker
 
 - **Produtos**: listar, aprovar/reprovar ofertas, ver preview da mensagem.
 - **Campanhas**: criar campanha (selecionar produtos aprovados), **Enviar agora** (informar lista de números).
+- **Enviar para WhatsApp pelo site**: em Campanhas, use **Enviar para WhatsApp**, escolha o canal (com link do canal preenchido em Canais WhatsApp) e clique — a mensagem é copiada e o canal abre em nova aba para você colar e enviar. Para isso funcionar em produção, o app precisa de **NEXT_PUBLIC_API_URL** apontando para a API (veja Deploy).
 
 ### API
 

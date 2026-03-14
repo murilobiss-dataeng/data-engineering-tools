@@ -100,7 +100,13 @@ export default function CampaignsPage() {
       setWhatsappModal(null);
     } catch (e) {
       console.error(e);
-      alert("Erro ao gerar mensagem.");
+      const msg = e instanceof Error ? e.message : "Erro ao gerar mensagem.";
+      alert(
+        msg +
+          (typeof window !== "undefined" && process.env.NODE_ENV === "production"
+            ? "\n\nSe a API estiver em outro domínio, configure NEXT_PUBLIC_API_URL no deploy do site."
+            : "")
+      );
     } finally {
       setOpeningWhatsapp(false);
     }
