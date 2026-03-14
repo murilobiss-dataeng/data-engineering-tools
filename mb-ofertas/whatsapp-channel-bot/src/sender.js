@@ -1,4 +1,5 @@
-import { MessageMedia } from "whatsapp-web.js";
+import pkg from "whatsapp-web.js";
+const { MessageMedia } = pkg;
 import { logger } from "./logger.js";
 import { formatMessage } from "./formatter.js";
 import { loadSentIds, markAsSent, postKey } from "./storage.js";
