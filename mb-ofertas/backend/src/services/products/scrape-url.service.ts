@@ -736,17 +736,45 @@ export async function scrapeProductFromUrl(
   if (options?.html) {
     html = options.html;
   } else {
-    const res = await fetch(normalized, {
-      headers: {
-        "User-Agent": BROWSER_UA,
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-      },
-      redirect: "follow",
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`Falha ao acessar a página (${res.status}). Tente novamente.`);
-    html = await res.text();
+    const useBrowser = process.env.USE_BROWSER_SCRAPER === "true" || process.env.USE_BROWSER_SCRAPER === "1";
+    const isAmazon = isAmazonUrl(normalized);
+
+    if (isAmazon && useBrowser) {
+      try {
+        const { getHtmlWithBrowser } = await import("./browser-scraper.service.js");
+        html = await getHtmlWithBrowser(normalized);
+      } catch (e) {
+        throw new Error("Falha ao acessar a página Amazon (browser).");
+      }
+    } else {
+      try {
+        const res = await fetch(normalized, {
+          headers: {
+            "User-Agent": BROWSER_UA,
+            Accept: "text/html,application/xhtml+xml",
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+          },
+          redirect: "follow",
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`Falha ao acessar a página (${res.status}). Tente novamente.`);
+        html = await res.text();
+      } catch (err: unknown) {
+        const code = err && typeof err === "object" && "code" in err ? (err as { code?: string }).code : undefined;
+        if (code === "ERR_SSL_PACKET_LENGTH_TOO_LONG" && isAmazon && useBrowser) {
+          try {
+            const { getHtmlWithBrowser } = await import("./browser-scraper.service.js");
+            html = await getHtmlWithBrowser(normalized);
+          } catch (e) {
+            throw new Error("Falha ao acessar a página Amazon (SSL).");
+          }
+        } else if (code === "ERR_SSL_PACKET_LENGTH_TOO_LONG") {
+          throw new Error("Falha ao acessar a página (SSL). Use USE_BROWSER_SCRAPER=true para Amazon.");
+        } else {
+          throw err;
+        }
+      }
+    }
   }
 
   const $ = cheerio.load(html);
