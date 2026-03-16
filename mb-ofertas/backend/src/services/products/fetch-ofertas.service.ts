@@ -13,7 +13,7 @@ import { logger } from "../../config/logger.js";
 import { appendLog } from "../../config/log-buffer.js";
 
 const DEFAULT_DELAY_MS = 2500;
-const DEFAULT_MAX_PER_LISTING = 45;
+const DEFAULT_MAX_PER_LISTING = 100;
 const SHOPEE_SEARCH_LIMIT_PER_KEYWORD = 10;
 
 const BROWSER_UA =
@@ -46,12 +46,22 @@ function getBackendRoot(): string {
   return join(cwd, "backend");
 }
 
-/** URLs padrão de listagem para busca automática (Amazon, ML). Shopee não incluído: listagem é carregada por JS e não retorna links no HTML. */
+/** URLs padrão de listagem para busca automática.
+ * Amazon: proxy ou, se USE_BROWSER_SCRAPER=true, URLs diretas (Playwright) — /deals e /gp/goldbox como fallback.
+ */
 export function getDefaultListingUrls(): string[] {
-  return [
-    "http://www.amazon.com.br/deals",
-    "https://www.mercadolivre.com.br/ofertas",
-  ];
+  const urls: string[] = [];
+  const proxy = process.env.AMAZON_DEALS_PROXY_URL?.trim();
+  const useBrowser = process.env.USE_BROWSER_SCRAPER === "true" || process.env.USE_BROWSER_SCRAPER === "1";
+  if (proxy && proxy.length > 0) {
+    urls.push(proxy);
+  } else if (useBrowser) {
+    urls.push("https://www.amazon.com.br/deals");
+    urls.push("http://www.amazon.com.br/gp/goldbox/");
+  }
+  urls.push("https://www.mercadolivre.com.br/ofertas");
+  urls.push("https://www.mercadolivre.com.br/ofertas/do-dia");
+  return urls;
 }
 
 function loadUrlsFromConfig(): string[] {

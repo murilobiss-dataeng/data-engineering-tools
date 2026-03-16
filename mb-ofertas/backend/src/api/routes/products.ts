@@ -109,13 +109,13 @@ productsRouter.post("/feed/mark-posted", async (req, res) => {
   }
 });
 
-/** Busca ofertas automaticamente (Amazon + ML) — acionado pela UI ou por integração. */
+/** Busca ofertas automaticamente (Amazon via proxy opcional + ML + Shopee API) — acionado pela UI ou por integração. */
 productsRouter.post("/fetch-ofertas", async (req, res) => {
   try {
     const body = (req.body || {}) as { urls?: string[] };
     const result = await runFetchOfertas({
       urls: body.urls?.length ? body.urls : undefined,
-      maxPerListing: 8,
+      maxPerListing: 100,
       delayMs: 1500,
     });
     res.json({

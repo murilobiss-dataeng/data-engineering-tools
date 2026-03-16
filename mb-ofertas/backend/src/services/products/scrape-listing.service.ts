@@ -1,12 +1,42 @@
 /**
  * Extrai links de produtos a partir de páginas de listagem (ofertas, busca)
  * Amazon, Mercado Livre e Shopee. Para uso com o script de busca automática.
+ * Para listagem Amazon (/deals) pode usar Playwright (USE_BROWSER_SCRAPER=true) para evitar bloqueio/SSL.
  */
 import * as cheerio from "cheerio";
 import { logger } from "../../config/logger.js";
 
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+function isAmazonListingUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    const path = u.pathname.toLowerCase();
+    if (!host.includes("amazon")) return false;
+    return path.includes("/deals") || path.includes("/s?") || path.includes("/b/") || path.includes("/gp/offer-listing");
+  } catch {
+    return false;
+  }
+}
+
+function useBrowserForAmazonListing(): boolean {
+  const v = process.env.USE_BROWSER_SCRAPER;
+  return v === "true" || v === "1";
+}
+
+function extractUrlsFromHtml(html: string, baseUrl: string): string[] {
+  const $ = cheerio.load(html);
+  const seen = new Set<string>();
+  $("a[href]").each((_, el) => {
+    const href = $(el).attr("href");
+    if (!href) return;
+    const normalized = normalizeUrl(href, baseUrl);
+    if (normalized && !seen.has(normalized)) seen.add(normalized);
+  });
+  return Array.from(seen);
+}
 
 /** Padrões de URL de produto por site */
 const AMAZON_PRODUCT_PATH = /^\/(dp|gp\/product)\/[A-Z0-9]{10}/i;
@@ -50,37 +80,69 @@ function normalizeUrl(href: string, baseUrl: string): string | null {
 
 /**
  * Busca uma página e extrai URLs de produtos (Amazon ou Mercado Livre).
- * Retorna lista única e normalizada de URLs para scrape posterior.
+ * Para listagem Amazon, se USE_BROWSER_SCRAPER=true usa Playwright para evitar bloqueio/SSL.
  */
 export async function extractProductUrlsFromListing(listingUrl: string): Promise<string[]> {
-  const res = await fetch(listingUrl, {
-    headers: {
-      "User-Agent": BROWSER_UA,
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-    },
-    redirect: "follow",
-    cache: "no-store",
-  });
+  const isAmazon = isAmazonListingUrl(listingUrl);
+  const useBrowser = useBrowserForAmazonListing();
 
-  if (!res.ok) {
-    logger.warn({ url: listingUrl, status: res.status }, "Listing page fetch failed");
+  const tryFetch = async (): Promise<{ html: string; baseUrl: string } | null> => {
+    try {
+      const res = await fetch(listingUrl, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+        },
+        redirect: "follow",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        logger.warn({ url: listingUrl, status: res.status }, "Listing page fetch failed");
+        return null;
+      }
+      const html = await res.text();
+      return { html, baseUrl: res.url || listingUrl };
+    } catch (err: unknown) {
+      const code = err && typeof err === "object" && "code" in err ? (err as { code?: string }).code : undefined;
+      if (code === "ERR_SSL_PACKET_LENGTH_TOO_LONG") {
+        logger.warn({ url: listingUrl }, "Listing fetch: SSL error");
+      }
+      return null;
+    }
+  };
+
+  const tryPlaywright = async (): Promise<{ html: string; baseUrl: string } | null> => {
+    if (!useBrowser) return null;
+    try {
+      const { getHtmlWithBrowser } = await import("./browser-scraper.service.js");
+      const html = await getHtmlWithBrowser(listingUrl);
+      return { html, baseUrl: listingUrl };
+    } catch (e) {
+      logger.warn({ url: listingUrl, err: e }, "Listing fetch via Playwright failed");
+      return null;
+    }
+  };
+
+  let result: { html: string; baseUrl: string } | null = null;
+
+  if (isAmazon && useBrowser) {
+    logger.info({ url: listingUrl }, "Amazon listing: using Playwright");
+    result = await tryPlaywright();
+    if (!result) result = await tryFetch();
+  } else {
+    result = await tryFetch();
+    if (!result && isAmazon && useBrowser) {
+      logger.info({ url: listingUrl }, "Amazon listing: retrying with Playwright");
+      result = await tryPlaywright();
+    }
+  }
+
+  if (!result) {
     return [];
   }
 
-  const html = await res.text();
-  const $ = cheerio.load(html);
-  const baseUrl = res.url || listingUrl;
-  const seen = new Set<string>();
-
-  $("a[href]").each((_, el) => {
-    const href = $(el).attr("href");
-    if (!href) return;
-    const normalized = normalizeUrl(href, baseUrl);
-    if (normalized && !seen.has(normalized)) seen.add(normalized);
-  });
-
-  const urls = Array.from(seen);
+  const urls = extractUrlsFromHtml(result.html, result.baseUrl);
   logger.info({ listingUrl, count: urls.length }, "Extracted product URLs from listing");
   return urls;
 }
