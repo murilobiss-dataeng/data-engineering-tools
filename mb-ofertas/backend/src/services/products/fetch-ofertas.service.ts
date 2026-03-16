@@ -47,17 +47,13 @@ function getBackendRoot(): string {
 }
 
 /** URLs padrão de listagem para busca automática.
- * Amazon: proxy ou, se USE_BROWSER_SCRAPER=true, URLs diretas (Playwright) — /deals e /gp/goldbox como fallback.
+ * Amazon: só entra se AMAZON_DEALS_PROXY_URL estiver setada (evita SSL/Playwright sem Chromium no Render).
  */
 export function getDefaultListingUrls(): string[] {
   const urls: string[] = [];
   const proxy = process.env.AMAZON_DEALS_PROXY_URL?.trim();
-  const useBrowser = process.env.USE_BROWSER_SCRAPER === "true" || process.env.USE_BROWSER_SCRAPER === "1";
   if (proxy && proxy.length > 0) {
     urls.push(proxy);
-  } else if (useBrowser) {
-    urls.push("https://www.amazon.com.br/deals");
-    urls.push("http://www.amazon.com.br/gp/goldbox/");
   }
   urls.push("https://www.mercadolivre.com.br/ofertas");
   urls.push("https://www.mercadolivre.com.br/ofertas/do-dia");
@@ -335,15 +331,27 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
         headers: {
           "User-Agent": BROWSER_UA,
           Accept: "application/json",
+          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+          Origin: "https://shopee.com.br",
           Referer: `https://shopee.com.br/search?keyword=${encodeURIComponent(keyword)}`,
+          "sec-ch-ua": '"Chromium";v="120", "Google Chrome";v="120", "Not_A Brand";v="24"',
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": '"Windows"',
         },
       });
       if (!res.ok) {
-        logger.warn({ apiUrl, status: res.status }, "Shopee API search failed");
+        if (res.status === 403) {
+          logger.info(
+            { keyword },
+            "Shopee API 403 (comum em IP de datacenter). Use OFERTAS_URLS com links de produto Shopee se precisar."
+          );
+        } else {
+          logger.warn({ apiUrl, status: res.status }, "Shopee API search failed");
+        }
         continue;
       }
       const data: any = await res.json();
-      const items: any[] = data?.items ?? [];
+      const items: any[] = data?.items ?? data?.data?.items ?? [];
       for (const item of items) {
         const shopid = item.shopid ?? item.shop_id;
         const itemid = item.itemid ?? item.item_id;
@@ -437,7 +445,9 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
     await sleep(delayMs);
   }
 
-  // Shopee: busca automática via API oficial de busca, usando palavras-chave por categoria.
+  // Shopee: busca automática via API (pode retornar 403 em datacenter). Desative com SHOPEE_SEARCH_ENABLED=false.
+  const shopeeEnabled = process.env.SHOPEE_SEARCH_ENABLED !== "false" && process.env.SHOPEE_SEARCH_ENABLED !== "0";
+  if (shopeeEnabled) {
   try {
     const shopeeUrls = await fetchShopeeProductsFromApi(maxPerListing);
     const toFetch = shopeeUrls.slice(0, maxPerListing);
@@ -471,6 +481,7 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
     const msg = e instanceof Error ? e.message : String(e);
     logger.warn({ err: e, message: msg }, "Shopee API fetch block failed");
     appendLog("warn", `[Shopee API bloco] ${msg}`);
+  }
   }
 
   return { inserted, failed, totalUrls: urls.length };
