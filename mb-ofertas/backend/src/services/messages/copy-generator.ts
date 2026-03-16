@@ -21,6 +21,11 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
 
+  if (product.discountPct != null && product.discountPct > 0) {
+    lines.push("OFERTA COM DESCONTO");
+    lines.push("");
+  }
+
   lines.push(product.title);
   lines.push("");
 
@@ -63,6 +68,11 @@ export function generatePostContent(
   const useShortLink = process.env.USE_APP_SHORT_LINK === "true" || process.env.USE_APP_SHORT_LINK === "1";
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
+
+  if (product.discountPct != null && product.discountPct > 0) {
+    lines.push("OFERTA COM DESCONTO");
+    lines.push("");
+  }
 
   lines.push(product.title);
   lines.push("");

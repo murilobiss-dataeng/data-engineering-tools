@@ -139,7 +139,13 @@ export async function deleteProduct(id: string): Promise<boolean> {
 export async function getApprovedProducts(limit = 20) {
   const res = await query(
     `SELECT id, title, price, previous_price, discount_pct, affiliate_link, image_url, installments
-     FROM products WHERE status = 'approved' ORDER BY approved_at DESC NULLS LAST LIMIT $1`,
+     FROM products
+     WHERE status = 'approved'
+     ORDER BY
+       (discount_pct IS NULL OR discount_pct <= 0) ASC,
+       discount_pct DESC NULLS LAST,
+       approved_at DESC NULLS LAST
+     LIMIT $1`,
     [limit]
   );
   return res.rows;
