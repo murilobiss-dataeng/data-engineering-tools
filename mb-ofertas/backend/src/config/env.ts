@@ -24,6 +24,9 @@ const envSchema = z.object({
   AMAZON_PARTNER_TAG: z.string().optional(),
   AMAZON_REGION: z.string().default("br1"),
 
+  /** Código de afiliado Mercado Livre (ex.: mk20260227092713). Adiciona ?afiliado=... em links ML. */
+  ML_AFFILIATE_TAG: z.string().optional(),
+
   // WhatsApp
   WHATSAPP_ACCOUNT_SID: z.string().optional(),
   WHATSAPP_AUTH_TOKEN: z.string().optional(),

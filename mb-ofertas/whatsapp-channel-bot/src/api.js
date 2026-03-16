@@ -40,17 +40,21 @@ export async function fetchPosts(apiUrl, options = {}) {
 
 /**
  * Marca o produto como postado na API (status = 'sent'). Remove da lista de aprovados.
- * apiUrl = URL do feed (ex.: https://xxx.com/api/products/feed). Chama POST .../feed/mark-posted.
+ * Preferir post.id (vem no feed); post.url é fallback.
  */
-export async function markPostAsPosted(apiUrl, postUrl) {
-  if (!apiUrl || !postUrl) return false;
+export async function markPostAsPosted(apiUrl, post) {
+  if (!apiUrl) return false;
+  const id = post?.id ? String(post.id).trim() : "";
+  const url = post?.url ? String(post.url).trim() : "";
+  if (!id && !url) return false;
   const markPostedUrl = apiUrl.replace(/\/feed\/?$/i, "/feed/mark-posted");
+  const body = id ? { id } : { url };
   try {
-    const { status } = await axios.post(
-      markPostedUrl,
-      { url: postUrl },
-      { timeout: 15000, headers: { "Content-Type": "application/json" }, validateStatus: () => true }
-    );
+    const { status } = await axios.post(markPostedUrl, body, {
+      timeout: 15000,
+      headers: { "Content-Type": "application/json" },
+      validateStatus: () => true,
+    });
     if (status >= 200 && status < 300) {
       logger.info("Produto removido da lista de aprovados (mark-posted).");
       return true;

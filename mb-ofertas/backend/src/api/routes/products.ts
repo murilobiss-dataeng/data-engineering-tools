@@ -72,6 +72,7 @@ productsRouter.get("/feed", async (req, res) => {
         installments: p.installments ?? undefined,
       });
       return {
+        id: p.id,
         title: p.title,
         text,
         url: p.affiliate_link,
@@ -87,16 +88,22 @@ productsRouter.get("/feed", async (req, res) => {
 
 /**
  * Marca produto como postado (status = 'sent'). Chamado pelo bot após enviar ao canal.
- * Body: { url: string } (affiliate_link do produto). Remove da lista de aprovados.
+ * Body: { id?: string, url?: string }. Preferir id (vem no feed); url é fallback (affiliate_link).
  */
 productsRouter.post("/feed/mark-posted", async (req, res) => {
   try {
-    const url = (req.body?.url ?? "").trim();
-    if (!url) return res.status(400).json({ error: "url é obrigatório" });
-    const id = await productsRepo.findProductIdByAffiliateLink(url);
-    if (!id) return res.status(404).json({ error: "Produto não encontrado" });
-    await productsRepo.updateProductStatus(id, "sent");
-    res.json({ ok: true, id });
+    const body = (req.body || {}) as { id?: string; url?: string };
+    let productId: string | null = null;
+    if (body.id && String(body.id).trim()) {
+      const row = await productsRepo.getProductById(String(body.id).trim());
+      if (row) productId = row.id;
+    }
+    if (!productId && body.url && String(body.url).trim()) {
+      productId = await productsRepo.findProductIdByAffiliateLink(String(body.url).trim());
+    }
+    if (!productId) return res.status(404).json({ error: "Produto não encontrado" });
+    await productsRepo.updateProductStatus(productId, "sent");
+    res.json({ ok: true, id: productId });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

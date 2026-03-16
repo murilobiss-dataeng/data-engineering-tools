@@ -8,6 +8,7 @@ import { env } from "../../config/env.js";
 import type { ProductInput } from "./types.js";
 
 const PARTNER_TAG = env.AMAZON_PARTNER_TAG ?? "";
+const ML_AFFILIATE_TAG = env.ML_AFFILIATE_TAG ?? "";
 
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -82,6 +83,18 @@ function withPartnerTag(url: string): string {
   try {
     const u = new URL(url);
     u.searchParams.set("tag", PARTNER_TAG);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/** Adiciona parâmetro de afiliado na URL do Mercado Livre (?afiliado=...). */
+function withMlAffiliateTag(url: string): string {
+  if (!ML_AFFILIATE_TAG) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set("afiliado", ML_AFFILIATE_TAG);
     return u.toString();
   } catch {
     return url;
@@ -822,6 +835,9 @@ export async function scrapeProductFromUrl(
     const shortLink = extractAmznShortLink(html);
     if (shortLink) affiliateLink = shortLink;
     else affiliateLink = withPartnerTag(affiliateLink);
+  }
+  if (isMercadoLivreUrl(normalized)) {
+    affiliateLink = withMlAffiliateTag(affiliateLink);
   }
   if (isShopeeUrl(normalized)) {
     affiliateLink = ogUrl || normalized;
