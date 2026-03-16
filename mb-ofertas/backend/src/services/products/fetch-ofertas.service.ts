@@ -14,6 +14,10 @@ import { appendLog } from "../../config/log-buffer.js";
 
 const DEFAULT_DELAY_MS = 2500;
 const DEFAULT_MAX_PER_LISTING = 45;
+const SHOPEE_SEARCH_LIMIT_PER_KEYWORD = 10;
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 /** Títulos que são do site, não de produto — não inserir. */
 const GENERIC_TITLES = new Set(["mercado livre", "mercadolivre", "mercado libre", "amazon", "shopee", "oferta", "ofertas"]);
@@ -45,7 +49,7 @@ function getBackendRoot(): string {
 /** URLs padrão de listagem para busca automática (Amazon, ML). Shopee não incluído: listagem é carregada por JS e não retorna links no HTML. */
 export function getDefaultListingUrls(): string[] {
   return [
-    "https://www.amazon.com.br/deals",
+    "http://www.amazon.com.br/deals",
     "https://www.mercadolivre.com.br/ofertas",
   ];
 }
@@ -90,6 +94,267 @@ export type FetchOfertasResult = {
   failed: number;
   totalUrls: number;
 };
+
+const SHOPEE_KEYWORD_GROUPS: Record<string, string[]> = {
+  health: [
+    "creatina",
+    "whey protein",
+    "whey isolado",
+    "whey hidrolisado",
+    "pré-treino",
+    "pré treino",
+    "suplemento",
+    "suplemento alimentar",
+    "vitamina",
+    "multivitamínico",
+    "vitamina c",
+    "vitamina d",
+    "vitamina b12",
+    "colágeno",
+    "colágeno hidrolisado",
+    "bcaa",
+    "glutamina",
+    "hipercalórico",
+    "termogênico",
+    "omega 3",
+    "óleo de peixe",
+    "melatonina",
+    "magnésio",
+    "zinco",
+    "coenzima q10",
+    "cafeína",
+    "barra de proteína",
+    "barra proteica",
+    "suplemento vegano",
+    "proteína vegetal",
+    "caseína",
+    "isotônico",
+    "bebida proteica",
+    "shaker",
+    "garrafa shaker",
+    "energia",
+    "imunidade",
+    "ganho de massa",
+    "massa muscular",
+    "recuperação muscular",
+    "performance",
+    "nutrição esportiva",
+  ],
+  tech: [
+    "notebook",
+    "laptop",
+    "ultrabook",
+    "macbook",
+    "chromebook",
+    "smartphone",
+    "celular",
+    "iphone",
+    "android",
+    "fone bluetooth",
+    "fone sem fio",
+    "earbuds",
+    "airbuds",
+    "headset",
+    "headset gamer",
+    "headphone",
+    "monitor",
+    "monitor gamer",
+    "monitor ultrawide",
+    "ssd",
+    "ssd nvme",
+    "ssd sata",
+    "hd externo",
+    "pendrive",
+    "teclado",
+    "teclado mecânico",
+    "teclado gamer",
+    "mouse",
+    "mouse gamer",
+    "mouse sem fio",
+    "webcam",
+    "microfone",
+    "microfone usb",
+    "cadeira gamer",
+    "mesa gamer",
+    "placa de vídeo",
+    "gpu",
+    "processador",
+    "cpu",
+    "memória ram",
+    "gabinete",
+    "fonte pc",
+    "cooler",
+    "water cooler",
+    "roteador",
+    "wifi",
+    "mesh wifi",
+    "repetidor wifi",
+    "switch rede",
+    "câmera de segurança",
+    "câmera ip",
+    "smartwatch",
+    "smartband",
+    "tablet",
+    "ipad",
+    "carregador",
+    "carregador turbo",
+    "power bank",
+    "hub usb",
+    "adaptador usb",
+    "dock station",
+    "suporte notebook",
+    "suporte monitor",
+  ],
+  ofertas: [
+    "promoção",
+    "oferta",
+    "desconto",
+    "cupom",
+    "cupom desconto",
+    "super oferta",
+    "mega oferta",
+    "oferta relâmpago",
+    "oferta do dia",
+    "promoção do dia",
+    "imperdível",
+    "últimas unidades",
+    "preço baixo",
+    "menor preço",
+    "preço especial",
+    "desconto exclusivo",
+    "liquidação",
+    "saldão",
+    "promoção limitada",
+    "desconto progressivo",
+    "frete grátis",
+    "frete gratis",
+    "entrega grátis",
+    "cashback",
+    "preço histórico",
+    "oferta amazon",
+    "oferta mercado livre",
+    "achado",
+    "achadinho",
+    "promo imperdível",
+    "desconto relâmpago",
+  ],
+  faith: [
+    "bíblia",
+    "bíblia sagrada",
+    "bíblia de estudo",
+    "bíblia católica",
+    "bíblia evangélica",
+    "livro evangélico",
+    "livro cristão",
+    "livro cristão motivacional",
+    "devocional",
+    "devocional diário",
+    "devocional cristão",
+    "livro de oração",
+    "oração",
+    "oração poderosa",
+    "oração diária",
+    "oração da manhã",
+    "oração da noite",
+    "oração da família",
+    "livro gospel",
+    "livro espiritual",
+    "livro religioso",
+    "louvor",
+    "música gospel",
+    "cd gospel",
+    "dvd gospel",
+    "camiseta cristã",
+    "camiseta gospel",
+    "quadro bíblico",
+    "quadro cristão",
+    "decoração cristã",
+    "presente cristão",
+    "presente religioso",
+    "terço",
+    "terço católico",
+    "imagem de santo",
+    "estátua religiosa",
+    "vela religiosa",
+    "cruz",
+    "crucifixo",
+    "medalha religiosa",
+    "medalha de são bento",
+    "livro de salmos",
+    "salmos",
+    "evangelho",
+    "palavra de deus",
+    "estudo bíblico",
+  ],
+};
+
+function getRandomItems<T>(arr: T[], count: number): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, count);
+}
+
+function buildShopeeProductUrl(shopId: number | string, itemId: number | string): string {
+  return `https://shopee.com.br/product/${shopId}/${itemId}`;
+}
+
+async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string[]> {
+  const keywords: string[] = [];
+  for (const group of Object.values(SHOPEE_KEYWORD_GROUPS)) {
+    keywords.push(...getRandomItems(group, Math.min(2, group.length)));
+  }
+
+  const seen = new Set<string>();
+
+  for (const keyword of keywords) {
+    const params = new URLSearchParams({
+      by: "relevancy",
+      keyword,
+      limit: String(Math.min(SHOPEE_SEARCH_LIMIT_PER_KEYWORD, maxPerListing)),
+      newest: "0",
+      order: "desc",
+      page_type: "search",
+      version: "2",
+    });
+    const apiUrl = `https://shopee.com.br/api/v4/search/search_items?${params.toString()}`;
+    try {
+      const res = await fetch(apiUrl, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "application/json",
+          Referer: `https://shopee.com.br/search?keyword=${encodeURIComponent(keyword)}`,
+        },
+      });
+      if (!res.ok) {
+        logger.warn({ apiUrl, status: res.status }, "Shopee API search failed");
+        continue;
+      }
+      const data: any = await res.json();
+      const items: any[] = data?.items ?? [];
+      for (const item of items) {
+        const shopid = item.shopid ?? item.shop_id;
+        const itemid = item.itemid ?? item.item_id;
+        if (shopid == null || itemid == null) continue;
+        const url = buildShopeeProductUrl(shopid, itemid);
+        if (!seen.has(url)) {
+          seen.add(url);
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn({ err: e, apiUrl, keyword, message: msg }, "Shopee API search error");
+      appendLog("warn", `[Shopee API] ${keyword} → ${msg}`);
+    }
+    await sleep(DEFAULT_DELAY_MS);
+  }
+
+  const urls = Array.from(seen);
+  logger.info({ count: urls.length }, "Shopee API: collected product URLs");
+  return urls;
+}
 
 /**
  * Busca ofertas nas URLs configuradas (ou nas urls passadas), scrape e insere no banco.
@@ -160,6 +425,42 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
       failed++;
     }
     await sleep(delayMs);
+  }
+
+  // Shopee: busca automática via API oficial de busca, usando palavras-chave por categoria.
+  try {
+    const shopeeUrls = await fetchShopeeProductsFromApi(maxPerListing);
+    const toFetch = shopeeUrls.slice(0, maxPerListing);
+    for (const productUrl of toFetch) {
+      try {
+        const scraped = await scrapeProductFromUrlWithFallback(productUrl);
+        if (isGenericProductTitle(scraped.title)) {
+          logger.info({ url: productUrl, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
+          continue;
+        }
+        const input = { ...scrapedToProductInput(scraped), source: "shopee" as const };
+        const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
+        const category = await categoriesRepo.getCategoryBySlug(categorySlug);
+        if (category) input.categoryId = category.id;
+        input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
+        const { isNew } = await productsRepo.insertProduct(input);
+        if (isNew) inserted++;
+        logger.info(
+          { title: scraped.title.slice(0, 40), source: "shopee", isNew },
+          isNew ? "Inserted (Shopee API)" : "Skip duplicate (Shopee API)"
+        );
+      } catch (e) {
+        failed++;
+        const msg = e instanceof Error ? e.message : String(e);
+        logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (Shopee API)");
+        appendLog("warn", `[Shopee API produto] ${productUrl} → ${msg}`);
+      }
+      await sleep(delayMs);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logger.warn({ err: e, message: msg }, "Shopee API fetch block failed");
+    appendLog("warn", `[Shopee API bloco] ${msg}`);
   }
 
   return { inserted, failed, totalUrls: urls.length };
