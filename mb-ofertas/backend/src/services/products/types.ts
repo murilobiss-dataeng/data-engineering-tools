@@ -1,6 +1,8 @@
 export type ProductInput = {
   title: string;
+  /** Preço à vista (PIX / principal). */
   price: number;
+  /** Preço cheio / "de" (riscado), quando houver promoção. */
   previousPrice: number | null;
   discountPct: number | null;
   affiliateLink: string;
@@ -8,7 +10,12 @@ export type ProductInput = {
   externalId?: string;
   source?: string;
   categoryId?: string | null;
+  /** Texto livre do parcelamento (ex.: frase da loja). */
   installments?: string | null;
+  /** Máximo de parcelas oferecido (ex.: 12). */
+  installmentMaxTimes?: number | null;
+  /** Valor de cada parcela nessa condição. */
+  installmentUnitPrice?: number | null;
 };
 
 export type ProductCaptureResult = {

@@ -47,7 +47,15 @@ export async function markPostAsPosted(apiUrl, post) {
   const id = post?.id ? String(post.id).trim() : "";
   const url = post?.url ? String(post.url).trim() : "";
   if (!id && !url) return false;
-  const markPostedUrl = apiUrl.replace(/\/feed\/?$/i, "/feed/mark-posted");
+  let markPostedUrl = apiUrl;
+  try {
+    const u = new URL(apiUrl);
+    u.pathname = u.pathname.replace(/\/feed\/?$/, "/feed/mark-posted");
+    u.search = "";
+    markPostedUrl = u.toString();
+  } catch {
+    markPostedUrl = apiUrl.replace(/\/feed\/?(\?.*)?$/i, "/feed/mark-posted");
+  }
   const body = id ? { id } : { url };
   try {
     const { status } = await axios.post(markPostedUrl, body, {

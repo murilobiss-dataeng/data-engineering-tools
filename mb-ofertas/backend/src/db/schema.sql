@@ -96,7 +96,7 @@ INSERT INTO categories (name, slug) VALUES
   ('Tech', 'tech'),
   ('Ofertas', 'ofertas'),
   ('Faith', 'faith'),
-  ('Fitness', 'fitness'),
+  ('Fitness', 'fitness')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Coluna installments (para bancos já existentes)
@@ -104,6 +104,17 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'installments') THEN
     ALTER TABLE products ADD COLUMN installments TEXT;
+  END IF;
+END $$;
+
+-- Parcelamento estruturado (complementa o texto em installments)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'installment_max_times') THEN
+    ALTER TABLE products ADD COLUMN installment_max_times INT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'installment_unit_price') THEN
+    ALTER TABLE products ADD COLUMN installment_unit_price DECIMAL(12,2);
   END IF;
 END $$;
 
@@ -121,6 +132,14 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'whatsapp_channels' AND column_name = 'channel_link') THEN
     ALTER TABLE whatsapp_channels ADD COLUMN channel_link TEXT;
+  END IF;
+END $$;
+
+-- Qual categoria/canal de ofertas este registro representa (health, tech, ofertas, faith, fitness) — alinha com GitHub Actions CHANNEL_SLUG
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'whatsapp_channels' AND column_name = 'category_slug') THEN
+    ALTER TABLE whatsapp_channels ADD COLUMN category_slug VARCHAR(100);
   END IF;
 END $$;
 

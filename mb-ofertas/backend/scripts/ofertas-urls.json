@@ -1,7 +1,8 @@
 {
   "urls": [
     "https://www.amazon.com.br/deals",
-    "https://www.mercadolivre.com.br/ofertas"
+    "https://www.mercadolivre.com.br/ofertas",
+    "https://shopee.com.br/flash-sale"
   ],
-  "comment": "Adicione URLs de páginas de ofertas (listagem) ou de produtos individuais. Uma URL por linha também pode ser usada em ofertas-urls.txt"
+  "comment": "Listagens (ofertas/busca). Antes URLs Amazon eram ignoradas sem AMAZON_DEALS_PROXY_URL — agora todas são tentadas; Amazon pode precisar de proxy ou USE_BROWSER_SCRAPER no servidor. Shopee também usa busca via API (SHOPEE_SEARCH_ENABLED) além destas URLs."
 }

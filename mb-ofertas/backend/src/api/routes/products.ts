@@ -8,15 +8,22 @@ import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.j
 import { inferCategorySlugFromTitle } from "../../services/products/categorize.service.js";
 import { generateOfferMessage, generatePostContent } from "../../services/messages/copy-generator.js";
 import { toTwoDecimalsString } from "../../utils/price.js";
+import { parseInstallmentParts } from "../../utils/installments.js";
 import type { ProductInput } from "../../services/products/types.js";
 
 /** Formata preços do row para sempre 2 casas decimais (ex.: 386.1 → "386.10"). */
-function formatProductRow<T extends { price?: unknown; previous_price?: unknown; discount_pct?: unknown }>(row: T): T {
+function formatProductRow<
+  T extends { price?: unknown; previous_price?: unknown; discount_pct?: unknown; installment_unit_price?: unknown },
+>(row: T): T {
   return {
     ...row,
     price: toTwoDecimalsString(row.price as number | string) ?? row.price,
     previous_price: row.previous_price != null ? (toTwoDecimalsString(row.previous_price as number | string) ?? row.previous_price) : null,
     discount_pct: row.discount_pct != null ? (toTwoDecimalsString(row.discount_pct as number | string) ?? row.discount_pct) : null,
+    installment_unit_price:
+      row.installment_unit_price != null
+        ? (toTwoDecimalsString(row.installment_unit_price as number | string) ?? row.installment_unit_price)
+        : null,
   };
 }
 
@@ -33,6 +40,25 @@ function normalizeProductPrices(p: ProductInput): ProductInput {
     };
   }
   return p;
+}
+
+function dbRowToProductInput(row: Record<string, unknown>): ProductInput {
+  const installments = row.installments != null ? String(row.installments) : null;
+  return normalizeProductPrices({
+    title: String(row.title ?? ""),
+    price: parseFloat(String(row.price)),
+    previousPrice: row.previous_price != null ? parseFloat(String(row.previous_price)) : null,
+    discountPct: row.discount_pct != null ? parseFloat(String(row.discount_pct)) : null,
+    affiliateLink: String(row.affiliate_link ?? ""),
+    imageUrl: row.image_url != null ? String(row.image_url) : null,
+    installments: installments || null,
+    installmentMaxTimes:
+      row.installment_max_times != null && String(row.installment_max_times).trim() !== ""
+        ? Number(row.installment_max_times)
+        : null,
+    installmentUnitPrice:
+      row.installment_unit_price != null ? parseFloat(String(row.installment_unit_price)) : null,
+  });
 }
 
 export const productsRouter = Router();
@@ -58,25 +84,21 @@ productsRouter.get("/", async (req, res) => {
 productsRouter.get("/feed", async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
-    const rows = await productsRepo.getApprovedProducts(limit);
+    const rawSlug = (req.query.channelSlug || req.query.categorySlug || "") as string;
+    const channelSlug = String(rawSlug).trim() || null;
+    const rows = await productsRepo.getApprovedProducts(limit, channelSlug);
     // Só incluir produtos com imagem (essencial para engajamento no canal)
     const withImage = rows.filter((p) => p.image_url && p.image_url.trim() !== "");
     const feed = withImage.map((p) => {
-      const text = generateOfferMessage({
-        title: p.title,
-        price: Number(p.price),
-        previousPrice: p.previous_price != null ? Number(p.previous_price) : null,
-        discountPct: p.discount_pct != null ? Number(p.discount_pct) : null,
-        affiliateLink: p.affiliate_link,
-        imageUrl: p.image_url ?? undefined,
-        installments: p.installments ?? undefined,
-      });
+      const text = generateOfferMessage(dbRowToProductInput(p));
+      const slug = p.category_slug && String(p.category_slug).trim() ? String(p.category_slug).trim() : undefined;
       return {
         id: p.id,
         title: p.title,
         text,
         url: p.affiliate_link,
         imageUrl: p.image_url ?? undefined,
+        ...(slug ? { channelSlug: slug, categorySlug: slug } : {}),
       };
     });
     res.setHeader("Cache-Control", "public, max-age=60");
@@ -215,6 +237,21 @@ productsRouter.post("/", async (req, res) => {
       const cat = await categoriesRepo.getCategoryBySlug(slug);
       if (cat) categoryId = cat.id;
     }
+    let instMax =
+      body.installmentMaxTimes != null && Number(body.installmentMaxTimes) > 0
+        ? Math.floor(Number(body.installmentMaxTimes))
+        : null;
+    let instUnit =
+      body.installmentUnitPrice != null && Number(body.installmentUnitPrice) > 0
+        ? Number(body.installmentUnitPrice)
+        : null;
+    if ((instMax == null || instUnit == null) && body.installments) {
+      const parsed = parseInstallmentParts(body.installments);
+      if (parsed.maxTimes && parsed.unitPrice) {
+        instMax = parsed.maxTimes;
+        instUnit = parsed.unitPrice;
+      }
+    }
     const { id } = await productsRepo.insertProduct({
       title: body.title,
       price: Number(body.price),
@@ -223,6 +260,8 @@ productsRouter.post("/", async (req, res) => {
       affiliateLink: body.affiliateLink,
       imageUrl: body.imageUrl ?? null,
       installments: body.installments ?? null,
+      installmentMaxTimes: instMax,
+      installmentUnitPrice: instUnit,
       externalId: body.externalId,
       source: body.source ?? "manual",
       categoryId,
@@ -238,16 +277,7 @@ productsRouter.get("/:id/preview-message", async (req, res) => {
   try {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
-    let product: ProductInput = {
-      title: row.title,
-      price: parseFloat(row.price),
-      previousPrice: row.previous_price ? parseFloat(row.previous_price) : null,
-      discountPct: row.discount_pct ? parseFloat(row.discount_pct) : null,
-      affiliateLink: row.affiliate_link,
-      imageUrl: row.image_url,
-      installments: row.installments ?? undefined,
-    };
-    product = normalizeProductPrices(product);
+    const product = dbRowToProductInput(row);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
     const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase);
     const message = generateOfferMessage(product, { shortLink: short.shortUrl });
@@ -262,16 +292,7 @@ productsRouter.get("/:id/post-content", async (req, res) => {
   try {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
-    let product: ProductInput = {
-      title: row.title,
-      price: parseFloat(row.price),
-      previousPrice: row.previous_price ? parseFloat(row.previous_price) : null,
-      discountPct: row.discount_pct ? parseFloat(row.discount_pct) : null,
-      affiliateLink: row.affiliate_link,
-      imageUrl: row.image_url,
-      installments: row.installments ?? undefined,
-    };
-    product = normalizeProductPrices(product);
+    const product = dbRowToProductInput(row);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
     const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase);
     const coupon = (req.query.coupon as string)?.trim() || undefined;
@@ -307,10 +328,27 @@ productsRouter.post("/post-content", async (req, res) => {
       affiliateLink?: string;
       imageUrl?: string | null;
       installments?: string | null;
+      installmentMaxTimes?: number | null;
+      installmentUnitPrice?: number | null;
       coupon?: string | null;
     };
     if (!b.title || b.price == null || !b.affiliateLink) {
       return res.status(400).json({ error: "title, price e affiliateLink são obrigatórios." });
+    }
+    let instMax =
+      b.installmentMaxTimes != null && Number(b.installmentMaxTimes) > 0
+        ? Math.floor(Number(b.installmentMaxTimes))
+        : null;
+    let instUnit =
+      b.installmentUnitPrice != null && Number(b.installmentUnitPrice) > 0
+        ? Number(b.installmentUnitPrice)
+        : null;
+    if ((instMax == null || instUnit == null) && b.installments) {
+      const parsed = parseInstallmentParts(b.installments);
+      if (parsed.maxTimes && parsed.unitPrice) {
+        instMax = parsed.maxTimes;
+        instUnit = parsed.unitPrice;
+      }
     }
     let product: ProductInput = {
       title: b.title,
@@ -320,6 +358,8 @@ productsRouter.post("/post-content", async (req, res) => {
       affiliateLink: b.affiliateLink,
       imageUrl: b.imageUrl ?? null,
       installments: b.installments ?? undefined,
+      installmentMaxTimes: instMax,
+      installmentUnitPrice: instUnit,
     };
     product = normalizeProductPrices(product);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;

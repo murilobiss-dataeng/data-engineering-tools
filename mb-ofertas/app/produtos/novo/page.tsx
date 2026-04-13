@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type Product } from "@/lib/api";
+import { parseInstallmentParts } from "@/lib/installments";
 
 export default function NovoProdutoPage() {
   const router = useRouter();
@@ -14,6 +15,9 @@ export default function NovoProdutoPage() {
     previousPrice: "",
     affiliateLink: "",
     imageUrl: "",
+    installments: "",
+    installmentMaxTimes: "",
+    installmentUnitPrice: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,6 +37,22 @@ export default function NovoProdutoPage() {
       setError("Link de afiliado é obrigatório.");
       return;
     }
+    const instMax = form.installmentMaxTimes.trim()
+      ? parseInt(form.installmentMaxTimes.trim(), 10)
+      : NaN;
+    const instUnit = form.installmentUnitPrice.trim()
+      ? parseFloat(form.installmentUnitPrice.replace(",", "."))
+      : NaN;
+    let maxT = Number.isFinite(instMax) && instMax > 0 ? instMax : null;
+    let unitP = Number.isFinite(instUnit) && instUnit > 0 ? instUnit : null;
+    if ((maxT == null || unitP == null) && form.installments.trim()) {
+      const p = parseInstallmentParts(form.installments);
+      if (p.maxTimes && p.unitPrice) {
+        maxT = p.maxTimes;
+        unitP = p.unitPrice;
+      }
+    }
+
     setSaving(true);
     try {
       const product = await api<Product>("/products", {
@@ -43,6 +63,9 @@ export default function NovoProdutoPage() {
           previousPrice: previousPrice && Number.isFinite(previousPrice) ? previousPrice : null,
           affiliateLink: form.affiliateLink.trim(),
           imageUrl: form.imageUrl.trim() || null,
+          installments: form.installments.trim() || undefined,
+          installmentMaxTimes: maxT ?? undefined,
+          installmentUnitPrice: unitP ?? undefined,
           source: "manual",
         }),
       });
@@ -85,7 +108,7 @@ export default function NovoProdutoPage() {
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <label htmlFor="price" className="input-label">
-              Preço (R$) *
+              À vista (R$) *
             </label>
             <input
               id="price"
@@ -100,7 +123,7 @@ export default function NovoProdutoPage() {
           </div>
           <div>
             <label htmlFor="previousPrice" className="input-label">
-              Preço anterior (R$) — opcional
+              Preço cheio (R$) — opcional
             </label>
             <input
               id="previousPrice"
@@ -109,6 +132,50 @@ export default function NovoProdutoPage() {
               value={form.previousPrice}
               onChange={(e) => setForm({ ...form, previousPrice: e.target.value })}
               placeholder="129,90"
+              className="input"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-3">
+          <div className="sm:col-span-3">
+            <label htmlFor="installments" className="input-label">
+              Parcelamento — texto (opcional)
+            </label>
+            <input
+              id="installments"
+              type="text"
+              value={form.installments}
+              onChange={(e) => setForm({ ...form, installments: e.target.value })}
+              placeholder="ex.: em 12x de R$ 25,00 sem juros"
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="installmentMaxTimes" className="input-label">
+              Até quantas vezes
+            </label>
+            <input
+              id="installmentMaxTimes"
+              type="text"
+              inputMode="numeric"
+              value={form.installmentMaxTimes}
+              onChange={(e) => setForm({ ...form, installmentMaxTimes: e.target.value })}
+              placeholder="12"
+              className="input"
+            />
+          </div>
+          <div>
+            <label htmlFor="installmentUnitPrice" className="input-label">
+              Valor da parcela (R$)
+            </label>
+            <input
+              id="installmentUnitPrice"
+              type="text"
+              inputMode="decimal"
+              value={form.installmentUnitPrice}
+              onChange={(e) => setForm({ ...form, installmentUnitPrice: e.target.value })}
+              placeholder="25,90"
               className="input"
             />
           </div>

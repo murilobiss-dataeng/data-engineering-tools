@@ -1,5 +1,13 @@
-# Envia produtos aprovados (feed da API) para o canal WhatsApp a cada 10 minutos.
-# Secrets: API_URL, CHAT_ID. Na primeira vez rode "Init WhatsApp (escanear QR)".
+# Envia produtos aprovados por canal (slug da categoria) para o WhatsApp.
+# Um único job percorre health → tech → ofertas → faith → fitness em sequência,
+# reutilizando a mesma sessão (sem corrida no cache do LocalAuth).
+#
+# Secrets:
+#   API_URL — ex.: https://sua-api.onrender.com/api/products/feed (sem query; o bot usa ?channelSlug= por canal)
+#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH, CHAT_ID_FITNESS — ID do canal (ex.: 120363405814099508@newsletter)
+#   Canais sem secret ficam de fora (mensagem no log).
+#
+# Primeira vez: workflow "Init WhatsApp (escanear QR)".
 
 name: WhatsApp Bot (postar ofertas)
 
@@ -13,7 +21,7 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -47,16 +55,27 @@ jobs:
             echo "session_ok=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Rodar bot (single-run)
+      - name: Rodar bot (single-run) por canal
         if: steps.session.outputs.session_ok == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          SINGLE_RUN: "true"
-          GITHUB_ACTIONS: "true"
         run: |
           cd mb-ofertas/whatsapp-channel-bot
-          node src/index.js
+          for channel in health tech ofertas faith fitness; do
+            case "$channel" in
+              health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
+              tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
+              ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
+              faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
+              fitness) CHAT_ID="${{ secrets.CHAT_ID_FITNESS }}" ;;
+            esac
+            if [ -z "$CHAT_ID" ]; then
+              echo "::notice::CHAT_ID não configurado para o canal $channel — ignorando."
+              continue
+            fi
+            export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true
+            node src/index.js
+          done
 
       - name: Sessão não encontrada
         if: steps.session.outputs.session_ok != 'true'

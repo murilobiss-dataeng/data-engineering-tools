@@ -9,11 +9,13 @@ export default function CanaisWhatsAppPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [channelLink, setChannelLink] = useState("");
+  const [categorySlug, setCategorySlug] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState<WhatsAppChannel | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editChannelLink, setEditChannelLink] = useState("");
+  const [editCategorySlug, setEditCategorySlug] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
@@ -37,14 +39,21 @@ export default function CanaisWhatsAppPage() {
     }
     setSubmitting(true);
     try {
+      const slug = categorySlug.trim() || null;
       const created = await api<WhatsAppChannel>("/whatsapp/channels", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), phone: num ?? "", channelLink: link }),
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: num ?? "",
+          channelLink: link,
+          categorySlug: slug,
+        }),
       });
       setChannels((prev) => [...prev, created]);
       setName("");
       setPhone("");
       setChannelLink("");
+      setCategorySlug("");
     } catch (err) {
       console.error(err);
       alert("Erro ao adicionar canal.");
@@ -58,6 +67,7 @@ export default function CanaisWhatsAppPage() {
     setEditName(c.name);
     setEditPhone(c.phone || "");
     setEditChannelLink(c.channel_link || "");
+    setEditCategorySlug(c.category_slug || "");
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -77,6 +87,7 @@ export default function CanaisWhatsAppPage() {
           name: editName.trim(),
           phone: num ?? "",
           channelLink: link,
+          categorySlug: editCategorySlug.trim() || null,
         }),
       });
       setChannels((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -114,7 +125,9 @@ export default function CanaisWhatsAppPage() {
         <div>
           <h1 className="page-title">Canais WhatsApp</h1>
           <p className="page-subtitle">
-            Cadastre os canais (números ou grupos) para o botão &quot;Enviar para o WhatsApp&quot; nas campanhas.
+            Cadastre os canais (números ou grupos) para o botão &quot;Enviar para o WhatsApp&quot; nas campanhas. O campo
+            &quot;Tag do canal&quot; deve coincidir com a categoria das ofertas (health, tech, ofertas, faith, fitness) e com o{" "}
+            <code className="rounded bg-stone-100 px-1">CHANNEL_SLUG</code> no GitHub Actions.
           </p>
         </div>
       </div>
@@ -153,6 +166,21 @@ export default function CanaisWhatsAppPage() {
             />
             <p className="mt-1 text-xs text-stone-500">Para canal público (ex.: mb.OFERTAS), use o link do canal.</p>
           </div>
+          <div className="min-w-[160px]">
+            <label className="mb-1 block text-sm font-medium text-stone-600">Tag do canal (opcional)</label>
+            <select
+              value={categorySlug}
+              onChange={(e) => setCategorySlug(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">—</option>
+              <option value="health">health</option>
+              <option value="tech">tech</option>
+              <option value="ofertas">ofertas</option>
+              <option value="faith">faith</option>
+              <option value="fitness">fitness</option>
+            </select>
+          </div>
           <button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">
             {submitting ? "Salvando…" : "Adicionar"}
           </button>
@@ -170,6 +198,9 @@ export default function CanaisWhatsAppPage() {
             <div>
               <p className="font-medium text-stone-900">{c.name}</p>
               <p className="text-sm text-stone-500">{c.channel_link ? c.channel_link : c.phone || "—"}</p>
+              {c.category_slug && (
+                <p className="text-xs text-stone-400">Canal de ofertas: {c.category_slug}</p>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -225,6 +256,22 @@ export default function CanaisWhatsAppPage() {
                   className="input w-full"
                 />
                 <p className="mt-1 text-xs text-stone-500">Preencha para que &quot;Enviar para WhatsApp&quot; abra o canal em vez do número.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-600">Tag do canal (categoria)</label>
+                <select
+                  value={editCategorySlug}
+                  onChange={(e) => setEditCategorySlug(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">—</option>
+                  <option value="health">health</option>
+                  <option value="tech">tech</option>
+                  <option value="ofertas">ofertas</option>
+                  <option value="faith">faith</option>
+                  <option value="fitness">fitness</option>
+                </select>
+                <p className="mt-1 text-xs text-stone-500">Alinha com a categoria do produto e com o bot automatizado.</p>
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setEditing(null)} className="btn-secondary">

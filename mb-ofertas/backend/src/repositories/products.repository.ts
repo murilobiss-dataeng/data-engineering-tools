@@ -40,8 +40,9 @@ export async function insertProduct(
   const res = await query<{ id: string }>(
     `INSERT INTO products (
       category_id, external_id, title, price, previous_price, discount_pct,
-      affiliate_link, image_url, source, status, installments
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10)
+      affiliate_link, image_url, source, status, installments,
+      installment_max_times, installment_unit_price
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12)
     RETURNING id`,
     [
       input.categoryId ?? null,
@@ -54,6 +55,8 @@ export async function insertProduct(
       input.imageUrl ?? null,
       input.source ?? "amazon",
       input.installments ?? null,
+      input.installmentMaxTimes != null && input.installmentMaxTimes > 0 ? Math.floor(Number(input.installmentMaxTimes)) : null,
+      input.installmentUnitPrice != null ? roundToTwoDecimals(Number(input.installmentUnitPrice)) : null,
     ]
   );
   return { id: res.rows[0].id, isNew: true };
@@ -86,6 +89,7 @@ export async function listProducts(filters?: {
   const res = await query(
     `SELECT p.id, p.category_id, p.external_id, p.title, p.price, p.previous_price, p.discount_pct,
             p.affiliate_link, p.image_url, p.source, p.status, p.approved_at, p.created_at, p.updated_at, p.installments,
+            p.installment_max_times, p.installment_unit_price,
             c.name AS category_name, c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
@@ -101,6 +105,7 @@ export async function getProductById(id: string) {
   const res = await query(
     `SELECT p.id, p.category_id, p.external_id, p.title, p.price, p.previous_price, p.discount_pct,
             p.affiliate_link, p.image_url, p.source, p.status, p.approved_at, p.created_at, p.updated_at, p.installments,
+            p.installment_max_times, p.installment_unit_price,
             c.name AS category_name, c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
@@ -136,17 +141,22 @@ export async function deleteProduct(id: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
-export async function getApprovedProducts(limit = 20) {
+export async function getApprovedProducts(limit = 20, channelSlug?: string | null) {
+  const slug = channelSlug?.trim() || null;
   const res = await query(
-    `SELECT id, title, price, previous_price, discount_pct, affiliate_link, image_url, installments
-     FROM products
-     WHERE status = 'approved'
+    `SELECT p.id, p.title, p.price, p.previous_price, p.discount_pct, p.affiliate_link, p.image_url, p.installments,
+            p.installment_max_times, p.installment_unit_price,
+            c.slug AS category_slug
+     FROM products p
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE p.status = 'approved'
+     AND ($1::text IS NULL OR $1 = '' OR c.slug = $1)
      ORDER BY
-       (discount_pct IS NULL OR discount_pct <= 0) ASC,
-       discount_pct DESC NULLS LAST,
-       approved_at DESC NULLS LAST
-     LIMIT $1`,
-    [limit]
+       (p.discount_pct IS NULL OR p.discount_pct <= 0) ASC,
+       p.discount_pct DESC NULLS LAST,
+       p.approved_at DESC NULLS LAST
+     LIMIT $2`,
+    [slug, limit]
   );
   return res.rows;
 }

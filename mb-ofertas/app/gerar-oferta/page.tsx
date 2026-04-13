@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type ScrapedProduct, type Product } from "@/lib/api";
+import { parseInstallmentParts } from "@/lib/installments";
+
+function getSourceFromAffiliateLink(link: string): string {
+  const u = link.toLowerCase();
+  if (u.includes("mercadolivre") || u.includes("mercadolibre")) return "mercadolivre";
+  if (u.includes("shopee")) return "shopee";
+  if (u.includes("amazon")) return "amazon";
+  return "manual";
+}
 
 export default function GerarOfertaPage() {
   const router = useRouter();
@@ -54,6 +63,8 @@ export default function GerarOfertaPage() {
           affiliateLink: product.affiliateLink,
           imageUrl: product.imageUrl,
           installments: product.installments ?? undefined,
+          installmentMaxTimes: product.installmentMaxTimes ?? undefined,
+          installmentUnitPrice: product.installmentUnitPrice ?? undefined,
           coupon: coupon.trim() || undefined,
         }),
       });
@@ -93,7 +104,9 @@ export default function GerarOfertaPage() {
           affiliateLink: product.affiliateLink,
           imageUrl: product.imageUrl,
           installments: product.installments ?? undefined,
-          source: "amazon",
+          installmentMaxTimes: product.installmentMaxTimes ?? undefined,
+          installmentUnitPrice: product.installmentUnitPrice ?? undefined,
+          source: getSourceFromAffiliateLink(product.affiliateLink),
         }),
       });
       router.push(`/produtos/${saved.id}`);
@@ -191,7 +204,7 @@ export default function GerarOfertaPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="input-label">Preço (R$)</label>
+                    <label className="input-label">À vista (R$)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -201,7 +214,7 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                   <div>
-                    <label className="input-label">De (R$) — opcional</label>
+                    <label className="input-label">Preço cheio (R$) — opcional</label>
                     <input
                       type="number"
                       step="0.01"
@@ -232,15 +245,64 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="input-label">Parcelamento (opcional)</label>
-                  <input
-                    type="text"
-                    value={product.installments ?? ""}
-                    onChange={(e) => setProduct({ ...product, installments: e.target.value || null })}
-                    placeholder="ex.: em 12x de R$ 25,00 sem juros"
-                    className="input w-full"
-                  />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <label className="input-label">Parcelamento (texto da loja, opcional)</label>
+                    <input
+                      type="text"
+                      value={product.installments ?? ""}
+                      onChange={(e) => setProduct({ ...product, installments: e.target.value || null })}
+                      onBlur={(e) => {
+                        const p = parseInstallmentParts(e.target.value);
+                        if (p.maxTimes && p.unitPrice) {
+                          setProduct((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  installmentMaxTimes: p.maxTimes,
+                                  installmentUnitPrice: p.unitPrice,
+                                }
+                              : prev
+                          );
+                        }
+                      }}
+                      placeholder="ex.: em 12x de R$ 25,00 sem juros"
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label">Até quantas vezes</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={48}
+                      value={product.installmentMaxTimes ?? ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          installmentMaxTimes: e.target.value ? parseInt(e.target.value, 10) : null,
+                        })
+                      }
+                      placeholder="12"
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label">Valor da parcela (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={product.installmentUnitPrice ?? ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          installmentUnitPrice: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      placeholder="25,00"
+                      className="input w-full"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

@@ -11,9 +11,36 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
+/** Bloco de preços: cheio (se houver), à vista, parcelado (até Nx ou texto da loja). */
+function appendPriceLines(lines: string[], product: ProductInput): void {
+  const hasFull = product.previousPrice != null && product.previousPrice > product.price;
+  if (hasFull) {
+    lines.push(`Preço cheio: ${formatPrice(product.previousPrice!)}`);
+  }
+  lines.push(`À vista: ${formatPrice(product.price)}`);
+
+  const structured =
+    product.installmentMaxTimes != null &&
+    product.installmentMaxTimes > 0 &&
+    product.installmentUnitPrice != null &&
+    product.installmentUnitPrice > 0;
+
+  if (structured) {
+    lines.push(
+      `Até ${product.installmentMaxTimes}x de ${formatPrice(product.installmentUnitPrice!)} (parcelado)`
+    );
+  } else if (product.installments?.trim()) {
+    lines.push(product.installments.trim());
+  }
+
+  if (hasFull && product.discountPct != null && product.discountPct > 0) {
+    lines.push(`${product.discountPct}% OFF no à vista`);
+  }
+}
+
 /**
  * Gera mensagem de oferta para WhatsApp com:
- * - Título, preço de/por (desconto se houver), link direto (Amazon/ML).
+ * - Título, preço cheio / à vista / parcelas, link.
  * - Sem emojis para evitar desconfiguração em canais.
  */
 export function generateOfferMessage(product: ProductInput, options?: { shortLink?: string }): string {
@@ -21,7 +48,8 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
 
-  if (product.discountPct != null && product.discountPct > 0) {
+  const hasFull = product.previousPrice != null && product.previousPrice > product.price;
+  if (hasFull && product.discountPct != null && product.discountPct > 0) {
     lines.push("OFERTA COM DESCONTO");
     lines.push("");
   }
@@ -29,18 +57,7 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   lines.push(product.title);
   lines.push("");
 
-  if (product.previousPrice != null && product.previousPrice > product.price) {
-    lines.push(`De: ${formatPrice(product.previousPrice)} por ${formatPrice(product.price)}`);
-    if (product.discountPct != null && product.discountPct > 0) {
-      lines.push(`${product.discountPct}% OFF`);
-    }
-  } else {
-    lines.push(formatPrice(product.price));
-  }
-
-  if (product.installments?.trim()) {
-    lines.push(product.installments.trim());
-  }
+  appendPriceLines(lines, product);
 
   lines.push("");
   lines.push("Oferta por tempo limitado. Aproveite!");
@@ -69,7 +86,8 @@ export function generatePostContent(
   const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
   const lines: string[] = [];
 
-  if (product.discountPct != null && product.discountPct > 0) {
+  const hasFullPost = product.previousPrice != null && product.previousPrice > product.price;
+  if (hasFullPost && product.discountPct != null && product.discountPct > 0) {
     lines.push("OFERTA COM DESCONTO");
     lines.push("");
   }
@@ -77,18 +95,7 @@ export function generatePostContent(
   lines.push(product.title);
   lines.push("");
 
-  if (product.previousPrice != null && product.previousPrice > product.price) {
-    lines.push(`De: ${formatPrice(product.previousPrice)} por ${formatPrice(product.price)}`);
-    if (product.discountPct != null && product.discountPct > 0) {
-      lines.push(`${product.discountPct}% OFF`);
-    }
-  } else {
-    lines.push(formatPrice(product.price));
-  }
-
-  if (product.installments?.trim()) {
-    lines.push(product.installments.trim());
-  }
+  appendPriceLines(lines, product);
 
   if (options?.coupon?.trim()) {
     lines.push(`CUPOM: ${options.coupon.trim().toUpperCase()}`);

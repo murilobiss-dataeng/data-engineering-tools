@@ -46,6 +46,12 @@ export default function RootLayout({
                 Campanhas
               </a>
               <a
+                href="/analytics"
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-amber-50 hover:text-amber-800"
+              >
+                Analytics
+              </a>
+              <a
                 href="/canais-whatsapp"
                 className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-amber-50 hover:text-amber-800"
               >

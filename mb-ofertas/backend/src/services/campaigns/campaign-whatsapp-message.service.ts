@@ -39,6 +39,10 @@ export async function getCampaignWhatsAppMessage(
       affiliateLink: row.affiliate_link,
       imageUrl: row.image_url,
       installments: row.installments ?? undefined,
+      installmentMaxTimes:
+        row.installment_max_times != null ? Number(row.installment_max_times) : null,
+      installmentUnitPrice:
+        row.installment_unit_price != null ? parseFloat(String(row.installment_unit_price)) : null,
     };
     p = normalizeProductPrices(p);
     const short = await shortLinksRepo.createShortLink(row.affiliate_link, options?.shortLinkBaseUrl);

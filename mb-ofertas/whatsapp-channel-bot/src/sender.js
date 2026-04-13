@@ -133,7 +133,7 @@ export async function sendPost(client, post) {
 
   if (sent) {
     markAsSent(config.dataPath, key);
-    await markPostAsPosted(config.apiUrl, post);
+    await markPostAsPosted(config.markPostedUrl || config.apiUrl, post);
   }
   return sent;
 }

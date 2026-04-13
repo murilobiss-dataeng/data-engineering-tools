@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, type Product, type Category } from "@/lib/api";
-import { formatPriceTwoDecimals } from "@/lib/format";
+import { ProductPriceBlock } from "@/components/ProductPriceBlock";
 
 const FILTERS = [
   { value: "", label: "Todos" },
@@ -256,34 +256,15 @@ export default function ProductsPage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-stone-900 line-clamp-2">{p.title}</p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                {(() => {
-                  const prev = Number(p.previous_price);
-                  const curr = Number(p.price);
-                  const hasDiscount = p.previous_price != null && prev > 0 && curr > 0 && prev !== curr;
-                  const fullPrice = hasDiscount ? (prev > curr ? prev : curr) : curr;
-                  const salePrice = hasDiscount ? (prev > curr ? curr : prev) : curr;
-                  if (hasDiscount) {
-                    return (
-                      <>
-                        <span className="text-sm text-stone-400 line-through">R$ {formatPriceTwoDecimals(fullPrice)}</span>
-                        <span className="font-semibold text-amber-700">por R$ {formatPriceTwoDecimals(salePrice)}</span>
-                        <span className="badge bg-amber-100 text-amber-800">
-                          {Math.round(((fullPrice - salePrice) / fullPrice) * 100)}% OFF
-                        </span>
-                      </>
-                    );
-                  }
-                  return (
-                    <>
-                      <span className="font-semibold text-amber-700">R$ {formatPriceTwoDecimals(p.price)}</span>
-                      {p.discount_pct && (
-                        <span className="badge bg-amber-100 text-amber-800">{p.discount_pct}% OFF</span>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
+              <ProductPriceBlock
+                variant="compact"
+                price={p.price}
+                previous_price={p.previous_price}
+                discount_pct={p.discount_pct}
+                installments={p.installments}
+                installment_max_times={p.installment_max_times}
+                installment_unit_price={p.installment_unit_price}
+              />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <StatusBadge status={p.status} />
                 <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">

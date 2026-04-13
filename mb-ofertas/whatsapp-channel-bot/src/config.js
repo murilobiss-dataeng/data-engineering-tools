@@ -1,11 +1,55 @@
 import "dotenv/config";
 
 /**
+ * Monta URL do feed com filtro por canal (slug da categoria: health, tech, ofertas, faith, fitness).
+ */
+function buildFeedUrl(apiUrl, channelSlug) {
+  const base = (apiUrl || "").trim();
+  if (!base) return "";
+  const slug = (channelSlug || "").trim();
+  if (!slug) return base;
+  try {
+    const u = new URL(base);
+    u.searchParams.set("channelSlug", slug);
+    return u.toString();
+  } catch {
+    return base;
+  }
+}
+
+/**
+ * POST /api/products/feed/mark-posted — pathname derivado da URL do feed, sem query string.
+ */
+function buildMarkPostedUrl(feedOrApiUrl) {
+  const base = (feedOrApiUrl || "").trim();
+  if (!base) return "";
+  try {
+    const u = new URL(base);
+    u.pathname = u.pathname.replace(/\/feed\/?$/, "/feed/mark-posted");
+    u.search = "";
+    return u.toString();
+  } catch {
+    return base.replace(/\/feed\/?(\?.*)?$/i, "/feed/mark-posted");
+  }
+}
+
+/**
  * Configuração via variáveis de ambiente.
  */
 export const config = {
-  /** URL da API que retorna array de posts: [{ title, text, url, imageUrl? }] */
+  /** URL base da API (ex.: https://api.example.com/api/products/feed) */
   apiUrl: process.env.API_URL || "",
+  /** Slug do canal/categoria (mesmo slug das categorias no painel). Opcional: sem isso, o feed traz todos os aprovados. */
+  channelSlug: (process.env.CHANNEL_SLUG || "").trim(),
+  /** URL usada no GET (apiUrl + ?channelSlug= quando CHANNEL_SLUG está definido) */
+  get feedUrl() {
+    const u = buildFeedUrl(this.apiUrl, this.channelSlug);
+    return u || this.apiUrl;
+  },
+  /** URL do mark-posted (sem query) */
+  get markPostedUrl() {
+    return buildMarkPostedUrl(this.feedUrl || this.apiUrl);
+  },
   /** ID do canal (ex.: 120363405814099508@newsletter). Única variável de destino. */
   chatIds: (() => {
     const id = (process.env.CHAT_ID || "").trim();

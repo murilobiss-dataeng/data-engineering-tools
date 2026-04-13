@@ -100,9 +100,10 @@ async function runJob() {
     return;
   }
 
-  logger.info("Buscando novos posts na API...");
+  const feedUrl = config.feedUrl || config.apiUrl;
+  logger.info("Buscando novos posts na API...", config.channelSlug ? `(canal: ${config.channelSlug})` : "(todos os canais)");
   const apiOptions = config.singleRun ? { timeout: 60000, retries: 2 } : { timeout: 30000, retries: 1 };
-  const posts = await fetchPosts(config.apiUrl, apiOptions);
+  const posts = await fetchPosts(feedUrl, apiOptions);
   if (posts.length === 0) return;
 
   const sent = await processPosts(client, posts);
@@ -113,7 +114,7 @@ async function runJob() {
 
 async function start() {
   logger.info("Iniciando bot. Modo:", config.singleRun ? "single-run (GHA)" : `intervalo ${config.cronIntervalMinutes} min`);
-  logger.info("API:", config.apiUrl || "(não configurada)");
+  logger.info("API:", config.apiUrl || "(não configurada)", config.channelSlug ? `CHANNEL_SLUG=${config.channelSlug}` : "");
   logger.info("Chats:", config.chatIds.length ? config.chatIds : "(nenhum)");
 
   client = createClient();

@@ -1,43 +1,43 @@
-# Envia produtos aprovados (feed da API) para o canal WhatsApp a cada 10 minutos.
-# Secrets necessários: API_URL, CHAT_IDS (configurados no repositório).
-# Na primeira vez: rode o workflow "Init WhatsApp" para escanear o QR e gerar a sessão.
+# Espelho do workflow na raiz do monorepo: use `.github/workflows/main.yml` se o repositório
+# for a pasta `data-engineering-tools`. Este arquivo existe para quem abre só o subpasta mb-ofertas.
+# Ajuste os paths `cd` se a estrutura do seu clone for diferente.
 
-name: WhatsApp Bot (postar ofertas)
+name: WhatsApp Bot (postar ofertas) — mb-ofertas
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"   # a cada 10 minutos
   workflow_dispatch:
 
 jobs:
   send:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/cache@v4
-        id: session
         with:
           path: whatsapp-channel-bot/data
           key: whatsapp-session-${{ runner.os }}-v1
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      - name: Instalar dependências do bot
+      - name: Instalar e rodar por canal
+        env:
+          API_URL: ${{ secrets.API_URL }}
         run: |
           cd whatsapp-channel-bot
           npm install
-
-      - name: Rodar bot (single-run)
-        env:
-          API_URL: ${{ secrets.API_URL }}
-          CHAT_IDS: ${{ secrets.CHAT_IDS }}
-          SINGLE_RUN: "true"
-          GITHUB_ACTIONS: "true"
-        run: |
-          cd whatsapp-channel-bot
-          node src/index.js
+          for channel in health tech ofertas faith fitness; do
+            case "$channel" in
+              health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
+              tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
+              ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
+              faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
+              fitness) CHAT_ID="${{ secrets.CHAT_ID_FITNESS }}" ;;
+            esac
+            if [ -z "$CHAT_ID" ]; then
+              echo "Pulando $channel (sem CHAT_ID)"
+              continue
+            fi
+            export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true
+            node src/index.js || echo "::warning::Falha no canal $channel"
+          done

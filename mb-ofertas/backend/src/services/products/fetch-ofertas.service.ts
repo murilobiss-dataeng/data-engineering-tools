@@ -39,6 +39,7 @@ function getSource(url: string): "amazon" | "mercadolivre" | "shopee" {
   return "amazon";
 }
 
+/** Proxy opcional para listagens Amazon (menos bloqueio em alguns ambientes). Não é mais obrigatório para *tentar* Amazon. */
 function canUseAmazonSource(): boolean {
   return Boolean(process.env.AMAZON_DEALS_PROXY_URL?.trim());
 }
@@ -50,17 +51,20 @@ function getBackendRoot(): string {
   return join(cwd, "backend");
 }
 
-/** URLs padrão de listagem para busca automática.
- * Amazon: só entra se AMAZON_DEALS_PROXY_URL estiver setada (evita SSL/Playwright sem Chromium no Render).
+/** URLs padrão quando não há OFERTAS_URLS nem ofertas-urls.json.
+ * Amazon/Shopee podem falhar em datacenter (SSL/bot); use AMAZON_DEALS_PROXY_URL ou USE_BROWSER_SCRAPER=true.
  */
 export function getDefaultListingUrls(): string[] {
   const urls: string[] = [];
   const proxy = process.env.AMAZON_DEALS_PROXY_URL?.trim();
   if (proxy && proxy.length > 0) {
     urls.push(proxy);
+  } else {
+    urls.push("https://www.amazon.com.br/deals");
   }
   urls.push("https://www.mercadolivre.com.br/ofertas");
   urls.push("https://www.mercadolivre.com.br/ofertas/do-dia");
+  urls.push("https://shopee.com.br/flash-sale");
   return urls;
 }
 
@@ -393,14 +397,14 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
 export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promise<FetchOfertasResult> {
   const configUrls = options.urls?.length ? options.urls : loadUrlsFromConfig();
   const rawUrls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
-  const urls = rawUrls.filter((url) => {
-    const source = getSource(url);
-    if (source === "amazon" && !canUseAmazonSource()) {
-      logger.info({ url }, "Amazon desativada sem AMAZON_DEALS_PROXY_URL");
-      return false;
-    }
-    return true;
-  });
+  const urls = rawUrls;
+  const amazonWithoutProxy = urls.filter((u) => getSource(u) === "amazon" && !canUseAmazonSource());
+  if (amazonWithoutProxy.length > 0) {
+    logger.warn(
+      { count: amazonWithoutProxy.length, sample: amazonWithoutProxy[0] },
+      "Amazon na fila sem AMAZON_DEALS_PROXY_URL: listagem pode falhar (SSL). Defina o proxy ou USE_BROWSER_SCRAPER=true no servidor."
+    );
+  }
   const delayMs = options.delayMs ?? DEFAULT_DELAY_MS;
   const maxPerListing = options.maxPerListing ?? DEFAULT_MAX_PER_LISTING;
 

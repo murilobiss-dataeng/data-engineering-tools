@@ -6,6 +6,7 @@ import * as cheerio from "cheerio";
 import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
 import type { ProductInput } from "./types.js";
+import { parseInstallmentParts } from "../../utils/installments.js";
 
 const PARTNER_TAG = env.AMAZON_PARTNER_TAG ?? "";
 const ML_AFFILIATE_TAG = env.ML_AFFILIATE_TAG ?? "";
@@ -24,6 +25,9 @@ export type ScrapedProduct = {
   affiliateLink: string;
   rawUrl: string;
   installments: string | null;
+  /** Derivado do texto de parcelas quando possível (ex.: 12x de R$ …). */
+  installmentMaxTimes?: number | null;
+  installmentUnitPrice?: number | null;
   /** ID externo (ASIN, MLB..., etc.) para evitar duplicatas. */
   externalId?: string | null;
   /** Todos os preços encontrados na página, com código da origem (para você indicar qual está correto). */
@@ -912,6 +916,8 @@ export async function scrapeProductFromUrl(
 
   const externalId = extractExternalIdFromUrl(normalized) ?? undefined;
 
+  const instParsed = parseInstallmentParts(installments);
+
   return {
     title,
     price,
@@ -921,6 +927,8 @@ export async function scrapeProductFromUrl(
     affiliateLink,
     rawUrl: normalized,
     installments,
+    installmentMaxTimes: instParsed.maxTimes,
+    installmentUnitPrice: instParsed.unitPrice,
     priceCandidates,
     externalId,
   };
@@ -957,6 +965,8 @@ export function scrapedToProductInput(scraped: ScrapedProduct, categoryId?: stri
     affiliateLink: scraped.affiliateLink,
     imageUrl: scraped.imageUrl,
     installments: scraped.installments ?? undefined,
+    installmentMaxTimes: scraped.installmentMaxTimes ?? undefined,
+    installmentUnitPrice: scraped.installmentUnitPrice ?? undefined,
     externalId: scraped.externalId ?? undefined,
     source: "amazon",
     categoryId,

@@ -14,11 +14,21 @@ whatsappChannelsRouter.get("/", async (_req, res) => {
 
 whatsappChannelsRouter.post("/", async (req, res) => {
   try {
-    const { name, phone, channelLink } = req.body as { name?: string; phone?: string; channelLink?: string | null };
+    const { name, phone, channelLink, categorySlug } = req.body as {
+      name?: string;
+      phone?: string;
+      channelLink?: string | null;
+      categorySlug?: string | null;
+    };
     if (!name?.trim()) {
       return res.status(400).json({ error: "name é obrigatório" });
     }
-    const id = await channelsRepo.insertChannel(name.trim(), (phone || "").trim(), channelLink?.trim() || undefined);
+    const id = await channelsRepo.insertChannel(
+      name.trim(),
+      (phone || "").trim(),
+      channelLink?.trim() || undefined,
+      categorySlug?.trim() || undefined
+    );
     const channel = await channelsRepo.getChannelById(id);
     res.status(201).json(channel);
   } catch (err) {
@@ -28,8 +38,13 @@ whatsappChannelsRouter.post("/", async (req, res) => {
 
 whatsappChannelsRouter.patch("/:id", async (req, res) => {
   try {
-    const { name, phone, channelLink } = req.body as { name?: string; phone?: string; channelLink?: string | null };
-    const channel = await channelsRepo.updateChannel(req.params.id, { name, phone, channelLink });
+    const { name, phone, channelLink, categorySlug } = req.body as {
+      name?: string;
+      phone?: string;
+      channelLink?: string | null;
+      categorySlug?: string | null;
+    };
+    const channel = await channelsRepo.updateChannel(req.params.id, { name, phone, channelLink, categorySlug });
     if (!channel) return res.status(404).json({ error: "Canal não encontrado" });
     res.json(channel);
   } catch (err) {

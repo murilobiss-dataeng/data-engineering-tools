@@ -29,7 +29,9 @@ export type Product = {
   category_name: string | null;
   category_slug: string | null;
   title: string;
+  /** Preço à vista (principal). */
   price: string;
+  /** Preço cheio / de (riscado). */
   previous_price: string | null;
   discount_pct: string | null;
   affiliate_link: string;
@@ -38,6 +40,10 @@ export type Product = {
   status: string;
   created_at: string;
   installments: string | null;
+  /** Máximo de parcelas (ex.: 12) quando extraído ou informado. */
+  installment_max_times?: number | null;
+  /** Valor de cada parcela. */
+  installment_unit_price?: string | null;
 };
 
 export type Campaign = {
@@ -52,11 +58,25 @@ export type Campaign = {
 
 export type Category = { id: string; name: string; slug: string };
 
+/** Linha do painel /analytics (links curtos + cliques). */
+export type ShortLinkAnalytics = {
+  code: string;
+  long_url: string;
+  short_url_path: string;
+  click_count: number;
+  last_clicked_at: string | null;
+  created_at: string;
+  product_title: string | null;
+  category_slug: string | null;
+};
+
 export type WhatsAppChannel = {
   id: string;
   name: string;
   phone: string;
   channel_link: string | null;
+  /** Slug da categoria de ofertas (mesmo do CHANNEL_SLUG no GitHub Actions) */
+  category_slug: string | null;
   created_at: string;
 };
 
@@ -83,6 +103,8 @@ export type ScrapedProduct = {
   affiliateLink: string;
   rawUrl: string;
   installments: string | null;
+  installmentMaxTimes?: number | null;
+  installmentUnitPrice?: number | null;
   /** Preços encontrados na página (origem: amazon | mercadolivre | shopee) para você indicar qual usar. */
   priceCandidates?: {
     source: "amazon" | "mercadolivre" | "shopee";
