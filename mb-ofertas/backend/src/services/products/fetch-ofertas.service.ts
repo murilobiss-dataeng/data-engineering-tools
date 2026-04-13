@@ -39,6 +39,10 @@ function getSource(url: string): "amazon" | "mercadolivre" | "shopee" {
   return "amazon";
 }
 
+function canUseAmazonSource(): boolean {
+  return Boolean(process.env.AMAZON_DEALS_PROXY_URL?.trim());
+}
+
 /** Diretório raiz do backend (funciona com tsx e com node dist/). */
 function getBackendRoot(): string {
   const cwd = process.cwd();
@@ -314,6 +318,7 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
   }
 
   const seen = new Set<string>();
+  let forbiddenCount = 0;
 
   for (const keyword of keywords) {
     const params = new URLSearchParams({
@@ -341,6 +346,7 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
       });
       if (!res.ok) {
         if (res.status === 403) {
+          forbiddenCount++;
           logger.info(
             { keyword },
             "Shopee API 403 (comum em IP de datacenter). Use OFERTAS_URLS com links de produto Shopee se precisar."
@@ -370,6 +376,12 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
   }
 
   const urls = Array.from(seen);
+  if (forbiddenCount > 0 && urls.length === 0) {
+    logger.info(
+      { forbiddenCount },
+      "Shopee bloqueou todas as buscas da API neste ambiente. Para Shopee, use links de produto em OFERTAS_URLS."
+    );
+  }
   logger.info({ count: urls.length }, "Shopee API: collected product URLs");
   return urls;
 }
@@ -380,7 +392,15 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
  */
 export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promise<FetchOfertasResult> {
   const configUrls = options.urls?.length ? options.urls : loadUrlsFromConfig();
-  const urls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
+  const rawUrls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
+  const urls = rawUrls.filter((url) => {
+    const source = getSource(url);
+    if (source === "amazon" && !canUseAmazonSource()) {
+      logger.info({ url }, "Amazon desativada sem AMAZON_DEALS_PROXY_URL");
+      return false;
+    }
+    return true;
+  });
   const delayMs = options.delayMs ?? DEFAULT_DELAY_MS;
   const maxPerListing = options.maxPerListing ?? DEFAULT_MAX_PER_LISTING;
 

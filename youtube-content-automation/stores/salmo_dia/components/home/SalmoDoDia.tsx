@@ -23,7 +23,7 @@ export function SalmoDoDia() {
               Salmo {salmo.numero}
             </p>
             <h3 className="font-serif text-2xl font-semibold text-scripture-dark">
-              {salmo.titulo}
+              {salmo.titulo} | Salmo do Dia
             </h3>
             <p className="text-sm text-muted-foreground">Tema: {salmo.tema}</p>
           </CardHeader>

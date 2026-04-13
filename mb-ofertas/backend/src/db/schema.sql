@@ -90,15 +90,13 @@ CREATE TABLE IF NOT EXISTS send_counters (
   UNIQUE(window_at)
 );
 
--- Seed categorias iniciais: Casa, Católicos, Eletrônicos, Livros, Fitness, Oferta do dia (>40% off), Outros
+-- Seed categorias dos canais
 INSERT INTO categories (name, slug) VALUES
-  ('Casa', 'casa'),
-  ('Católicos', 'catolicos'),
-  ('Eletrônicos', 'eletronicos'),
-  ('Livros', 'livros'),
+  ('Health', 'health'),
+  ('Tech', 'tech'),
+  ('Ofertas', 'ofertas'),
+  ('Faith', 'faith'),
   ('Fitness', 'fitness'),
-  ('Oferta do dia', 'oferta-do-dia'),
-  ('Outros', 'outros')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Coluna installments (para bancos já existentes)
@@ -131,9 +129,20 @@ CREATE TABLE IF NOT EXISTS short_links (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code       VARCHAR(16) NOT NULL UNIQUE,
   long_url   TEXT NOT NULL,
+  click_count INT NOT NULL DEFAULT 0,
+  last_clicked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'short_links' AND column_name = 'click_count') THEN
+    ALTER TABLE short_links ADD COLUMN click_count INT NOT NULL DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'short_links' AND column_name = 'last_clicked_at') THEN
+    ALTER TABLE short_links ADD COLUMN last_clicked_at TIMESTAMPTZ;
+  END IF;
+END $$;
 
 -- Agendamentos WhatsApp (postagem programada para um canal)
 CREATE TABLE IF NOT EXISTS whatsapp_scheduled (

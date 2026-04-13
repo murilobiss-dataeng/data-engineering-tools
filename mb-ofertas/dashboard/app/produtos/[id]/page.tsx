@@ -50,6 +50,9 @@ export default function ProductDetailPage() {
               )}
             </p>
             <p className="mt-1 text-sm text-slate-400">Status: {product.status}</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Categoria: {product.category_name || product.category_slug || "Sem categoria"}
+            </p>
             <a
               href={product.affiliate_link}
               target="_blank"

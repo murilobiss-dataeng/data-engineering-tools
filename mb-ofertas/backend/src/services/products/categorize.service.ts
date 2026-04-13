@@ -1,81 +1,126 @@
 /**
- * Categoriza produto pelo título (keywords) para segmentação em canais WhatsApp.
- * Retorna o slug da categoria; usado ao inserir produto ou ao editar.
+ * Categoriza produto pelos slugs usados nos canais:
+ * `health`, `tech`, `ofertas`, `faith` e `fitness`.
  */
 const CATEGORY_KEYWORDS: { slug: string; keywords: string[] }[] = [
   {
-    slug: "eletronicos",
+    slug: "health",
     keywords: [
-      "celular", "smartphone", "iphone", "samsung", "xiaomi", "motorola",
-      "notebook", "laptop", "computador", "pc", "tablet", "ipad",
-      "fone", "fone de ouvido", "headset", "airpods", "earphone",
-      "tv", "televisão", "monitor", "smart tv", "fire tv",
-      "smartwatch", "relógio inteligente", "watch",
-      "câmera", "webcam", "mouse", "teclado", "ssd", "hd externo",
-      "fritadeira", "air fryer", "liquidificador", "cafeteira", "micro-ondas",
-      "geladeira", "lavadora", "secadora", "aspirador", "robô",
-      "eletrônico", "eletronicos", "gamer", "console", "playstation", "xbox", "nintendo",
-    ],
-  },
-  {
-    slug: "livros",
-    keywords: [
-      "livro", "livros", "obra", "romance", "literatura", "best-seller",
-      "infantil", "infantis", "didático", "enciclopédia", "biografia",
-      "quadrinhos", "hq", "manga", "comics",
-    ],
-  },
-  {
-    slug: "catolicos",
-    keywords: [
-      "terço", "terco", "rosário", "rosario", "bíblia", "biblia",
-      "santo", "santa", "católico", "catolico", "cristão", "cristao",
-      "cruz", "crucifixo", "imagem", "quadro religioso", "nossa senhora",
-      "são josé", "sao jose", "padre", "missal", "devocionário",
-    ],
-  },
-  {
-    slug: "casa",
-    keywords: [
-      "panela", "panelas", "frigideira", "talheres", "louça", "louca",
-      "cama", "colchão", "colchon", "travesseiro", "lençol", "lencol",
-      "sofá", "sofa", "cadeira", "mesa", "estante", "armário", "armario",
-      "decoração", "decoracao", "cortina", "tapete", "luminária", "luminaria",
-      "organizador", "caixa organizadora", "cozinha", "banheiro",
-      "ferramenta", "parafusadeira", "furadeira", "chave", "martelo",
-      "jardinagem", "vaso", "planta", "grama", "mangueira",
-      "limpeza", "vassoura", "rodo", "balde", "desinfetante",
+      "whey",
+      "creatina",
+      "suplemento",
+      "vitamina",
+      "multivitaminico",
+      "omega 3",
+      "colageno",
+      "bcaa",
+      "glutamina",
+      "termogenico",
+      "melatonina",
+      "protein",
+      "proteina",
+      "capsulas",
+      "saude",
+      "imunidade",
+      "pre treino",
+      "pre-treino",
     ],
   },
   {
     slug: "fitness",
     keywords: [
-      "fitness", "academia", "musculação", "musculacao", "treino", "suplemento",
-      "whey", "proteína", "proteina", "creatina", "pré-treino", "pre treino",
-      "bcaa", "termogênico", "termogenico", "colchonete", "peso", "halter",
-      "elástico", "elastico", "corda", "pular", "abdominal", "esteira",
-      "bicicleta ergométrica", "ergometrica", "luvas academia", "cinta",
+      "fitness",
+      "academia",
+      "musculacao",
+      "treino",
+      "halter",
+      "peso",
+      "anilha",
+      "esteira",
+      "ergometrica",
+      "bicicleta ergometrica",
+      "colchonete",
+      "elastico",
+      "corda de pular",
+      "luvas academia",
+      "faixa elastica",
+      "par de dumbbell",
+    ],
+  },
+  {
+    slug: "tech",
+    keywords: [
+      "celular",
+      "smartphone",
+      "iphone",
+      "samsung",
+      "xiaomi",
+      "motorola",
+      "notebook",
+      "laptop",
+      "computador",
+      "pc",
+      "tablet",
+      "ipad",
+      "fone",
+      "headset",
+      "airpods",
+      "monitor",
+      "smart tv",
+      "tv",
+      "smartwatch",
+      "ssd",
+      "hd externo",
+      "mouse",
+      "teclado",
+      "roteador",
+      "wifi",
+      "webcam",
+      "microfone",
+      "gpu",
+      "placa de video",
+      "console",
+      "playstation",
+      "xbox",
+      "nintendo",
+    ],
+  },
+  {
+    slug: "faith",
+    keywords: [
+      "biblia",
+      "salmos",
+      "evangelho",
+      "devocional",
+      "livro cristao",
+      "livro evangelico",
+      "terco",
+      "crucifixo",
+      "cruz",
+      "imagem de santo",
+      "catolico",
+      "cristao",
+      "gospel",
+      "oracao",
+      "religioso",
+      "presente cristao",
+      "quadro biblico",
     ],
   },
 ];
 
-const SLUG_OUTROS = "outros";
-const SLUG_OFERTA_DO_DIA = "oferta-do-dia";
-const DESCONTO_MIN_OFERTA_DIA = 40;
+const SLUG_OFERTAS = "ofertas";
 
 /**
- * Infere o slug da categoria a partir do título (e opcionalmente do desconto).
- * Oferta do dia: somente quando desconto > 40% e nenhuma outra categoria bateu.
- * Caso contrário, fallback em "outros".
+ * Infere o slug da categoria a partir do título.
+ * Todo item não reconhecido cai em `ofertas`, para sempre ter canal de fallback.
  */
 export function inferCategorySlugFromTitle(
   title: string,
   options?: { discountPct?: number | null }
 ): string {
   if (!title || typeof title !== "string") {
-    return options?.discountPct != null && options.discountPct > DESCONTO_MIN_OFERTA_DIA
-      ? SLUG_OFERTA_DO_DIA
-      : SLUG_OUTROS;
+    return SLUG_OFERTAS;
   }
   const lower = title.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
@@ -85,9 +130,5 @@ export function inferCategorySlugFromTitle(
       if (lower.includes(kwNorm)) return slug;
     }
   }
-
-  if (options?.discountPct != null && options.discountPct > DESCONTO_MIN_OFERTA_DIA) {
-    return SLUG_OFERTA_DO_DIA;
-  }
-  return SLUG_OUTROS;
+  return SLUG_OFERTAS;
 }

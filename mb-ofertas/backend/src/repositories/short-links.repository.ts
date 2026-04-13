@@ -33,6 +33,13 @@ export async function createShortLink(
     return { shortUrl: url };
   }
   if (!base) return { shortUrl: url };
+  const existingByUrl = await query<{ code: string }>(
+    `SELECT code FROM short_links WHERE long_url = $1 ORDER BY created_at ASC LIMIT 1`,
+    [url]
+  );
+  if (existingByUrl.rows[0]?.code) {
+    return { code: existingByUrl.rows[0].code, shortUrl: `${base}/r/${existingByUrl.rows[0].code}` };
+  }
   let code: string;
   let attempts = 0;
   while (true) {
@@ -55,4 +62,48 @@ export async function getLongUrlByCode(code: string): Promise<string | null> {
     [code]
   );
   return res.rows[0]?.long_url ?? null;
+}
+
+export async function registerShortLinkClick(code: string): Promise<string | null> {
+  const res = await query<{ long_url: string }>(
+    `UPDATE short_links
+     SET click_count = click_count + 1, last_clicked_at = now()
+     WHERE code = $1
+     RETURNING long_url`,
+    [code]
+  );
+  return res.rows[0]?.long_url ?? null;
+}
+
+export async function listShortLinkAnalytics(limit = 100): Promise<
+  {
+    code: string;
+    long_url: string;
+    short_url_path: string;
+    click_count: number;
+    last_clicked_at: string | null;
+    created_at: string;
+    product_title: string | null;
+    category_slug: string | null;
+  }[]
+> {
+  const res = await query(
+    `SELECT sl.code,
+            sl.long_url,
+            sl.click_count,
+            sl.last_clicked_at,
+            sl.created_at,
+            p.title AS product_title,
+            c.slug AS category_slug
+     FROM short_links sl
+     LEFT JOIN products p ON p.affiliate_link = sl.long_url
+     LEFT JOIN categories c ON c.id = p.category_id
+     ORDER BY sl.click_count DESC, sl.last_clicked_at DESC NULLS LAST, sl.created_at DESC
+     LIMIT $1`,
+    [limit]
+  );
+  return res.rows.map((row) => ({
+    ...row,
+    short_url_path: `/r/${row.code}`,
+  }));
 }

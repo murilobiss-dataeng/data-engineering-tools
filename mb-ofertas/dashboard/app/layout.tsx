@@ -24,6 +24,9 @@ export default function RootLayout({
               <a href="/campanhas" className="text-slate-600 hover:text-slate-900">
                 Campanhas
               </a>
+              <a href="/analytics" className="text-slate-600 hover:text-slate-900">
+                Analytics
+              </a>
             </nav>
           </div>
         </header>

@@ -15,7 +15,7 @@ import { whatsappChannelsRouter } from "./routes/whatsapp-channels.js";
 import { whatsappScheduledRouter } from "./routes/whatsapp-scheduled.js";
 import { shortLinksRouter } from "./routes/short-links.js";
 import { logsRouter } from "./routes/logs.js";
-import { getLongUrlByCode } from "../repositories/short-links.repository.js";
+import { getLongUrlByCode, registerShortLinkClick } from "../repositories/short-links.repository.js";
 import * as productsRepo from "../repositories/products.repository.js";
 
 const app = express();
@@ -29,11 +29,13 @@ app.get("/r/:code", async (req, res) => {
   const code = req.params.code?.trim();
   if (!code || code.length > 20) return res.status(404).send("Link não encontrado");
   try {
-    const longUrl = await getLongUrlByCode(code);
+    const longUrl = await registerShortLinkClick(code);
     if (!longUrl) return res.status(404).send("Link não encontrado");
     res.redirect(302, longUrl);
   } catch {
-    res.status(500).send("Erro ao redirecionar");
+    const longUrl = await getLongUrlByCode(code).catch(() => null);
+    if (!longUrl) return res.status(500).send("Erro ao redirecionar");
+    res.redirect(302, longUrl);
   }
 });
 

@@ -1,17 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Product } from "@/lib/api";
+import { api, type Category, type Product } from "@/lib/api";
 import { formatPriceTwoDecimals } from "@/lib/format";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
 
   useEffect(() => {
-    api<{ products: Product[] }>(`/products?status=${filter}&limit=50`)
-      .then((data) => setProducts(data.products))
+    Promise.all([
+      api<{ products: Product[] }>(`/products?status=${filter}&limit=100`),
+      api<{ categories: Category[] }>("/categories"),
+    ])
+      .then(([productsData, categoriesData]) => {
+        setProducts(productsData.products);
+        setCategories(categoriesData.categories);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [filter]);
@@ -26,6 +33,19 @@ export default function ProductsPage() {
     } catch (e) {
       console.error(e);
       alert("Erro ao atualizar");
+    }
+  }
+
+  async function updateCategory(id: string, categoryId: string | null) {
+    try {
+      const updated = await api<Product>(`/products/${id}/category`, {
+        method: "PATCH",
+        body: JSON.stringify({ categoryId }),
+      });
+      setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao atualizar categoria.");
     }
   }
 
@@ -88,8 +108,22 @@ export default function ProductsPage() {
                   <span className="ml-2 text-green-600">{p.discount_pct}% OFF</span>
                 )}
               </p>
-              <p className="mt-1 text-xs text-slate-400">Status: {p.status}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Status: {p.status} {p.category_slug ? `• Categoria: ${p.category_slug}` : ""}
+              </p>
             </div>
+            <select
+              value={p.category_id || ""}
+              onChange={(e) => updateCategory(p.id, e.target.value || null)}
+              className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+            >
+              <option value="">Sem categoria</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
             <div className="flex gap-2">
               {p.status === "pending" && (
                 <>

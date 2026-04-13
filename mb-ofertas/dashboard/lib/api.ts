@@ -22,6 +22,9 @@ export type Product = {
   image_url: string | null;
   status: string;
   created_at: string;
+  category_id?: string | null;
+  category_name?: string | null;
+  category_slug?: string | null;
 };
 
 export type Campaign = {
@@ -35,3 +38,14 @@ export type Campaign = {
 };
 
 export type Category = { id: string; name: string; slug: string };
+
+export type ShortLinkAnalytics = {
+  code: string;
+  long_url: string;
+  short_url_path: string;
+  click_count: number;
+  last_clicked_at: string | null;
+  created_at: string;
+  product_title: string | null;
+  category_slug: string | null;
+};
