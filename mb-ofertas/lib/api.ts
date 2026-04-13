@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+/** Base sem barra final; se NEXT_PUBLIC_API_URL terminar em /api, remove para não duplicar em /api/... */
+export function getPublicApiBaseUrl(): string {
+  let u = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").trim().replace(/\/$/, "");
+  if (u.endsWith("/api")) u = u.slice(0, -4);
+  return u;
+}
+
+const API_URL = getPublicApiBaseUrl();
 
 /** Base URL para link curto (fallback para encurtar e esconder tag). Enviado no header quando disponível. */
 function getShortLinkBaseUrl(): string {

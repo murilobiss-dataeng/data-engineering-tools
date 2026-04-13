@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { salmos } from "@/data/salmos";
+
+const salmosOrdenados = [...salmos].sort((a, b) => a.numero - b.numero);
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ROUTES } from "@/lib/constants";
 import { BookOpen } from "lucide-react";
@@ -21,7 +23,7 @@ export default function SalmosPage() {
       </p>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {salmos.map((salmo) => (
+        {salmosOrdenados.map((salmo) => (
           <Link key={salmo.id} href={`${ROUTES.salmos}/${salmo.slug}`}>
             <Card className="h-full transition hover:shadow-md hover:border-gold-200">
               <CardHeader className="pb-2">

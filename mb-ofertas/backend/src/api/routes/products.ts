@@ -279,7 +279,7 @@ productsRouter.get("/:id/preview-message", async (req, res) => {
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
     const product = dbRowToProductInput(row);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase);
+    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase, row.id);
     const message = generateOfferMessage(product, { shortLink: short.shortUrl });
     res.json({ message });
   } catch (err) {
@@ -294,7 +294,7 @@ productsRouter.get("/:id/post-content", async (req, res) => {
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
     const product = dbRowToProductInput(row);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase);
+    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase, row.id);
     const coupon = (req.query.coupon as string)?.trim() || undefined;
     const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
     res.json({ text, imageUrl });
@@ -331,6 +331,8 @@ productsRouter.post("/post-content", async (req, res) => {
       installmentMaxTimes?: number | null;
       installmentUnitPrice?: number | null;
       coupon?: string | null;
+      /** Opcional: vínculo do link curto ao produto (analytics). */
+      productId?: string | null;
     };
     if (!b.title || b.price == null || !b.affiliateLink) {
       return res.status(400).json({ error: "title, price e affiliateLink são obrigatórios." });
@@ -363,7 +365,8 @@ productsRouter.post("/post-content", async (req, res) => {
     };
     product = normalizeProductPrices(product);
     const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const short = await shortLinksRepo.createShortLink(b.affiliateLink, shortLinkBase);
+    const pid = typeof b.productId === "string" && b.productId.trim() ? b.productId.trim() : null;
+    const short = await shortLinksRepo.createShortLink(b.affiliateLink, shortLinkBase, pid);
     const coupon = b.coupon?.trim() || undefined;
     const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
     res.json({ text, imageUrl });

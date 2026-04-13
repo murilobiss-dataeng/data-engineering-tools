@@ -5,6 +5,14 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().default(""),
   DATABASE_POOL_MAX: z.coerce.number().min(1).max(20).optional(),
+  /** Fila BullMQ (envio em massa). true/1/yes = não conecta ao Redis (evita ENOTFOUND quando o host Redis expirou). */
+  REDIS_DISABLED: z
+    .preprocess((v) => {
+      if (v === undefined || v === "") return false;
+      const s = String(v).toLowerCase();
+      return s === "true" || s === "1" || s === "yes";
+    }, z.boolean())
+    .default(false),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   /** Se false/0/no, conecta sem TLS mesmo com rediss:// (evita ERR_SSL_PACKET_LENGTH_TOO_LONG no Redis Cloud quando a porta é TCP). */
   REDIS_TLS: z
@@ -23,6 +31,8 @@ const envSchema = z.object({
   AMAZON_SECRET_KEY: z.string().optional(),
   AMAZON_PARTNER_TAG: z.string().optional(),
   AMAZON_REGION: z.string().default("br1"),
+  /** URL de proxy/espelho para páginas de ofertas Amazon (listagem). Opcional; também use USE_BROWSER_SCRAPER. */
+  AMAZON_DEALS_PROXY_URL: z.string().optional(),
 
   /** Código de afiliado Mercado Livre (ex.: mk20260227092713). Adiciona ?afiliado=... em links ML. */
   ML_AFFILIATE_TAG: z.string().optional(),

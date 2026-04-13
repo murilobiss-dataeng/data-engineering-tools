@@ -45,7 +45,7 @@ export async function getCampaignWhatsAppMessage(
         row.installment_unit_price != null ? parseFloat(String(row.installment_unit_price)) : null,
     };
     p = normalizeProductPrices(p);
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, options?.shortLinkBaseUrl);
+    const short = await shortLinksRepo.createShortLink(row.affiliate_link, options?.shortLinkBaseUrl, row.id);
     lines.push(generateOfferMessage(p, { shortLink: short.shortUrl }));
   }
   return lines.join("\n\n——\n\n");

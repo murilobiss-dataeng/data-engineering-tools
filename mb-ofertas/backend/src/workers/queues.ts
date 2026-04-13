@@ -1,10 +1,12 @@
 import { Queue, Worker, type Job } from "bullmq";
+import type { RedisOptions } from "ioredis";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 
 const QUEUE_NAME = "mb-ofertas-send";
 
 function isRedisConfigured(): boolean {
+  if (env.REDIS_DISABLED) return false;
   const url = env.REDIS_URL || "";
   if (!url.trim()) return false;
   try {
@@ -16,28 +18,33 @@ function isRedisConfigured(): boolean {
   }
 }
 
-function getRedisOptions(): {
-  host: string;
-  port: number;
-  password?: string;
-  username?: string;
-  tls?: object;
-} {
+function getRedisOptions(): RedisOptions {
   try {
     const u = new URL(env.REDIS_URL || "redis://localhost:6379");
     const port = parseInt(u.port || "6379", 10);
-    const opts: { host: string; port: number; password?: string; username?: string; tls?: object } = {
+    const opts: RedisOptions = {
       host: u.hostname,
       port,
+      maxRetriesPerRequest: null,
+      /** Evita reconexão infinita e spam de ENOTFOUND quando o hostname Redis Cloud não existe mais. */
+      retryStrategy: (times: number) => {
+        if (times > 10) {
+          logger.error(
+            { host: u.hostname },
+            "Redis: desistindo após 10 tentativas (hostname inválido ou Redis indisponível). Defina REDIS_DISABLED=true ou corrija REDIS_URL no painel Redis Cloud."
+          );
+          return null;
+        }
+        return Math.min(times * 300, 3000);
+      },
+      lazyConnect: true,
     };
-    // Redis 6+ ACL / Upstash: username (e.g. "default") + password
     if (u.username) opts.username = decodeURIComponent(u.username);
     if (u.password) opts.password = decodeURIComponent(u.password);
-    // Só usa TLS se a URL for rediss:// e REDIS_TLS não for false (Redis Cloud às vezes expõe porta TCP sem TLS → ERR_SSL_PACKET_LENGTH_TOO_LONG)
     if (u.protocol === "rediss:" && env.REDIS_TLS !== false) opts.tls = {};
     return opts;
   } catch {
-    return { host: "localhost", port: 6379 };
+    return { host: "localhost", port: 6379, maxRetriesPerRequest: null };
   }
 }
 
@@ -62,8 +69,14 @@ if (isRedisConfigured()) {
       backoff: { type: "exponential", delay: 5000 },
     },
   });
+  _sendQueue.on("error", (err: Error) => {
+    logger.warn({ err: err.message, code: (err as NodeJS.ErrnoException).code }, "Redis/BullMQ queue error");
+  });
 } else {
-  logger.info("REDIS_URL not set or localhost — send queue disabled (envio WhatsApp não disponível)");
+  const reason = env.REDIS_DISABLED
+    ? "REDIS_DISABLED=true"
+    : "REDIS_URL vazio ou localhost";
+  logger.info({ reason }, "Fila de envio (BullMQ) desativada — campanhas em massa sem fila Redis");
 }
 
 export const sendQueue = _sendQueue;

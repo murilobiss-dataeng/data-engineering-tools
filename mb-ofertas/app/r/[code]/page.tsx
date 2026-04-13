@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { getPublicApiBaseUrl } from "@/lib/api";
 
 export default async function ShortLinkRedirect({
   params,
@@ -10,7 +9,8 @@ export default async function ShortLinkRedirect({
   const { code } = await params;
   if (!code?.trim() || code.length > 20) notFound();
   try {
-    const res = await fetch(`${API_URL}/api/short-links/${encodeURIComponent(code)}`, {
+    const base = getPublicApiBaseUrl();
+    const res = await fetch(`${base}/api/short-links/${encodeURIComponent(code)}`, {
       cache: "no-store",
     });
     if (!res.ok) notFound();

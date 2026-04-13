@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS short_links (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code       VARCHAR(16) NOT NULL UNIQUE,
   long_url   TEXT NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
   click_count INT NOT NULL DEFAULT 0,
   last_clicked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -161,7 +162,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'short_links' AND column_name = 'last_clicked_at') THEN
     ALTER TABLE short_links ADD COLUMN last_clicked_at TIMESTAMPTZ;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'short_links' AND column_name = 'product_id') THEN
+    ALTER TABLE short_links ADD COLUMN product_id UUID REFERENCES products(id) ON DELETE SET NULL;
+  END IF;
 END $$;
+CREATE INDEX IF NOT EXISTS idx_short_links_product_id ON short_links(product_id);
 
 -- Agendamentos WhatsApp (postagem programada para um canal)
 CREATE TABLE IF NOT EXISTS whatsapp_scheduled (

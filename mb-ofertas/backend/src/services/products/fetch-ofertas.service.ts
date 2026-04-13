@@ -39,9 +39,15 @@ function getSource(url: string): "amazon" | "mercadolivre" | "shopee" {
   return "amazon";
 }
 
-/** Proxy opcional para listagens Amazon (menos bloqueio em alguns ambientes). Não é mais obrigatório para *tentar* Amazon. */
+/** Proxy opcional para listagens Amazon (menos bloqueio em alguns ambientes). */
 function canUseAmazonSource(): boolean {
   return Boolean(process.env.AMAZON_DEALS_PROXY_URL?.trim());
+}
+
+/** Mesma regra de scrape-listing / scrape-url: Playwright para HTML quando fetch falha. */
+function useBrowserScraperEnv(): boolean {
+  const v = process.env.USE_BROWSER_SCRAPER;
+  return v === "true" || v === "1";
 }
 
 /** Diretório raiz do backend (funciona com tsx e com node dist/). */
@@ -398,11 +404,23 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
   const configUrls = options.urls?.length ? options.urls : loadUrlsFromConfig();
   const rawUrls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
   const urls = rawUrls;
-  const amazonWithoutProxy = urls.filter((u) => getSource(u) === "amazon" && !canUseAmazonSource());
-  if (amazonWithoutProxy.length > 0) {
+
+  logger.info(
+    {
+      amazonDealsProxyConfigured: canUseAmazonSource(),
+      useBrowserScraper: useBrowserScraperEnv(),
+      listingUrlCount: urls.length,
+    },
+    "fetch-ofertas: variáveis de ambiente (Amazon/Shopee)"
+  );
+
+  const amazonWithoutMitigation = urls.filter(
+    (u) => getSource(u) === "amazon" && !canUseAmazonSource() && !useBrowserScraperEnv()
+  );
+  if (amazonWithoutMitigation.length > 0) {
     logger.warn(
-      { count: amazonWithoutProxy.length, sample: amazonWithoutProxy[0] },
-      "Amazon na fila sem AMAZON_DEALS_PROXY_URL: listagem pode falhar (SSL). Defina o proxy ou USE_BROWSER_SCRAPER=true no servidor."
+      { count: amazonWithoutMitigation.length, sample: amazonWithoutMitigation[0] },
+      "URLs Amazon na fila sem AMAZON_DEALS_PROXY_URL e sem USE_BROWSER_SCRAPER: listagem pode falhar (SSL/anti-bot)."
     );
   }
   const delayMs = options.delayMs ?? DEFAULT_DELAY_MS;

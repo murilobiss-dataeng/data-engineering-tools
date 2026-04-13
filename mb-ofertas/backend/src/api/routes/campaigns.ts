@@ -116,7 +116,7 @@ campaignsRouter.post("/:id/send-now", async (req, res) => {
     const messageIds: string[] = [];
 
     for (const product of products) {
-      const short = await shortLinksRepo.createShortLink(product.affiliate_link);
+      const short = await shortLinksRepo.createShortLink(product.affiliate_link, undefined, product.id);
       const body = generateOfferMessage({
         title: product.title,
         price: parseFloat(product.price),

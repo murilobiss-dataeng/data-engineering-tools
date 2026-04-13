@@ -15,11 +15,12 @@ function generateCode(): string {
 
 /**
  * Cria link curto. Base URL: override baseUrl, ou SHORT_LINK_BASE_URL, ou API_URL, ou NEXT_PUBLIC_APP_URL.
- * Se nenhum estiver definido, retorna a URL original (fallback para encurtar e esconder tag).
+ * `productId` opcional: grava vínculo para analytics (evita "Sem produto" quando affiliate_link ≠ long_url por query).
  */
 export async function createShortLink(
   longUrl: string,
-  baseUrlOverride?: string | null
+  baseUrlOverride?: string | null,
+  productId?: string | null
 ): Promise<{ code: string; shortUrl: string } | { shortUrl: string }> {
   const base = (
     (baseUrlOverride && baseUrlOverride.trim()) ||
@@ -33,12 +34,19 @@ export async function createShortLink(
     return { shortUrl: url };
   }
   if (!base) return { shortUrl: url };
-  const existingByUrl = await query<{ code: string }>(
-    `SELECT code FROM short_links WHERE long_url = $1 ORDER BY created_at ASC LIMIT 1`,
+  const existingByUrl = await query<{ code: string; product_id: string | null }>(
+    `SELECT code, product_id FROM short_links WHERE long_url = $1 ORDER BY created_at ASC LIMIT 1`,
     [url]
   );
-  if (existingByUrl.rows[0]?.code) {
-    return { code: existingByUrl.rows[0].code, shortUrl: `${base}/r/${existingByUrl.rows[0].code}` };
+  const existingRow = existingByUrl.rows[0];
+  if (existingRow?.code) {
+    if (productId && !existingRow.product_id) {
+      await query(`UPDATE short_links SET product_id = $1 WHERE code = $2 AND product_id IS NULL`, [
+        productId,
+        existingRow.code,
+      ]);
+    }
+    return { code: existingRow.code, shortUrl: `${base}/r/${existingRow.code}` };
   }
   let code: string;
   let attempts = 0;
@@ -49,8 +57,8 @@ export async function createShortLink(
     if (++attempts > 5) return { shortUrl: url };
   }
   await query(
-    `INSERT INTO short_links (code, long_url) VALUES ($1, $2)`,
-    [code, url]
+    `INSERT INTO short_links (code, long_url, product_id) VALUES ($1, $2, $3)`,
+    [code, url, productId ?? null]
   );
   const shortUrl = `${base}/r/${code}`;
   return { code, shortUrl };
@@ -87,18 +95,40 @@ export async function listShortLinkAnalytics(limit = 100): Promise<
     category_slug: string | null;
   }[]
 > {
-  const res = await query(
-    `SELECT sl.code,
-            sl.long_url,
-            sl.click_count,
-            sl.last_clicked_at,
-            sl.created_at,
-            p.title AS product_title,
-            c.slug AS category_slug
-     FROM short_links sl
-     LEFT JOIN products p ON p.affiliate_link = sl.long_url
-     LEFT JOIN categories c ON c.id = p.category_id
-     ORDER BY sl.click_count DESC, sl.last_clicked_at DESC NULLS LAST, sl.created_at DESC
+  type AnalyticsRow = {
+    code: string;
+    long_url: string;
+    click_count: number;
+    last_clicked_at: string | null;
+    created_at: string;
+    product_title: string | null;
+    category_slug: string | null;
+  };
+  const res = await query<AnalyticsRow>(
+    `SELECT * FROM (
+       SELECT DISTINCT ON (sl.code)
+         sl.code,
+         sl.long_url,
+         sl.click_count,
+         sl.last_clicked_at,
+         sl.created_at,
+         p.title AS product_title,
+         c.slug AS category_slug
+       FROM short_links sl
+       LEFT JOIN products p ON p.id = sl.product_id
+         OR p.affiliate_link = sl.long_url
+         OR regexp_replace(p.affiliate_link, '/$', '') = regexp_replace(sl.long_url, '/$', '')
+         OR split_part(p.affiliate_link, '?', 1) = split_part(sl.long_url, '?', 1)
+       LEFT JOIN categories c ON c.id = p.category_id
+       ORDER BY sl.code,
+         CASE
+           WHEN sl.product_id IS NOT NULL AND p.id = sl.product_id THEN 0
+           WHEN p.affiliate_link = sl.long_url THEN 1
+           ELSE 2
+         END,
+         p.id NULLS LAST
+     ) sub
+     ORDER BY sub.click_count DESC, sub.last_clicked_at DESC NULLS LAST, sub.created_at DESC
      LIMIT $1`,
     [limit]
   );
