@@ -103,6 +103,7 @@ export async function listShortLinkAnalytics(limit = 100): Promise<
     created_at: string;
     product_title: string | null;
     category_slug: string | null;
+    product_status: string | null;
   };
   const res = await query<AnalyticsRow>(
     `SELECT * FROM (
@@ -113,7 +114,8 @@ export async function listShortLinkAnalytics(limit = 100): Promise<
          sl.last_clicked_at,
          sl.created_at,
          p.title AS product_title,
-         c.slug AS category_slug
+         c.slug AS category_slug,
+         p.status AS product_status
        FROM short_links sl
        LEFT JOIN products p ON p.id = sl.product_id
          OR p.affiliate_link = sl.long_url
@@ -122,12 +124,14 @@ export async function listShortLinkAnalytics(limit = 100): Promise<
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY sl.code,
          CASE
-           WHEN sl.product_id IS NOT NULL AND p.id = sl.product_id THEN 0
-           WHEN p.affiliate_link = sl.long_url THEN 1
-           ELSE 2
+           WHEN p.status = 'approved' AND sl.product_id IS NOT NULL AND p.id = sl.product_id THEN 0
+           WHEN p.status = 'approved' AND p.affiliate_link = sl.long_url THEN 1
+           WHEN p.status = 'approved' THEN 2
+           ELSE 3
          END,
          p.id NULLS LAST
      ) sub
+     WHERE sub.product_status = 'approved'
      ORDER BY sub.click_count DESC, sub.last_clicked_at DESC NULLS LAST, sub.created_at DESC
      LIMIT $1`,
     [limit]

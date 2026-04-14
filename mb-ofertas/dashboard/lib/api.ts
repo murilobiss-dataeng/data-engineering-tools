@@ -1,9 +1,31 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+/** Base sem barra final; se NEXT_PUBLIC_API_URL terminar em /api, remove para não duplicar em /api/... */
+export function getPublicApiBaseUrl(): string {
+  let u = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").trim().replace(/\/$/, "");
+  if (u.endsWith("/api")) u = u.slice(0, -4);
+  return u;
+}
+
+/** Base URL para link curto (pra abrir em /r/[code]). Preferir URL pública do app. */
+function getShortLinkBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return (
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (window as Window & { __APP_URL?: string }).__APP_URL ||
+      window.location.origin
+    ).replace(/\/$/, "");
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+}
+
+const API_URL = getPublicApiBaseUrl();
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
+  const base = getShortLinkBaseUrl();
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(options?.headers as Record<string, string>) };
+  if (base) headers["X-Short-Link-Base"] = base;
   const res = await fetch(`${API_URL}/api${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

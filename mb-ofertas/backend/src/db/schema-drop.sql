@@ -3,6 +3,9 @@
 -- Depois rode: npm run db:migrate para recriar com schema.sql
 
 -- Ordem: tabelas com FK primeiro (filhas), depois pais
+DROP TABLE IF EXISTS short_links;
+DROP TABLE IF EXISTS whatsapp_scheduled;
+DROP TABLE IF EXISTS whatsapp_channels;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS send_counters;
 DROP TABLE IF EXISTS campaigns;
