@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "playwright install --with-deps chromium",
-    "build": "playwright install --with-deps chromium && tsc",
+    "build": "tsc",
+    "pw:install": "playwright install chromium",
     "dev": "tsx watch src/api/index.ts",
     "start": "node dist/api/index.js",
     "worker": "tsx src/workers/run.ts",
