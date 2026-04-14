@@ -1,9 +1,10 @@
 /**
  * Obtém HTML de uma URL usando Playwright (Chromium).
  * Usado como fallback quando fetch + Cheerio não trazem preço (página dinâmica).
- * Requer: `npm i playwright` e `npx playwright install chromium chromium-headless-shell`
+ * Requer: `npm i playwright` e `npm run pw:install` (chromium + chromium-headless-shell em `.cache/ms-playwright`).
  * (Playwright 1.49+ usa headless shell no launch headless; só `install chromium` não basta.)
  */
+import "../../config/playwright-browsers-path.js";
 import { logger } from "../../config/logger.js";
 
 const BROWSER_TIMEOUT_MS = 25_000;

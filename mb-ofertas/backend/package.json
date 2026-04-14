@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "pw:install": "playwright install chromium chromium-headless-shell",
+    "pw:install": "PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright install chromium chromium-headless-shell",
     "dev": "tsx watch src/api/index.ts",
     "start": "node dist/api/index.js",
     "worker": "tsx src/workers/run.ts",
