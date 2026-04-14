@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "playwright install --with-deps chromium",
-    "build": "tsc",
+    "build": "playwright install --with-deps chromium && tsc",
     "dev": "tsx watch src/api/index.ts",
     "start": "node dist/api/index.js",
     "worker": "tsx src/workers/run.ts",
