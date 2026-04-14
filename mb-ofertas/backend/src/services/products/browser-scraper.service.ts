@@ -1,7 +1,8 @@
 /**
  * Obtém HTML de uma URL usando Playwright (Chromium).
  * Usado como fallback quando fetch + Cheerio não trazem preço (página dinâmica).
- * Requer: `npm i playwright` e `npx playwright install chromium` (evite `--with-deps` em PaaS sem root)
+ * Requer: `npm i playwright` e `npx playwright install chromium chromium-headless-shell`
+ * (Playwright 1.49+ usa headless shell no launch headless; só `install chromium` não basta.)
  */
 import { logger } from "../../config/logger.js";
 
@@ -21,10 +22,10 @@ export async function getHtmlWithBrowser(url: string): Promise<string> {
   } catch (e) {
     logger.warn(
       { err: e },
-      "Playwright não encontrado. Rode: npm i playwright && npx playwright install chromium"
+      "Playwright não encontrado. Rode: npm i playwright && npx playwright install chromium chromium-headless-shell"
     );
     throw new Error(
-      "Playwright não instalado. Para usar fallback com browser: npm i playwright && npx playwright install chromium"
+      "Playwright não instalado. Para usar fallback com browser: npm i playwright && npx playwright install chromium chromium-headless-shell"
     );
   }
 
@@ -37,10 +38,10 @@ export async function getHtmlWithBrowser(url: string): Promise<string> {
   } catch (e) {
     logger.error(
       { err: e },
-      "Playwright instalado, mas Chromium não está disponível. Rode: npx playwright install chromium"
+      "Playwright instalado, mas Chromium/headless-shell não está disponível. Rode: npx playwright install chromium chromium-headless-shell"
     );
     throw new Error(
-      "Playwright: Chromium não disponível. Rode: npx playwright install chromium"
+      "Playwright: Chromium não disponível. Rode: npx playwright install chromium chromium-headless-shell"
     );
   }
 
