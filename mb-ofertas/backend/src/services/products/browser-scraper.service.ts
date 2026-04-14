@@ -1,7 +1,7 @@
 /**
  * Obtém HTML de uma URL usando Playwright (Chromium).
  * Usado como fallback quando fetch + Cheerio não trazem preço (página dinâmica).
- * Requer: yarn add playwright && npx playwright install chromium
+ * Requer: `npm i playwright` e `npx playwright install --with-deps chromium`
  */
 import { logger } from "../../config/logger.js";
 
@@ -14,21 +14,35 @@ const WAIT_AFTER_LOAD_MS = 2_000;
  * para não quebrar o app se a dependência não estiver instalada.
  */
 export async function getHtmlWithBrowser(url: string): Promise<string> {
-  let chromium: typeof import("playwright").chromium;
+  let chromium: any;
   try {
     const pw = await import("playwright");
     chromium = pw.chromium;
   } catch (e) {
-    logger.warn({ err: e }, "Playwright não encontrado. Rode: yarn add playwright && npx playwright install chromium");
+    logger.warn(
+      { err: e },
+      "Playwright não encontrado. Rode: npm i playwright && npx playwright install --with-deps chromium"
+    );
     throw new Error(
-      "Playwright não instalado. Para usar fallback com browser: yarn add playwright && npx playwright install chromium"
+      "Playwright não instalado. Para usar fallback com browser: npm i playwright && npx playwright install --with-deps chromium"
     );
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-  });
+  let browser: any;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+  } catch (e) {
+    logger.error(
+      { err: e },
+      "Playwright instalado, mas Chromium não está disponível. Rode: npx playwright install --with-deps chromium"
+    );
+    throw new Error(
+      "Playwright: Chromium não disponível. Rode: npx playwright install --with-deps chromium"
+    );
+  }
 
   try {
     const page = await browser.newPage({

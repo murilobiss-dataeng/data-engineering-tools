@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "playwright install --with-deps chromium",
     "build": "tsc",
     "dev": "tsx watch src/api/index.ts",
     "start": "node dist/api/index.js",
