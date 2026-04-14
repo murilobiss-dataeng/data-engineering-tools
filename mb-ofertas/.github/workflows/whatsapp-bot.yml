@@ -26,13 +26,12 @@ jobs:
         run: |
           cd whatsapp-channel-bot
           npm install
-          for channel in health tech ofertas faith fitness; do
+          for channel in health tech ofertas faith; do
             case "$channel" in
               health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
               tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
               ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
               faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
-              fitness) CHAT_ID="${{ secrets.CHAT_ID_FITNESS }}" ;;
             esac
             if [ -z "$CHAT_ID" ]; then
               echo "Pulando $channel (sem CHAT_ID)"

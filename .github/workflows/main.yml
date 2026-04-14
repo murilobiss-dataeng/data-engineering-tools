@@ -1,10 +1,10 @@
 # Envia produtos aprovados por canal (slug da categoria) para o WhatsApp.
-# Um único job percorre health → tech → ofertas → faith → fitness em sequência,
+# Um único job percorre health → tech → ofertas → faith em sequência,
 # reutilizando a mesma sessão (sem corrida no cache do LocalAuth).
 #
 # Secrets:
 #   API_URL — ex.: https://sua-api.onrender.com/api/products/feed (sem query; o bot usa ?channelSlug= por canal)
-#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH, CHAT_ID_FITNESS — ID do canal (ex.: 120363405814099508@newsletter)
+#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH — ID do canal (ex.: 120363405814099508@newsletter)
 #   Canais sem secret ficam de fora (mensagem no log).
 #
 # Primeira vez: workflow "Init WhatsApp (escanear QR)".
@@ -61,13 +61,12 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
         run: |
           cd mb-ofertas/whatsapp-channel-bot
-          for channel in health tech ofertas faith fitness; do
+          for channel in health tech ofertas faith; do
             case "$channel" in
               health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
               tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
               ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
               faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
-              fitness) CHAT_ID="${{ secrets.CHAT_ID_FITNESS }}" ;;
             esac
             if [ -z "$CHAT_ID" ]; then
               echo "::notice::CHAT_ID não configurado para o canal $channel — ignorando."

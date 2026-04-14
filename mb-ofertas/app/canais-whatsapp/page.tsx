@@ -126,7 +126,7 @@ export default function CanaisWhatsAppPage() {
           <h1 className="page-title">Canais WhatsApp</h1>
           <p className="page-subtitle">
             Cadastre os canais (números ou grupos) para o botão &quot;Enviar para o WhatsApp&quot; nas campanhas. O campo
-            &quot;Tag do canal&quot; deve coincidir com a categoria das ofertas (health, tech, ofertas, faith, fitness) e com o{" "}
+            &quot;Tag do canal&quot; deve coincidir com a categoria das ofertas (health, tech, ofertas, faith) e com o{" "}
             <code className="rounded bg-stone-100 px-1">CHANNEL_SLUG</code> no GitHub Actions.
           </p>
         </div>
@@ -178,7 +178,6 @@ export default function CanaisWhatsAppPage() {
               <option value="tech">tech</option>
               <option value="ofertas">ofertas</option>
               <option value="faith">faith</option>
-              <option value="fitness">fitness</option>
             </select>
           </div>
           <button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">
@@ -269,7 +268,6 @@ export default function CanaisWhatsAppPage() {
                   <option value="tech">tech</option>
                   <option value="ofertas">ofertas</option>
                   <option value="faith">faith</option>
-                  <option value="fitness">fitness</option>
                 </select>
                 <p className="mt-1 text-xs text-stone-500">Alinha com a categoria do produto e com o bot automatizado.</p>
               </div>

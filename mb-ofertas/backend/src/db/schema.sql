@@ -95,8 +95,7 @@ INSERT INTO categories (name, slug) VALUES
   ('Health', 'health'),
   ('Tech', 'tech'),
   ('Ofertas', 'ofertas'),
-  ('Faith', 'faith'),
-  ('Fitness', 'fitness')
+  ('Faith', 'faith')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Coluna installments (para bancos já existentes)
@@ -135,11 +134,30 @@ BEGIN
   END IF;
 END $$;
 
--- Qual categoria/canal de ofertas este registro representa (health, tech, ofertas, faith, fitness) — alinha com GitHub Actions CHANNEL_SLUG
+-- Qual categoria/canal de ofertas este registro representa (health, tech, ofertas, faith) — alinha com GitHub Actions CHANNEL_SLUG
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'whatsapp_channels' AND column_name = 'category_slug') THEN
     ALTER TABLE whatsapp_channels ADD COLUMN category_slug VARCHAR(100);
+  END IF;
+END $$;
+
+-- Unificar Fitness em Health (após whatsapp_channels.category_slug existir)
+DO $$
+DECLARE
+  health_id UUID;
+  fitness_id UUID;
+BEGIN
+  SELECT id INTO health_id FROM categories WHERE slug = 'health' LIMIT 1;
+  SELECT id INTO fitness_id FROM categories WHERE slug = 'fitness' LIMIT 1;
+  IF health_id IS NOT NULL AND fitness_id IS NOT NULL THEN
+    UPDATE products SET category_id = health_id WHERE category_id = fitness_id;
+    UPDATE whatsapp_channels SET category_slug = 'health' WHERE category_slug = 'fitness';
+    DELETE FROM categories WHERE id = fitness_id;
+  ELSIF fitness_id IS NOT NULL THEN
+    UPDATE products SET category_id = NULL WHERE category_id = fitness_id;
+    UPDATE whatsapp_channels SET category_slug = 'health' WHERE category_slug = 'fitness';
+    DELETE FROM categories WHERE id = fitness_id;
   END IF;
 END $$;
 

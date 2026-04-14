@@ -5,7 +5,6 @@ const DEFAULT_CATEGORIES = [
   ["Tech", "tech"],
   ["Ofertas", "ofertas"],
   ["Faith", "faith"],
-  ["Fitness", "fitness"],
 ];
 
 async function ensureDefaultCategories(): Promise<void> {
@@ -14,8 +13,7 @@ async function ensureDefaultCategories(): Promise<void> {
      VALUES ('Health', 'health'),
             ('Tech', 'tech'),
             ('Ofertas', 'ofertas'),
-            ('Faith', 'faith'),
-            ('Fitness', 'fitness')
+            ('Faith', 'faith')
      ON CONFLICT (slug) DO NOTHING`
   );
 }

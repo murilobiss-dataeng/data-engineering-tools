@@ -5,7 +5,7 @@ export type WhatsAppChannel = {
   name: string;
   phone: string;
   channel_link: string | null;
-  /** Slug da categoria de ofertas (health, tech, ofertas, faith, fitness) — mesmo valor do CHANNEL_SLUG no bot. */
+  /** Slug da categoria de ofertas (health, tech, ofertas, faith) — mesmo valor do CHANNEL_SLUG no bot. */
   category_slug: string | null;
   created_at: string;
 };

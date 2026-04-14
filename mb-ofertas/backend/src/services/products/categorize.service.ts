@@ -1,6 +1,6 @@
 /**
  * Categoriza produto pelos slugs usados nos canais:
- * `health`, `tech`, `ofertas`, `faith` e `fitness`.
+ * `health` (inclui suplementos e artigos de treino), `tech`, `ofertas`, `faith`.
  */
 const CATEGORY_KEYWORDS: { slug: string; keywords: string[] }[] = [
   {
@@ -24,11 +24,6 @@ const CATEGORY_KEYWORDS: { slug: string; keywords: string[] }[] = [
       "imunidade",
       "pre treino",
       "pre-treino",
-    ],
-  },
-  {
-    slug: "fitness",
-    keywords: [
       "fitness",
       "academia",
       "musculacao",

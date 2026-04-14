@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 /**
- * Monta URL do feed com filtro por canal (slug da categoria: health, tech, ofertas, faith, fitness).
+ * Monta URL do feed com filtro por canal (slug da categoria: health, tech, ofertas, faith).
  */
 function buildFeedUrl(apiUrl, channelSlug) {
   const base = (apiUrl || "").trim();

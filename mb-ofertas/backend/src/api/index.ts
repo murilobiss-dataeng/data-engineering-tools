@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "../config/playwright-browsers-path.js";
 import dns from "dns";
 dns.setDefaultResultOrder("ipv4first");
 
