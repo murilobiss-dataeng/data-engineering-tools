@@ -82,7 +82,7 @@ jobs:
             echo ""
             echo "---"
             echo ""
-            echo "Depois disso o job **continua** até você escanear ou até ~8 min — isso é normal."
+            echo "Depois disso o job **continua** até você escanear ou até ~2 min — isso é normal."
           } >> "$GITHUB_STEP_SUMMARY"
 
           printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
@@ -97,14 +97,14 @@ jobs:
             echo "artifact_uploaded=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Aguardando escaneamento (até ~8 min). A cada minuto: lembrete no log."
-          for i in $(seq 1 48); do
+          echo "Aguardando escaneamento (até ~2 min). A cada minuto: lembrete no log."
+          for i in $(seq 1 12); do
             if ! kill -0 "$BOT_PID" 2>/dev/null; then
               echo "Bot encerrou. Sessão salva no cache."
               exit 0
             fi
             if [ $((i % 6)) -eq 0 ]; then
-              echo "⏳ Ainda aguardando (~$((i / 6)) min / 8). QR: Summary do job **init** ou Artifacts → whatsapp-qr."
+              echo "⏳ Ainda aguardando (~$((i / 6)) min / 2). QR: Summary do job **init** ou Artifacts → whatsapp-qr."
             fi
             sleep 10
           done
