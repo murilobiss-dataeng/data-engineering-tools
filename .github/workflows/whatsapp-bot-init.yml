@@ -1,15 +1,21 @@
 # Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
 # Um único step inicia o bot, gera o link do QR (visível no resumo) e só termina quando você escanear (ou após 8 min).
+# O artifact só é enviado no step seguinte, depois que este step termina (por isso o job precisa de timeout alto).
 
 name: Init WhatsApp (escanear QR)
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   init:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 2 min espera QR + 8 min loop + npm install — com 10 min o job era cancelado ANTES do "Upload artifact"
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +70,7 @@ jobs:
           printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
           cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
           printf '%s' '" width="280" alt="QR"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+          echo "qr.html criado na raiz do workspace; o próximo step fará o upload do artifact."
           echo "Aguardando você escanear... (até 8 min)"
           for i in $(seq 1 48); do
             if ! kill -0 $BOT_PID 2>/dev/null; then
@@ -74,8 +81,8 @@ jobs:
           done
           echo "Timeout. Se já escaneou, a sessão pode ter sido salva. Rode o workflow agendado para testar."
 
-      - name: Upload artifact (qr.html único)
-        if: steps.qr.outputs.qr_generated == 'true'
+      - name: Upload artifact (qr.html)
+        if: success() && hashFiles('qr.html') != ''
         uses: actions/upload-artifact@v4
         with:
           name: whatsapp-qr

@@ -1,21 +1,24 @@
-# Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
-# Depois que escanear, a sessão fica no cache e o workflow "WhatsApp Bot" agendado passa a funcionar.
+# Só é usado se este repositório for a raiz (projeto só mb-ofertas).
+# No monorepo data-engineering-tools use: .github/workflows/whatsapp-bot-init.yml na raiz.
 
 name: Init WhatsApp (escanear QR)
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   init:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/cache@v4
-        id: session
         with:
           path: whatsapp-channel-bot/data
           key: whatsapp-session-${{ runner.os }}-v1
@@ -29,31 +32,52 @@ jobs:
           cd whatsapp-channel-bot
           npm install
 
-      - name: Iniciar bot e aguardar escaneamento do QR
+      - name: Gerar QR, link e aguardar escaneamento
+        id: qr
         env:
           API_URL: ${{ secrets.API_URL }}
-          CHAT_IDS: ${{ secrets.CHAT_IDS }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
         run: |
           cd whatsapp-channel-bot
           node src/index.js &
           BOT_PID=$!
-          echo "Aguardando geração do QR (até 90s)..."
-          for i in $(seq 1 18); do
+          echo "Aguardando arquivo do QR (até 2 min)..."
+          for i in $(seq 1 24); do
             sleep 5
-            if [ -f data/qr-url.txt ]; then
-              cp data/qr-url.txt ../qr-for-scan.txt
-              URL=$(cat ../qr-for-scan.txt | tr -d '\n')
-              echo "<!DOCTYPE html><html><body style=\"margin:20px\"><p>Escaneie com o WhatsApp (Aparelhos conectados)</p><img src=\"$URL\" alt=\"QR\" style=\"max-width:300px\"/></body></html>" > ../qr.html
-              echo "QR gerado. Baixe o artifact 'whatsapp-qr', abra qr.html no navegador e escaneie."
-              break
-            fi
+            [ -f data/qr-url.txt ] && break
           done
-          wait $BOT_PID || true
+          if [ ! -f data/qr-url.txt ]; then
+            echo "qr_generated=false" >> $GITHUB_OUTPUT
+            kill $BOT_PID 2>/dev/null || true
+            echo "Timeout: arquivo do QR não apareceu. Rode o workflow de novo."
+            exit 1
+          fi
+          echo "qr_generated=true" >> $GITHUB_OUTPUT
+          DATAURL=$(cat data/qr-url.txt | tr -d '\n')
+          {
+            echo "## Escaneie o QR com o WhatsApp"
+            echo ""
+            echo "Abra **Aparelhos conectados** no celular e escaneie."
+            echo ""
+            printf '![QR](%s)\n' "$DATAURL"
+          } >> $GITHUB_STEP_SUMMARY
+          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
+          cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
+          printf '%s' '" width="280" alt="QR"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+          echo "Aguardando você escanear... (até 8 min)"
+          for i in $(seq 1 48); do
+            if ! kill -0 $BOT_PID 2>/dev/null; then
+              echo "Bot encerrou. Sessão salva no cache."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timeout. Se já escaneou, a sessão pode ter sido salva."
 
-      - name: Upload QR (abrir qr.html no navegador para escanear)
-        if: hashFiles('qr.html') != ''
+      - name: Upload artifact (qr.html)
+        if: success() && hashFiles('qr.html') != ''
         uses: actions/upload-artifact@v4
         with:
           name: whatsapp-qr
