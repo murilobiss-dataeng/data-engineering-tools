@@ -19,11 +19,11 @@ if (!fs.existsSync(config.dataPath)) {
 const AUTH_PATH = path.join(config.dataPath, ".wwebjs_auth");
 const CRON_EXPR = `*/${config.cronIntervalMinutes} * * * *`; // a cada N minutos
 
-/** Payload do WA é longo; QR pequeno ou ECC baixo fica ilegível (“riscado”) no celular. */
+/** Um único conjunto de opções para toDataURL e toFile (evita QR “diferente” do workflow). */
 const QR_IMAGE_OPTS = {
   margin: 4,
-  width: 1024,
-  errorCorrectionLevel: "H",
+  width: 768,
+  errorCorrectionLevel: "M",
 };
 
 /** No GHA o cache restaura a pasta da sessão; locks do Chromium de um job cancelado impedem novo launch. */
@@ -77,29 +77,37 @@ function createClient() {
   });
 
   c.on("qr", async (qr) => {
-    // No GHA o WhatsApp pode renovar o QR várias vezes (expira rápido); precisamos gravar cada versão.
+    // No GHA o WhatsApp renova o QR; gravamos cada versão. Só uma fonte de imagem: o bot (não re-gerar no workflow).
     if (!isGHA && qrAlreadyShown) return;
     if (!isGHA) qrAlreadyShown = true;
+
+    const payload = typeof qr === "string" ? qr : String(qr ?? "");
+    if (!payload) {
+      logger.warn("Evento qr sem payload; ignorando.");
+      return;
+    }
 
     logger.info("Escaneie o QR Code com o WhatsApp (Aparelhos conectados):");
     if (isGHA) {
       try {
-        const qrDataUrl = await QRCode.toDataURL(qr, QR_IMAGE_OPTS);
+        const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
         const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
-        logger.info("QR atualizado em:", qrFilePath);
+        const qrPngPath = path.resolve(config.dataPath, "qr.png");
+        await QRCode.toFile(qrPngPath, payload, QR_IMAGE_OPTS);
+        logger.info("QR atualizado em:", qrFilePath, "+", qrPngPath);
         const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
-        fs.writeFileSync(qrRawPath, qr, "utf-8");
-        logger.info("Payload bruto do QR (workflow adicional):", qrRawPath);
-        logger.info("No GHA: baixe o artifact 'whatsapp-qr' (qr.html) na página da execução do workflow.");
+        fs.writeFileSync(qrRawPath, payload, "utf-8");
+        logger.info("Payload bruto (referência):", qrRawPath);
+        logger.info("No GHA: use o mesmo QR do Summary/artifact; cada renovação invalida o código anterior.");
       } catch (e) {
         logger.warn("Não foi possível salvar QR:", e.message);
       }
     } else {
-      qrcode.generate(qr, { small: true });
+      qrcode.generate(payload, { small: true });
       const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
       try {
-        const qrDataUrl = await QRCode.toDataURL(qr, QR_IMAGE_OPTS);
+        const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
         logger.info("QR também salvo em:", qrFilePath);
       } catch (_) {}
