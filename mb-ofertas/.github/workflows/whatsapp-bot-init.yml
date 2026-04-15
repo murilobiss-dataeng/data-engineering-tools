@@ -53,10 +53,11 @@ jobs:
             printf '%s' '" width="768" height="768" alt="QR WhatsApp"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
             node scripts/gha-qr-from-raw.cjs || true
             eval "$(python3 scripts/gha-export-actions-env.py 2>/dev/null)" || true
-            if node scripts/gha-upload-qr-artifact.cjs 2>/dev/null; then
+            if node scripts/gha-upload-qr-artifact.cjs; then
               echo "::notice::Artifact **whatsapp-qr** publicado — já pode baixar o zip (não precisa esperar o fim do job)."
               echo "artifact_uploaded_early=true" >> "$GITHUB_OUTPUT"
             else
+              echo "::warning::Upload antecipado falhou (token); o zip sai no fim do step."
               echo "artifact_uploaded_early=false" >> "$GITHUB_OUTPUT"
             fi
           }
@@ -96,7 +97,7 @@ jobs:
             echo "Role a página do job: a **imagem do QR** deve aparecer abaixo (markdown com data URL)."
             echo ""
             echo "### 2) Arquivo para abrir no navegador"
-            echo "Na **mesma** página da execução, seção **Artifacts** (após o job): baixe **whatsapp-qr** (zip com qr.html e PNG). O WhatsApp **renova o QR**; os ficheiros em disco são atualizados durante o job e o zip reflete o último estado ao **terminar** o step."
+            echo "Na **mesma** página, **Artifacts**: o zip **whatsapp-qr** costuma aparecer **pouco depois** do QR ser gerado (upload antecipado). Se não vir ainda, aguarde o fim do step ou use a imagem acima no Summary."
             echo ""
             echo "---"
             echo ""
