@@ -43,6 +43,10 @@ jobs:
         run: |
           set -e
           cd mb-ofertas/whatsapp-channel-bot
+          # Cache do GHA pode restaurar locks do Chromium (job cancelado) → "profile appears to be in use".
+          if [ -d data ]; then
+            find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
+          fi
 
           rebuild_qr_and_upload() {
             [ ! -f data/qr-url.txt ] && return 0

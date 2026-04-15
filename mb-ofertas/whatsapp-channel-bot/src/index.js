@@ -19,6 +19,32 @@ if (!fs.existsSync(config.dataPath)) {
 const AUTH_PATH = path.join(config.dataPath, ".wwebjs_auth");
 const CRON_EXPR = `*/${config.cronIntervalMinutes} * * * *`; // a cada N minutos
 
+/** No GHA o cache restaura a pasta da sessão; locks do Chromium de um job cancelado impedem novo launch. */
+function removeChromiumProfileLocksSync(dir) {
+  if (!fs.existsSync(dir)) return;
+  let list;
+  try {
+    list = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of list) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      removeChromiumProfileLocksSync(full);
+    } else if (
+      e.name === "SingletonLock" ||
+      e.name === "SingletonCookie" ||
+      e.name === "SingletonSocket"
+    ) {
+      try {
+        fs.unlinkSync(full);
+        if (isGHA) logger.info("Lock do Chromium removido (evita 'profile in use'):", full);
+      } catch (_) {}
+    }
+  }
+}
+
 let client = null;
 let isRunning = false;
 let cronScheduled = false;
@@ -120,6 +146,10 @@ async function start() {
   logger.info("Iniciando bot. Modo:", config.singleRun ? "single-run (GHA)" : `intervalo ${config.cronIntervalMinutes} min`);
   logger.info("API:", config.apiUrl || "(não configurada)", config.channelSlug ? `CHANNEL_SLUG=${config.channelSlug}` : "");
   logger.info("Chats:", config.chatIds.length ? config.chatIds : "(nenhum)");
+
+  if (isGHA) {
+    removeChromiumProfileLocksSync(AUTH_PATH);
+  }
 
   client = createClient();
 

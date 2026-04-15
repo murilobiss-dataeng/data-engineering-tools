@@ -42,6 +42,9 @@ jobs:
         run: |
           set -e
           cd whatsapp-channel-bot
+          if [ -d data ]; then
+            find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
+          fi
 
           rebuild_qr_and_upload() {
             [ ! -f data/qr-url.txt ] && return 0
