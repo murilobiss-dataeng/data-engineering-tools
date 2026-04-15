@@ -22,7 +22,7 @@ const CRON_EXPR = `*/${config.cronIntervalMinutes} * * * *`; // a cada N minutos
 /** Payload do WA é longo; QR pequeno ou ECC baixo fica ilegível (“riscado”) no celular. */
 const QR_IMAGE_OPTS = {
   margin: 4,
-  width: 720,
+  width: 1024,
   errorCorrectionLevel: "H",
 };
 

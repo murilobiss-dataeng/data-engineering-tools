@@ -1,9 +1,39 @@
 /**
  * Usado só no GitHub Actions (Init WhatsApp): publica qr.html como artifact
  * imediatamente, sem esperar o fim do scan (o step principal continua em loop).
+ *
+ * Em alguns runners o Node não recebe ACTIONS_* no process.env; o toolkit lê só
+ * process.env — hidratamos a partir de /proc (Linux) antes de carregar o client.
  */
 const fs = require("fs");
 const path = require("path");
+
+function hydrateActionsEnvFromProc(pid) {
+  if (process.platform !== "linux") return;
+  const p = `/proc/${pid}/environ`;
+  if (!fs.existsSync(p)) return;
+  try {
+    const buf = fs.readFileSync(p);
+    const parts = buf.toString("binary").split("\0");
+    for (const part of parts) {
+      if (!part) continue;
+      const eq = part.indexOf("=");
+      if (eq <= 0) continue;
+      const key = part.slice(0, eq);
+      const val = part.slice(eq + 1);
+      if (
+        (key === "ACTIONS_RUNTIME_TOKEN" || key === "ACTIONS_RESULTS_URL") &&
+        !process.env[key]
+      ) {
+        process.env[key] = val;
+      }
+    }
+  } catch (_) {}
+}
+
+hydrateActionsEnvFromProc(process.pid);
+hydrateActionsEnvFromProc(process.ppid);
+
 const client = require("@actions/artifact").default;
 
 const root = process.env.GITHUB_WORKSPACE;
@@ -29,7 +59,12 @@ if (fs.existsSync(qrWorkflowPngPath)) {
 
 (async () => {
   try {
-    // A API exige caminhos absolutos: ["qr.html"] resolve contra o cwd do Node (pasta do bot), não contra root.
+    if (!process.env.ACTIONS_RUNTIME_TOKEN) {
+      console.error(
+        "gha-upload-qr-artifact: ACTIONS_RUNTIME_TOKEN ainda ausente (upload nativo do Actions indisponível neste processo)."
+      );
+      process.exit(1);
+    }
     await client.uploadArtifact("whatsapp-qr", filesToUpload, root, {
       retentionDays: 3,
     });

@@ -8,7 +8,7 @@ const QRCode = require("qrcode");
 const qrcodeTerminal = require("qrcode-terminal");
 
 /** Mesmo critério do bot: payload longo precisa de módulos grandes + ECC alto. */
-const QR_OPTS = { margin: 4, width: 720, errorCorrectionLevel: "H" };
+const QR_OPTS = { margin: 4, width: 1024, errorCorrectionLevel: "H" };
 
 const root = process.env.GITHUB_WORKSPACE;
 const rawPath = path.join(process.cwd(), "data", "qr-raw.txt");
@@ -26,11 +26,18 @@ if (!raw) {
 
 (async () => {
   try {
-    // 1) Mostra o QR direto no log (ASCII). Ajuda quando o render do markdown/HTML falha.
+    // Payload do WA é longo: ASCII no log fica denso e parece “riscado”; escaneie só PNG/HTML.
     console.log("");
-    console.log("=== QR (ASCII) gerado no workflow — escaneie daqui se quiser ===");
-    qrcodeTerminal.generate(raw, { small: true });
-    console.log("=== fim do QR (ASCII) ===");
+    console.log(
+      "Para escanear use qr-workflow.png ou qr.html no artifact (não use o bloco ASCII abaixo para leitura)."
+    );
+    if (raw.length < 400) {
+      console.log("=== QR (ASCII) — só ilustrativo ===");
+      qrcodeTerminal.generate(raw, { small: true });
+      console.log("=== fim ===");
+    } else {
+      console.log("(ASCII omitido — payload longo.)");
+    }
     console.log("");
 
     // 2) Gera data URL e arquivos adicionais
@@ -41,9 +48,9 @@ if (!raw) {
     }
     const outHtml = path.join(root, "qr-workflow.html");
     const outPng = path.join(root, "qr-workflow.png");
-    const body = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp (workflow)</title></head><body style="margin:20px;font-family:sans-serif"><h2>QR gerado no workflow (payload bruto)</h2><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="${dataUrl}" width="720" height="720" alt="QR"/></body></html>`;
+    const body = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp (workflow)</title></head><body style="margin:20px;font-family:sans-serif"><h2>QR gerado no workflow (payload bruto)</h2><img style="image-rendering:pixelated;image-rendering:crisp-edges;max-width:min(98vw,1024px);height:auto" src="${dataUrl}" width="1024" height="1024" alt="QR"/></body></html>`;
     fs.writeFileSync(outHtml, body, "utf8");
-    await QRCode.toFile(outPng, raw, { ...QR_OPTS, width: 1024 });
+    await QRCode.toFile(outPng, raw, { ...QR_OPTS, width: 1536 });
 
     const summary = process.env.GITHUB_STEP_SUMMARY;
     if (summary) {

@@ -48,9 +48,10 @@ jobs:
 
           rebuild_qr_and_upload() {
             [ ! -f data/qr-url.txt ] && return 0
+            export ACTIONS_RUNTIME_TOKEN ACTIONS_RESULTS_URL
             printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="' > "$GITHUB_WORKSPACE/qr.html"
             cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
-            printf '%s' '" width="720" height="720" alt="QR WhatsApp"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+            printf '%s' '" width="1024" height="1024" alt="QR WhatsApp"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
             node scripts/gha-qr-from-raw.cjs || true
             if node scripts/gha-upload-qr-artifact.cjs; then
               echo "artifact_uploaded=true" >> "$GITHUB_OUTPUT"
@@ -136,17 +137,21 @@ jobs:
               exit 0
             fi
             if [ $((i % 6)) -eq 0 ]; then
-              echo "⏳ Ainda aguardando (~$((i / 6)) min / 8). Se o QR expirou, baixe **whatsapp-qr** de novo ou veja o log (QR ASCII quando renovar)."
+              echo "⏳ Ainda aguardando (~$((i / 6)) min / 8). Se o QR expirou, baixe **whatsapp-qr** de novo (use **qr-workflow.png** para escanear)."
             fi
             sleep 10
           done
           kill "$WATCH_PID" 2>/dev/null || true
           echo "Timeout de espera. Se já escaneou, a sessão pode estar no cache; teste o workflow agendado."
 
-      - name: Upload artifact (fallback se o upload imediato falhou)
+      - name: Upload artifact (fallback se o upload via Node falhou)
         if: success() && hashFiles('qr.html') != '' && steps.qr.outputs.artifact_uploaded != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: whatsapp-qr
-          path: qr.html
+          path: |
+            qr.html
+            qr-workflow.html
+            qr-workflow.png
+          if-no-files-found: warn
           overwrite: true
