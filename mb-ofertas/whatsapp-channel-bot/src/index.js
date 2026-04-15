@@ -54,6 +54,9 @@ function createClient() {
         const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
         logger.info("QR salvo em:", qrFilePath);
+        const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
+        fs.writeFileSync(qrRawPath, qr, "utf-8");
+        logger.info("Payload bruto do QR (workflow adicional):", qrRawPath);
         logger.info("No GHA: baixe o artifact 'whatsapp-qr' (qr.html) na página da execução do workflow.");
       } catch (e) {
         logger.warn("Não foi possível salvar QR:", e.message);

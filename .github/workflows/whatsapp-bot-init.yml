@@ -43,6 +43,11 @@ jobs:
         run: |
           set -e
           cd mb-ofertas/whatsapp-channel-bot
+          # Cache pode trazer arquivos de QR antigos: o loop disparava cedo e o upload falhava antes do QR novo.
+          rm -f data/qr-url.txt
+          rm -f data/qr-raw.txt
+          rm -f "$GITHUB_WORKSPACE/qr.html"
+          rm -f "$GITHUB_WORKSPACE/qr-workflow.html"
           node src/index.js &
           BOT_PID=$!
           echo "Aguardando arquivo do QR (até 2 min)..."
@@ -89,6 +94,9 @@ jobs:
           printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
           cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
           printf '%s' '" width="280" alt="QR"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+
+          echo "QR adicional: gerar qr-workflow.html + trecho no Summary a partir de data/qr-raw.txt (não substitui o fluxo acima)."
+          node scripts/gha-qr-from-raw.cjs || echo "::warning::QR adicional (workflow) falhou; o QR principal (qr.html) segue válido."
 
           echo "Publicando artifact whatsapp-qr agora (antes de esperar o scan)..."
           # Já estamos em mb-ofertas/whatsapp-channel-bot

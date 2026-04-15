@@ -12,18 +12,27 @@ if (!root) {
   process.exit(1);
 }
 const qrPath = path.join(root, "qr.html");
+const qrWorkflowPath = path.join(root, "qr-workflow.html");
 if (!fs.existsSync(qrPath)) {
   console.error("gha-upload-qr-artifact: qr.html não encontrado em", qrPath);
   process.exit(1);
 }
 
+const filesToUpload = [qrPath];
+if (fs.existsSync(qrWorkflowPath)) {
+  filesToUpload.push(qrWorkflowPath);
+}
+
 (async () => {
   try {
-    await client.uploadArtifact("whatsapp-qr", ["qr.html"], root, {
+    // A API exige caminhos absolutos: ["qr.html"] resolve contra o cwd do Node (pasta do bot), não contra root.
+    await client.uploadArtifact("whatsapp-qr", filesToUpload, root, {
       retentionDays: 3,
     });
     console.log(
-      "Artifact 'whatsapp-qr' (qr.html) publicado. Veja na seção Artifacts desta execução."
+      "Artifact 'whatsapp-qr' publicado (" +
+        filesToUpload.map((f) => path.basename(f)).join(", ") +
+        "). Veja na seção Artifacts desta execução."
     );
     process.exit(0);
   } catch (e) {
