@@ -44,8 +44,9 @@ function createClient() {
   });
 
   c.on("qr", async (qr) => {
-    if (qrAlreadyShown) return;
-    qrAlreadyShown = true;
+    // No GHA o WhatsApp pode renovar o QR várias vezes (expira rápido); precisamos gravar cada versão.
+    if (!isGHA && qrAlreadyShown) return;
+    if (!isGHA) qrAlreadyShown = true;
 
     logger.info("Escaneie o QR Code com o WhatsApp (Aparelhos conectados):");
     if (isGHA) {
@@ -53,7 +54,7 @@ function createClient() {
         const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
         const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
-        logger.info("QR salvo em:", qrFilePath);
+        logger.info("QR atualizado em:", qrFilePath);
         const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
         fs.writeFileSync(qrRawPath, qr, "utf-8");
         logger.info("Payload bruto do QR (workflow adicional):", qrRawPath);

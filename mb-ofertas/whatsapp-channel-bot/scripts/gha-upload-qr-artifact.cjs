@@ -13,6 +13,7 @@ if (!root) {
 }
 const qrPath = path.join(root, "qr.html");
 const qrWorkflowPath = path.join(root, "qr-workflow.html");
+const qrWorkflowPngPath = path.join(root, "qr-workflow.png");
 if (!fs.existsSync(qrPath)) {
   console.error("gha-upload-qr-artifact: qr.html não encontrado em", qrPath);
   process.exit(1);
@@ -21,6 +22,9 @@ if (!fs.existsSync(qrPath)) {
 const filesToUpload = [qrPath];
 if (fs.existsSync(qrWorkflowPath)) {
   filesToUpload.push(qrWorkflowPath);
+}
+if (fs.existsSync(qrWorkflowPngPath)) {
+  filesToUpload.push(qrWorkflowPngPath);
 }
 
 (async () => {
