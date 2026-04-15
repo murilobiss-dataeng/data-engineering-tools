@@ -7,6 +7,9 @@ const path = require("path");
 const QRCode = require("qrcode");
 const qrcodeTerminal = require("qrcode-terminal");
 
+/** Mesmo critério do bot: payload longo precisa de módulos grandes + ECC alto. */
+const QR_OPTS = { margin: 4, width: 720, errorCorrectionLevel: "H" };
+
 const root = process.env.GITHUB_WORKSPACE;
 const rawPath = path.join(process.cwd(), "data", "qr-raw.txt");
 
@@ -31,16 +34,16 @@ if (!raw) {
     console.log("");
 
     // 2) Gera data URL e arquivos adicionais
-    const dataUrl = await QRCode.toDataURL(raw, { margin: 2, width: 280 });
+    const dataUrl = await QRCode.toDataURL(raw, QR_OPTS);
     if (!root) {
       console.error("gha-qr-from-raw: GITHUB_WORKSPACE não definido.");
       process.exit(1);
     }
     const outHtml = path.join(root, "qr-workflow.html");
     const outPng = path.join(root, "qr-workflow.png");
-    const body = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp (workflow)</title></head><body style="margin:20px;font-family:sans-serif"><h2>QR gerado no workflow (payload bruto)</h2><img src="${dataUrl}" width="280" alt="QR"/></body></html>`;
+    const body = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp (workflow)</title></head><body style="margin:20px;font-family:sans-serif"><h2>QR gerado no workflow (payload bruto)</h2><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="${dataUrl}" width="720" height="720" alt="QR"/></body></html>`;
     fs.writeFileSync(outHtml, body, "utf8");
-    await QRCode.toFile(outPng, raw, { margin: 2, width: 560 });
+    await QRCode.toFile(outPng, raw, { ...QR_OPTS, width: 1024 });
 
     const summary = process.env.GITHUB_STEP_SUMMARY;
     if (summary) {

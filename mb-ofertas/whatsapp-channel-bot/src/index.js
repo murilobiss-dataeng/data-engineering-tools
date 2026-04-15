@@ -19,6 +19,13 @@ if (!fs.existsSync(config.dataPath)) {
 const AUTH_PATH = path.join(config.dataPath, ".wwebjs_auth");
 const CRON_EXPR = `*/${config.cronIntervalMinutes} * * * *`; // a cada N minutos
 
+/** Payload do WA é longo; QR pequeno ou ECC baixo fica ilegível (“riscado”) no celular. */
+const QR_IMAGE_OPTS = {
+  margin: 4,
+  width: 720,
+  errorCorrectionLevel: "H",
+};
+
 /** No GHA o cache restaura a pasta da sessão; locks do Chromium de um job cancelado impedem novo launch. */
 function removeChromiumProfileLocksSync(dir) {
   if (!fs.existsSync(dir)) return;
@@ -77,7 +84,7 @@ function createClient() {
     logger.info("Escaneie o QR Code com o WhatsApp (Aparelhos conectados):");
     if (isGHA) {
       try {
-        const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
+        const qrDataUrl = await QRCode.toDataURL(qr, QR_IMAGE_OPTS);
         const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
         logger.info("QR atualizado em:", qrFilePath);
@@ -92,7 +99,7 @@ function createClient() {
       qrcode.generate(qr, { small: true });
       const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
       try {
-        const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 280 });
+        const qrDataUrl = await QRCode.toDataURL(qr, QR_IMAGE_OPTS);
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
         logger.info("QR também salvo em:", qrFilePath);
       } catch (_) {}

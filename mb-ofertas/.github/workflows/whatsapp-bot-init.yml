@@ -48,9 +48,9 @@ jobs:
 
           rebuild_qr_and_upload() {
             [ ! -f data/qr-url.txt ] && return 0
-            printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img src="' > "$GITHUB_WORKSPACE/qr.html"
+            printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="' > "$GITHUB_WORKSPACE/qr.html"
             cat data/qr-url.txt | tr -d '\n' >> "$GITHUB_WORKSPACE/qr.html"
-            printf '%s' '" width="280" alt="QR"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
+            printf '%s' '" width="720" height="720" alt="QR WhatsApp"/></body></html>' >> "$GITHUB_WORKSPACE/qr.html"
             node scripts/gha-qr-from-raw.cjs || true
             if node scripts/gha-upload-qr-artifact.cjs; then
               echo "artifact_uploaded=true" >> "$GITHUB_OUTPUT"
