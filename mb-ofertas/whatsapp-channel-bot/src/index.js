@@ -26,6 +26,9 @@ const QR_IMAGE_OPTS = {
   errorCorrectionLevel: "M",
 };
 
+const MODERN_CHROME_UA =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+
 /** No GHA o cache restaura a pasta da sessão; locks do Chromium de um job cancelado impedem novo launch. */
 function removeChromiumProfileLocksSync(dir) {
   if (!fs.existsSync(dir)) return;
@@ -65,6 +68,11 @@ function createClient() {
 
   const c = new Client({
     authStrategy: auth,
+    authTimeoutMs: 120000,
+    qrMaxRetries: 0,
+    takeoverOnConflict: true,
+    takeoverTimeoutMs: 10000,
+    userAgent: MODERN_CHROME_UA,
     puppeteer: {
       headless: true,
       args: [
@@ -72,6 +80,7 @@ function createClient() {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        `--user-agent=${MODERN_CHROME_UA}`,
       ],
     },
   });
@@ -87,7 +96,13 @@ function createClient() {
       return;
     }
 
-    logger.info("Escaneie o QR Code com o WhatsApp (Aparelhos conectados):");
+    logger.info("Escaneie o QR em Aparelhos conectados (Linked devices):");
+    logger.info(
+      "Ligue o bot só a uma conta: use o app WhatsApp normal ou o WhatsApp Business (não misture). Business: app WhatsApp Business, menu, Aparelhos conectados, Conectar um aparelho."
+    );
+    logger.info(
+      "Se só o Messenger funcionar: apague data/.wwebjs_auth (ou mude AUTH_CLIENT_ID), desvincule aparelhos no telefone e escaneie de novo com o app desejado."
+    );
     if (isGHA) {
       try {
         const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
@@ -125,6 +140,16 @@ function createClient() {
 
   c.on("auth_failure", (msg) => {
     logger.error("Falha de autenticação:", msg);
+  });
+
+  c.on("change_state", (state) => {
+    logger.info("Estado do WhatsApp:", state);
+    if (state === "DEPRECATED_VERSION") {
+      logger.error("O WhatsApp Web reportou versão obsoleta.");
+    }
+    if (state === "TOS_BLOCK" || state === "SMB_TOS_BLOCK") {
+      logger.error("A conta foi bloqueada ou restringida pelo WhatsApp Web.");
+    }
   });
 
   c.on("disconnected", (reason) => {

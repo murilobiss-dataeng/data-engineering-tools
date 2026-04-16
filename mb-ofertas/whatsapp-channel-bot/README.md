@@ -36,6 +36,19 @@ Variáveis no `.env`:
 | `AUTH_CLIENT_ID` | Id da sessão LocalAuth (padrão: `channel_bot`) |
 | `SKIP_POSTS_WITHOUT_IMAGE` | Se `true` (padrão), não envia posts sem imagem. Use `false` para enviar também só texto. |
 
+### WhatsApp Business vs WhatsApp normal (Messenger)
+
+O bot usa o **mesmo** fluxo que [web.whatsapp.com](https://web.whatsapp.com): o QR é **um só**; quem define se a sessão é **pessoal** ou **Business** é o **app no telefone** que você usa para escanear.
+
+- Para vincular a conta **Business**: abra o app **WhatsApp Business** → menu (⋮ ou ⚙) → **Aparelhos conectados** → **Conectar um aparelho** e escaneie o QR (não use o app WhatsApp “verde” para isso).
+- Para vincular a conta **pessoal**: use o **WhatsApp** normal no mesmo caminho (**Aparelhos conectados**).
+
+Se **só** o Messenger completar o pareamento e o **Business** falhar ou não oferecer “Conectar”:
+
+1. No telefone, em **ambos** os apps (se tiver os dois), veja **Aparelhos conectados** e **desconecte** sessões antigas do WhatsApp Web.
+2. Apague a sessão local do bot: remova a pasta `data/.wwebjs_auth` (ou mude `AUTH_CLIENT_ID` no `.env` para gerar uma sessão nova, ex.: `channel_bot_wa_business`).
+3. Atualize o **WhatsApp Business** na loja e tente de novo; em contas muito antigas, confira se **multi‑dispositivo** / aparelhos ligados está ativo nas definições do WhatsApp.
+
 **Patch:** é aplicado um patch em `whatsapp-web.js` (via `patch-package`) para evitar erro ao enviar para canal público quando `channelMetadata.description` não vem na resposta (`Cannot read properties of undefined (reading 'description')`). O `postinstall` aplica o patch após `npm install`.
 
 ### Formato da API / Feed mb-ofertas
