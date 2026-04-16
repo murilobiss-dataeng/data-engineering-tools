@@ -132,11 +132,11 @@ Em **Settings → Secrets and variables → Actions** adicione:
 
 1. No GitHub: **Actions** → **Init WhatsApp (escanear QR)** → **Run workflow**.
 2. Abra a **execução** (clique no run).
-3. No fim da página, em **Artifacts**, baixe **whatsapp-qr** (zip). Dentro use **qr.html** (abra no navegador) ou **qr-workflow.png** para escanear. O resumo do job só explica isso — **não** há imagem do QR embutida no Summary (evita data URL gigante e divergência com o zip).
+3. No fim da página, em **Artifacts**, baixe **whatsapp-qr** (zip). O zip contém só **qr.png** e **qr.html** (a mesma imagem; extraia os dois para a mesma pasta). O workflow espera o PNG estabilizar antes de publicar, para coincidir com o que o WhatsApp aceita no scan.
 4. Escaneie com o WhatsApp no celular: **Aparelhos conectados** → **Conectar um aparelho**.
 5. Aguarde o job concluir (há uma espera curta após o upload do artifact). A sessão fica no cache e o workflow agendado passa a funcionar sem novo QR.
 
-**Se o QR expirar antes de escanear:** rode o workflow de novo e baixe o artifact outra vez.
+**Se o pareamento falhar ou o QR expirar:** rode o workflow de novo (cada run gera **um** par `qr.png` / `qr.html`).
 
 ### Workflow agendado
 

@@ -40,14 +40,6 @@ function writeWorkflowFiles(dataUrl, label) {
     `<p style="color:#444;font-size:14px">${label}</p>` +
     `<img style="image-rendering:pixelated;image-rendering:crisp-edges;max-width:min(98vw,768px);height:auto" src="${dataUrl}" width="768" height="768" alt="QR"/></body></html>`;
   fs.writeFileSync(outHtml, body, "utf8");
-  const summary = process.env.GITHUB_STEP_SUMMARY;
-  if (summary) {
-    fs.appendFileSync(
-      summary,
-      "\n---\n\n## QR (cópia do gerado pelo bot)\n\n" +
-        `![QR WhatsApp](${dataUrl})\n`
-    );
-  }
   console.log("gha-qr-from-raw: qr-workflow.png/html a partir de", label);
 }
 

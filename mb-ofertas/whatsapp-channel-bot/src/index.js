@@ -59,6 +59,8 @@ let client = null;
 let isRunning = false;
 let cronScheduled = false;
 let qrAlreadyShown = false;
+/** No GHA: o WhatsApp renova o QR muitas vezes — só logamos instruções uma vez; os ficheiros continuam a atualizar. */
+let ghaQrInstructionsLogged = false;
 
 function createClient() {
   const auth = new LocalAuth({
@@ -96,13 +98,16 @@ function createClient() {
       return;
     }
 
-    logger.info("Escaneie o QR em Aparelhos conectados (Linked devices):");
-    logger.info(
-      "Ligue o bot só a uma conta: use o app WhatsApp normal ou o WhatsApp Business (não misture). Business: app WhatsApp Business, menu, Aparelhos conectados, Conectar um aparelho."
-    );
-    logger.info(
-      "Se só o Messenger funcionar: apague data/.wwebjs_auth (ou mude AUTH_CLIENT_ID), desvincule aparelhos no telefone e escaneie de novo com o app desejado."
-    );
+    if (!isGHA || !ghaQrInstructionsLogged) {
+      logger.info("Escaneie o QR em Aparelhos conectados (Linked devices):");
+      logger.info(
+        "Ligue o bot só a uma conta: use o app WhatsApp normal ou o WhatsApp Business (não misture). Business: app WhatsApp Business, menu, Aparelhos conectados, Conectar um aparelho."
+      );
+      logger.info(
+        "Se só o Messenger funcionar: apague data/.wwebjs_auth (ou mude AUTH_CLIENT_ID), desvincule aparelhos no telefone e escaneie de novo com o app desejado."
+      );
+      if (isGHA) ghaQrInstructionsLogged = true;
+    }
     if (isGHA) {
       try {
         const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
@@ -110,11 +115,8 @@ function createClient() {
         fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
         const qrPngPath = path.resolve(config.dataPath, "qr.png");
         await QRCode.toFile(qrPngPath, payload, QR_IMAGE_OPTS);
-        logger.info("QR atualizado em:", qrFilePath, "+", qrPngPath);
         const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
         fs.writeFileSync(qrRawPath, payload, "utf-8");
-        logger.info("Payload bruto (referência):", qrRawPath);
-        logger.info("No GHA: use o mesmo QR do Summary/artifact; cada renovação invalida o código anterior.");
       } catch (e) {
         logger.warn("Não foi possível salvar QR:", e.message);
       }
