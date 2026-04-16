@@ -1,5 +1,5 @@
 # Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
-# O artifact é publicado num passo YAML logo após gerar os ficheiros (não espera o fim da espera longa).
+# Um único artifact (upload-artifact@v4); o Summary não embute o QR (evita data URL gigante / divergência).
 
 name: Init WhatsApp (escanear QR)
 
@@ -79,39 +79,26 @@ jobs:
             exit 1
           fi
           echo "qr_generated=true" >> "$GITHUB_OUTPUT"
-          DATAURL=$(cat data/qr-url.txt | tr -d '\n')
 
           echo ""
           echo "=== Onde achar o QR nesta execução ==="
           echo "URL da run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          echo "1) Job init → Summary (imagem)  |  2) Passo seguinte → Artifacts → whatsapp-qr (zip, logo após este passo)"
+          echo "Artifacts (rodapé desta run) → **whatsapp-qr** (zip), publicado no passo seguinte."
           echo ""
 
           {
-            echo "## Onde ver o QR Code"
+            echo "## QR Code"
             echo ""
-            echo "### 1) Nesta página (mais rápido)"
-            echo "No **menu à esquerda** desta execução do workflow, clique no job **init**."
-            echo "Role a página do job: a **imagem do QR** deve aparecer abaixo (markdown com data URL)."
+            echo "Baixe o artifact **whatsapp-qr** (zip) no fim desta página (secção **Artifacts**)."
+            echo "Dentro: **qr.html** (abra no navegador) ou **qr-workflow.png** para escanear."
             echo ""
-            echo "### 2) Arquivo para abrir no navegador"
-            echo "O **próximo passo** publica o artifact **whatsapp-qr** (zip) — **não** precisa esperar o fim do job."
-            echo ""
-            echo "---"
-            echo ""
-            echo "### Imagem do QR"
-            echo ""
-            printf '![QR Code WhatsApp — escaneie em Aparelhos conectados](%s)\n' "$DATAURL"
-            echo ""
-            echo "---"
-            echo ""
-            echo "Depois disso o job **continua** até você escanear ou até ~4 min. Se o QR expirar no celular, use o artifact **final** (último passo) ou a imagem no Summary."
+            echo "Se o QR expirar antes de escanear, rode o workflow de novo (o WhatsApp renova o código)."
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "Gerando qr.html e PNG no workspace (1ª vez)..."
           rebuild_qr_files
 
-      - name: Publicar artifact whatsapp-qr (logo após gerar QR)
+      - name: Publicar artifact whatsapp-qr
         if: success() && hashFiles('qr.html') != ''
         uses: actions/upload-artifact@v4
         with:
@@ -159,14 +146,14 @@ jobs:
               [ -z "$s" ] && continue
               [ "$s" = "$LAST" ] && continue
               LAST="$s"
-              echo "::notice::QR renovado pelo WhatsApp; ficheiros no workspace atualizados (novo zip no passo final)."
+              echo "::notice::QR renovado pelo WhatsApp; baixe o artifact **whatsapp-qr** de novo ou rode o workflow se precisar do PNG atualizado."
               rebuild_qr_files || true
             done
           ) &
           WATCH_PID=$!
           trap 'kill "$WATCH_PID" 2>/dev/null || true' EXIT
 
-          echo "Aguardando escaneamento (até ~4 min). O QR pode renovar; o último zip reflete o estado no fim da espera."
+          echo "Aguardando escaneamento (até ~4 min). Se o QR renovar, use o artifact já baixado ou rode o workflow outra vez."
           for i in $(seq 1 24); do
             if ! kill -0 "$BOT_PID" 2>/dev/null; then
               kill "$WATCH_PID" 2>/dev/null || true
@@ -174,22 +161,9 @@ jobs:
               exit 0
             fi
             if [ $((i % 6)) -eq 0 ]; then
-              echo "⏳ Ainda aguardando (~$((i / 6)) min / 4). Se o QR expirou, baixe **whatsapp-qr** de novo no fim do job (use **qr-workflow.png** para escanear)."
+              echo "⏳ Ainda aguardando (~$((i / 6)) min / 4). Se o QR expirou, baixe o artifact **whatsapp-qr** de novo ou rode o workflow (use **qr-workflow.png**)."
             fi
             sleep 10
           done
           kill "$WATCH_PID" 2>/dev/null || true
           echo "Timeout de espera. Se já escaneou, a sessão pode estar no cache; teste o workflow agendado."
-
-      - name: Publicar artifact whatsapp-qr (estado final / QR renovado)
-        if: always() && hashFiles('qr.html') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: whatsapp-qr
-          path: |
-            qr.html
-            qr-workflow.html
-            qr-workflow.png
-            mb-ofertas/whatsapp-channel-bot/data/qr.png
-          if-no-files-found: warn
-          overwrite: true
