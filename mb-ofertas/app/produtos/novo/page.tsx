@@ -85,7 +85,7 @@ export default function NovoProdutoPage() {
       <div className="mb-8">
         <h1 className="page-title">Nova oferta</h1>
         <p className="page-subtitle">
-          Cadastre um produto manualmente. Depois você pode aprovar e gerar o conteúdo para post.
+          Cadastre um produto manualmente. Ele entra na fila do painel; depois você pode gerar o conteúdo para post.
         </p>
       </div>
 

@@ -315,7 +315,7 @@ export default function GerarOfertaPage() {
               >
                 {saving ? "Salvando…" : "Salvar oferta na lista"}
               </button>
-              <span className="text-sm text-stone-500">Salve para aprovar e usar em campanhas.</span>
+              <span className="text-sm text-stone-500">Salve para entrar na fila de ofertas do painel.</span>
             </div>
           </section>
 

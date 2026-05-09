@@ -92,6 +92,8 @@ export async function insertProduct(
 
 export async function listProducts(filters?: {
   status?: string;
+  /** Se definido, filtra por vários status (ex.: fila do painel: pending + approved). */
+  statuses?: string[];
   categoryId?: string;
   limit?: number;
   offset?: number;
@@ -102,7 +104,10 @@ export async function listProducts(filters?: {
   const params: unknown[] = [];
   let i = 1;
 
-  if (filters?.status) {
+  if (filters?.statuses?.length) {
+    conditions.push(`p.status = ANY($${i++}::varchar[])`);
+    params.push(filters.statuses);
+  } else if (filters?.status) {
     conditions.push(`p.status = $${i++}`);
     params.push(filters.status);
   }
@@ -163,12 +168,13 @@ export async function updateProductStatus(
   );
 }
 
-/** Remove o produto do banco (usado ao reprovar = tirar da lista). */
+/** Remove o produto do banco (uso administrativo; a fila do painel usa status rejected). */
 export async function deleteProduct(id: string): Promise<boolean> {
   const res = await query(`DELETE FROM products WHERE id = $1`, [id]);
   return (res.rowCount ?? 0) > 0;
 }
 
+/** Fila para o bot WhatsApp: pendentes (sem aprovação manual) e aprovados legados. */
 export async function getApprovedProducts(limit = 20, channelSlug?: string | null) {
   const slug = channelSlug?.trim() || null;
   const res = await query(
@@ -177,12 +183,12 @@ export async function getApprovedProducts(limit = 20, channelSlug?: string | nul
             c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE p.status = 'approved'
+     WHERE p.status IN ('pending', 'approved')
      AND ($1::text IS NULL OR $1 = '' OR c.slug = $1)
      ORDER BY
        (p.discount_pct IS NULL OR p.discount_pct <= 0) ASC,
        p.discount_pct DESC NULLS LAST,
-       p.approved_at DESC NULLS LAST
+       COALESCE(p.approved_at, p.created_at) DESC NULLS LAST
      LIMIT $2`,
     [slug, limit]
   );
@@ -190,19 +196,18 @@ export async function getApprovedProducts(limit = 20, channelSlug?: string | nul
 }
 
 /**
- * Exclui ofertas aprovadas há mais de X horas (timeout automático).
- * Retorna quantos foram excluídos.
+ * Ofertas aprovadas há mais de X horas sem uso: marca como rejeitadas (mantém linha para dedupe).
  */
 export async function expireApprovedOlderThanHours(hours: number): Promise<number> {
-  const res = await query<{ id: string }>(
-    `SELECT id FROM products
-     WHERE status = 'approved' AND approved_at IS NOT NULL AND approved_at < now() - ($1 || ' hours')::interval`,
+  const res = await query(
+    `UPDATE products
+     SET status = 'rejected', updated_at = now()
+     WHERE status = 'approved'
+     AND approved_at IS NOT NULL
+     AND approved_at < now() - ($1 || ' hours')::interval`,
     [hours]
   );
-  for (const row of res.rows) {
-    await query(`DELETE FROM products WHERE id = $1`, [row.id]);
-  }
-  return res.rows.length;
+  return res.rowCount ?? 0;
 }
 
 export async function updateProductCoupon(id: string, coupon: string | null): Promise<boolean> {

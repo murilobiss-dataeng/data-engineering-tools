@@ -124,14 +124,14 @@ export async function listShortLinkAnalytics(limit = 100): Promise<
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY sl.code,
          CASE
-           WHEN p.status = 'approved' AND sl.product_id IS NOT NULL AND p.id = sl.product_id THEN 0
-           WHEN p.status = 'approved' AND p.affiliate_link = sl.long_url THEN 1
-           WHEN p.status = 'approved' THEN 2
+           WHEN p.status IN ('pending', 'approved', 'sent') AND sl.product_id IS NOT NULL AND p.id = sl.product_id THEN 0
+           WHEN p.status IN ('pending', 'approved', 'sent') AND p.affiliate_link = sl.long_url THEN 1
+           WHEN p.status IN ('pending', 'approved', 'sent') THEN 2
            ELSE 3
          END,
          p.id NULLS LAST
      ) sub
-     WHERE sub.product_status = 'approved'
+     WHERE sub.product_status IN ('pending', 'approved', 'sent')
      ORDER BY sub.click_count DESC, sub.last_clicked_at DESC NULLS LAST, sub.created_at DESC
      LIMIT $1`,
     [limit]

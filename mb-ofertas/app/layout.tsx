@@ -40,22 +40,10 @@ export default function RootLayout({
                 Produtos
               </a>
               <a
-                href="/campanhas"
-                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
-              >
-                Campanhas
-              </a>
-              <a
                 href="/analytics"
                 className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-amber-50 hover:text-amber-800"
               >
                 Analytics
-              </a>
-              <a
-                href="/canais-whatsapp"
-                className="rounded-lg px-4 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-amber-50 hover:text-amber-800"
-              >
-                Canais WhatsApp
               </a>
               <LogoutButton />
             </nav>

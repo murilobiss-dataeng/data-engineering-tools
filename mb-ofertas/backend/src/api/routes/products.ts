@@ -66,11 +66,13 @@ export const productsRouter = Router();
 
 productsRouter.get("/", async (req, res) => {
   try {
-    const status = req.query.status as string | undefined;
+    const inQueue = String(req.query.inQueue ?? "") === "1" || String(req.query.inQueue ?? "") === "true";
+    const status = inQueue ? undefined : (req.query.status as string | undefined);
+    const statuses = inQueue ? (["pending", "approved"] as const) : undefined;
     const categoryId = req.query.categoryId as string | undefined;
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const offset = Number(req.query.offset) || 0;
-    const rows = await productsRepo.listProducts({ status, categoryId, limit, offset });
+    const rows = await productsRepo.listProducts({ status, statuses: statuses ? [...statuses] : undefined, categoryId, limit, offset });
     res.json({ products: rows.map(formatProductRow) });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -78,9 +80,8 @@ productsRouter.get("/", async (req, res) => {
 });
 
 /**
- * Feed para o bot WhatsApp (whatsapp-channel-bot): retorna produtos aprovados no formato
- * [{ title, text, url, imageUrl }]. O bot usa API_URL apontando para a base da API (ex. https://sua-api.onrender.com)
- * com path /api/products/feed.
+ * Feed para o bot WhatsApp: produtos na fila (pending ou approved legado), formato
+ * [{ title, text, url, imageUrl, id }]. Após enviar, POST /api/products/feed/mark-posted com id.
  */
 productsRouter.get("/feed", async (req, res) => {
   try {

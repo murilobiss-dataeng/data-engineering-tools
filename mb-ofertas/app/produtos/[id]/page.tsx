@@ -64,12 +64,12 @@ export default function ProductDetailPage() {
   async function handleEnviarParaWhatsApp() {
     const channel = channels.find((c) => c.id === selectedChannelId);
     if (!channel) {
-      alert("Selecione um canal. Cadastre em Canais WhatsApp.");
+      alert("Selecione um canal. Cadastre canais na API do backend (/api/whatsapp/channels).");
       return;
     }
     if (!channel.channel_link?.trim()) {
       alert(
-        "Para publicar no canal, configure o link do canal. Vá em Canais WhatsApp, edite este canal e preencha \"Link do canal\" (ex.: link do mb.OFERTAS)."
+        "Para publicar no canal, configure o campo \"Link do canal\" desse canal na API ou no banco (ex.: convite do canal público)."
       );
       return;
     }
@@ -88,15 +88,18 @@ export default function ProductDetailPage() {
     }
   }
 
-  async function handleExcluirOferta() {
-    if (!confirm("Excluir esta oferta? Ela será removida do banco (oferta temporária).")) return;
+  async function handleTirarDaFila() {
+    if (!confirm("Tirar esta oferta da fila? O registro permanece no sistema para não duplicar na busca.")) return;
     setExcluding(true);
     try {
-      await api(`/products/${id}`, { method: "DELETE" });
+      await api(`/products/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "rejected" }),
+      });
       router.push("/");
     } catch (e) {
       console.error(e);
-      alert("Erro ao excluir oferta.");
+      alert("Erro ao atualizar oferta.");
     } finally {
       setExcluding(false);
     }
@@ -115,6 +118,18 @@ export default function ProductDetailPage() {
       <a href="/" className="btn-ghost text-sm">
         ← Voltar aos produtos
       </a>
+
+      {product.status === "sent" && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+          Esta oferta já foi enviada ao WhatsApp pelo bot. Ela não aparece na lista principal, mas o registro permanece para evitar
+          duplicatas.
+        </div>
+      )}
+      {product.status === "rejected" && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700">
+          Esta oferta foi removida da fila. O registro permanece no sistema para não duplicar na busca automática.
+        </div>
+      )}
 
       <div className="card-flat">
         <div className="flex flex-col gap-6 sm:flex-row">
@@ -148,6 +163,7 @@ export default function ProductDetailPage() {
               <label className="text-sm text-stone-500">Alterar categoria:</label>
               <select
                 value={product.category_id ?? ""}
+                disabled={product.status !== "pending" && product.status !== "approved"}
                 onChange={async (e) => {
                   const categoryId = e.target.value || null;
                   try {
@@ -237,7 +253,7 @@ export default function ProductDetailPage() {
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
               title={
                 !channels.find((c) => c.id === selectedChannelId)?.channel_link?.trim()
-                  ? "Selecione um canal com link configurado (edite em Canais WhatsApp)"
+                  ? "Selecione um canal com \"Link do canal\" preenchido (configure na API ou no banco)"
                   : undefined
               }
             >
@@ -276,18 +292,16 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {product.status === "approved" && (
+      {(product.status === "pending" || product.status === "approved") && (
         <div className="rounded-xl border border-red-200 bg-red-50/50 p-4">
-          <p className="mb-2 text-sm text-stone-600">
-            Oferta temporária. Exclua quando não for mais usar ou ela será removida automaticamente após 24h.
-          </p>
+          <p className="mb-2 text-sm text-stone-600">Para retirar esta oferta da fila do painel (sem apagar o registro no banco):</p>
           <button
             type="button"
-            onClick={handleExcluirOferta}
+            onClick={handleTirarDaFila}
             disabled={excluding}
             className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
           >
-            {excluding ? "Excluindo…" : "Excluir oferta"}
+            {excluding ? "Atualizando…" : "Tirar da fila"}
           </button>
         </div>
       )}

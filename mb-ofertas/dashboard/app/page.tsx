@@ -12,7 +12,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     Promise.all([
-      api<{ products: Product[] }>("/products?limit=200"),
+      api<{ products: Product[] }>("/products?limit=200&inQueue=1"),
       api<{ categories: Category[] }>("/categories"),
     ])
       .then(([productsData, categoriesData]) => {
@@ -29,19 +29,6 @@ export default function ProductsPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-
-  async function updateStatus(id: string, status: "approved") {
-    try {
-      await api(`/products/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao atualizar");
-    }
-  }
 
   async function updateCategory(id: string, categoryId: string | null) {
     try {
@@ -72,13 +59,16 @@ export default function ProductsPage() {
   }
 
   async function rejectProduct(id: string) {
-    if (!confirm("Rejeitar e remover esta oferta?")) return;
+    if (!confirm("Tirar esta oferta da fila? O registro permanece no sistema.")) return;
     try {
-      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
+      await api(`/products/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "rejected" }),
+      });
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       console.error(e);
-      alert("Erro ao remover produto.");
+      alert("Erro ao atualizar oferta.");
     }
   }
 
@@ -90,7 +80,7 @@ export default function ProductsPage() {
         <div>
           <h2 className="text-xl font-semibold">Produtos (ofertas)</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Todos os itens numa lista. Cupom opcional na mensagem; rejeitar remove do sistema.
+            Fila do painel (não enviadas). Cupom opcional; rejeitar tira da fila e mantém o registro para dedupe.
           </p>
         </div>
       </div>
@@ -158,22 +148,12 @@ export default function ProductsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {p.status === "pending" && (
-                <button
-                  onClick={() => updateStatus(p.id, "approved")}
-                  className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-                >
-                  Aprovar
-                </button>
-              )}
-              {p.status !== "sent" && (
-                <button
-                  onClick={() => rejectProduct(p.id)}
-                  className="rounded bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                >
-                  Rejeitar
-                </button>
-              )}
+              <button
+                onClick={() => rejectProduct(p.id)}
+                className="rounded bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                Rejeitar
+              </button>
               <a
                 href={`/produtos/${p.id}`}
                 className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"

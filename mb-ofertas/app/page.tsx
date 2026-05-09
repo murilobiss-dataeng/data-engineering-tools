@@ -5,10 +5,10 @@ import { api, type Product, type Category } from "@/lib/api";
 import { ProductPriceBlock } from "@/components/ProductPriceBlock";
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "approved") return <span className="badge-approved">Aprovado</span>;
-  if (status === "rejected") return <span className="badge-rejected">Rejeitado</span>;
-  if (status === "sent") return <span className="rounded bg-stone-200 px-2 py-0.5 text-xs text-stone-700">Enviado</span>;
-  return <span className="badge-pending">Pendente</span>;
+  if (status === "pending" || status === "approved") {
+    return <span className="badge-pending">Na fila</span>;
+  }
+  return <span className="badge-pending">{status}</span>;
 }
 
 type FetchOfertasResult = { inserted: number; failed: number; totalUrls: number; message: string };
@@ -26,6 +26,7 @@ export default function ProductsPage() {
     const params = new URLSearchParams();
     if (categoryFilter) params.set("categoryId", categoryFilter);
     params.set("limit", "100");
+    params.set("inQueue", "1");
     return api<{ products: Product[] }>(`/products?${params.toString()}`)
       .then((data) => {
         const seen = new Set<string>();
@@ -81,29 +82,18 @@ export default function ProductsPage() {
     }
   }
 
-  async function updateStatus(id: string, status: "approved") {
+  /** Rejeitar = tira da fila do site; o registro continua no banco (evita duplicata na busca). */
+  async function rejectProduct(id: string) {
+    if (!confirm("Tirar esta oferta da fila? O registro permanece no sistema para não duplicar na busca.")) return;
     try {
       await api(`/products/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: "rejected" }),
       });
-      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
-    } catch (e) {
-      console.error(e);
-      const msg = e instanceof Error ? e.message : "Erro ao atualizar";
-      alert(msg);
-    }
-  }
-
-  /** Rejeitar = apagar o produto do banco. */
-  async function rejectProduct(id: string) {
-    if (!confirm("Rejeitar e remover esta oferta do sistema?")) return;
-    try {
-      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       console.error(e);
-      alert("Erro ao remover produto.");
+      alert("Erro ao atualizar oferta.");
     }
   }
 
@@ -160,8 +150,8 @@ export default function ProductsPage() {
         <div>
           <h1 className="page-title">Produtos (ofertas)</h1>
           <p className="page-subtitle">
-            Lista única com todos os produtos. Defina um cupom (opcional) ou rejeite a oferta. Cadastre manualmente ou busque por URL
-            da Amazon/Mercado Livre.
+            Só aparecem ofertas na fila (ainda não enviadas ao WhatsApp pelo bot). Cupom opcional; rejeitar tira da fila e mantém o
+            registro para não duplicar. Cadastre manualmente ou busque por URL da Amazon/Mercado Livre.
           </p>
         </div>
         <a href="/produtos/novo" className="btn-primary">
@@ -258,7 +248,7 @@ export default function ProductsPage() {
                 installment_unit_price={p.installment_unit_price}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-stone-500">Status:</span>
+                <span className="text-xs text-stone-500">Fila:</span>
                 <StatusBadge status={p.status} />
                 <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                   {p.category_name ?? "Sem categoria"}
@@ -300,25 +290,6 @@ export default function ProductsPage() {
             </div>
             <div className="flex flex-col gap-2 sm:items-end">
               <div className="flex flex-wrap justify-end gap-2">
-              {p.status === "pending" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => updateStatus(p.id, "approved")}
-                    className="btn-primary text-sm"
-                  >
-                    Aprovar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => rejectProduct(p.id)}
-                    className="btn-secondary text-sm"
-                  >
-                    Rejeitar
-                  </button>
-                </>
-              )}
-              {p.status === "approved" && (
                 <button
                   type="button"
                   onClick={() => rejectProduct(p.id)}
@@ -326,10 +297,9 @@ export default function ProductsPage() {
                 >
                   Rejeitar
                 </button>
-              )}
-              <a href={`/produtos/${p.id}`} className="btn-secondary text-sm">
-                Ver / Gerar post
-              </a>
+                <a href={`/produtos/${p.id}`} className="btn-secondary text-sm">
+                  Ver / Gerar post
+                </a>
               </div>
             </div>
           </li>

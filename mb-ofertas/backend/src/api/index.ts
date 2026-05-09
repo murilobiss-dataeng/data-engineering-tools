@@ -68,7 +68,7 @@ function runExpiryJob() {
   return productsRepo
     .expireApprovedOlderThanHours(env.OFFER_EXPIRY_HOURS)
     .then((deleted) => {
-      if (deleted > 0) logger.info({ deleted, hours: env.OFFER_EXPIRY_HOURS }, "Ofertas expiradas (timeout)");
+      if (deleted > 0) logger.info({ deleted, hours: env.OFFER_EXPIRY_HOURS }, "Ofertas expiradas (marcadas como rejeitadas)");
     })
     .catch((err) => logger.error({ err }, "Erro ao expirar ofertas"));
 }
