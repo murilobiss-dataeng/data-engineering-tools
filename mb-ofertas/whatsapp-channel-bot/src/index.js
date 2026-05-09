@@ -209,8 +209,17 @@ async function start() {
       return s.length > 0;
     };
     const inviteCode = (v) => {
-      const s = (v || "").trim();
-      const m = s.match(/whatsapp\.com\/channel\/([A-Za-z0-9_-]+)/);
+      let s = (v || "").trim().replace(/^["']+|["']+$/g, "").trim();
+      if (!s) return s;
+      try {
+        if (/^https?:\/\//i.test(s)) {
+          const u = new URL(s);
+          const parts = u.pathname.split("/").filter(Boolean);
+          const idx = parts.indexOf("channel");
+          if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
+        }
+      } catch (_) {}
+      const m = s.match(/whatsapp\.com\/channel\/([^/?#\s]+)/i);
       return m ? m[1] : s;
     };
 

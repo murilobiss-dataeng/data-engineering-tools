@@ -34,6 +34,18 @@ function buildMarkPostedUrl(feedOrApiUrl) {
 }
 
 /**
+ * Um ou vários destinos: separados por vírgula, ponto e vírgula ou quebra de linha (útil em secrets do GitHub).
+ * Remove aspas acidentais em volta do valor.
+ */
+function parseChatIdsFromEnv() {
+  const raw = process.env.CHAT_ID || "";
+  return raw
+    .split(/[\n,;]+/)
+    .map((s) => s.trim().replace(/^["']+|["']+$/g, "").trim())
+    .filter(Boolean);
+}
+
+/**
  * Configuração via variáveis de ambiente.
  */
 export const config = {
@@ -50,11 +62,8 @@ export const config = {
   get markPostedUrl() {
     return buildMarkPostedUrl(this.feedUrl || this.apiUrl);
   },
-  /** ID do canal (ex.: 120363405814099508@newsletter). Única variável de destino. */
-  chatIds: (() => {
-    const id = (process.env.CHAT_ID || "").trim();
-    return id ? [id] : [];
-  })(),
+  /** IDs dos canais/chats (ex.: 120363405814099508@newsletter). CHAT_ID pode listar vários separados por vírgula ou linha. */
+  chatIds: parseChatIdsFromEnv(),
   /** Intervalo em minutos entre cada verificação */
   cronIntervalMinutes: Math.max(1, parseInt(process.env.CRON_INTERVAL_MINUTES || "10", 10)),
   /** Pasta para sessão (LocalAuth) e arquivo de enviados */

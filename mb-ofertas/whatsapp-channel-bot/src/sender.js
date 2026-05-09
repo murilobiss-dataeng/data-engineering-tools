@@ -30,11 +30,36 @@ async function downloadImageAsMedia(imageUrl) {
   return new MessageMedia(mimetype, base64);
 }
 
-/** Extrai o código de convite do canal a partir da URL ou devolve o valor se já for código/ID. */
+/** Extrai o código de convite / pathname do canal a partir da URL ou devolve o valor já normalizado. */
 function normalizeChatId(value) {
-  const s = (value || "").trim();
-  const match = s.match(/whatsapp\.com\/channel\/([A-Za-z0-9_-]+)/);
-  return match ? match[1] : s;
+  let s = (value || "").trim().replace(/^["']+|["']+$/g, "").trim();
+  if (!s) return "";
+  try {
+    if (/^https?:\/\//i.test(s)) {
+      const u = new URL(s);
+      const parts = u.pathname.split("/").filter(Boolean);
+      const idx = parts.indexOf("channel");
+      if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
+    }
+  } catch {
+    /* fallback abaixo */
+  }
+  const match = s.match(/whatsapp\.com\/channel\/([^/?#\s]+)/i);
+  if (match) return match[1];
+  return s;
+}
+
+/** ID serializado para sendMessage (whatsapp-web.js usa string ou objeto com _serialized). */
+function serializeWhatsAppId(chatOrChannel) {
+  if (!chatOrChannel) return null;
+  if (typeof chatOrChannel === "string" && /@/.test(chatOrChannel)) return chatOrChannel;
+  const ch = chatOrChannel;
+  const fromObj =
+    ch.id?._serialized ||
+    (typeof ch.id === "string" && ch.id.includes("@") ? ch.id : null) ||
+    ch._serialized ||
+    (typeof ch.chatId === "string" && ch.chatId.includes("@") ? ch.chatId : null);
+  return fromObj || null;
 }
 
 /** Retorna true se o valor parece ID interno (ex.: 120363xxx@g.us). */
@@ -59,7 +84,8 @@ async function getChatOrChannel(client, rawId) {
 
 /** Obtém o ID serializado para envio (client.sendMessage). Se chat for undefined mas rawId for ID interno, usa rawId. */
 function getSendableChatId(chat, rawId) {
-  if (chat?.id?._serialized) return chat.id._serialized;
+  const serialized = serializeWhatsAppId(chat);
+  if (serialized) return serialized;
   const normalized = normalizeChatId(rawId);
   if (isInternalChatId(normalized)) return normalized;
   return null;

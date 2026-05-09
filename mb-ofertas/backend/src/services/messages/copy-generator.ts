@@ -11,13 +11,13 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
-/** Bloco de preços: cheio (se houver), à vista, parcelado (até Nx ou texto da loja). */
+/** Bloco de preços: cheio (se houver), valor à vista, valor parcelado (até Nx ou texto da loja). */
 function appendPriceLines(lines: string[], product: ProductInput): void {
   const hasFull = product.previousPrice != null && product.previousPrice > product.price;
   if (hasFull) {
     lines.push(`Preço cheio: ${formatPrice(product.previousPrice!)}`);
   }
-  lines.push(`À vista: ${formatPrice(product.price)}`);
+  lines.push(`Valor à vista: ${formatPrice(product.price)}`);
 
   const structured =
     product.installmentMaxTimes != null &&
@@ -27,14 +27,14 @@ function appendPriceLines(lines: string[], product: ProductInput): void {
 
   if (structured) {
     lines.push(
-      `Até ${product.installmentMaxTimes}x de ${formatPrice(product.installmentUnitPrice!)} (parcelado)`
+      `Valor parcelado: até ${product.installmentMaxTimes}x de ${formatPrice(product.installmentUnitPrice!)}`
     );
   } else if (product.installments?.trim()) {
-    lines.push(product.installments.trim());
+    lines.push(`Valor parcelado: ${product.installments.trim()}`);
   }
 
   if (hasFull && product.discountPct != null && product.discountPct > 0) {
-    lines.push(`${product.discountPct}% OFF no à vista`);
+    lines.push(`${product.discountPct}% OFF no valor à vista`);
   }
 }
 
