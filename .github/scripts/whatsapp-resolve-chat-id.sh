@@ -3,20 +3,21 @@
 # shellcheck disable=SC2034
 
 # Canal: health | tech | ofertas | faith
-# Ordem: CHAT_ID_ALL (linhas mb.CANAL: ou canal:) → CHAT_ID_HEALTH… → CHAT_IDS (health,tech,ofertas,faith).
+# Ordem: secrets por canal (CHAT_ID_HEALTH…) primeiro → CHAT_ID_ALL → CHAT_IDS.
+# CHAT_ID_ALL com só link/código de convite (0029…) não substitui um ID ...@newsletter explícito no canal.
 resolve_chat_id_for_channel() {
   local ch="$1"
   local id=""
-  if [ -n "${CHAT_ID_ALL:-}" ]; then
+  case "$ch" in
+    health) id="${CHAT_ID_HEALTH:-}" ;;
+    tech) id="${CHAT_ID_TECH:-}" ;;
+    ofertas) id="${CHAT_ID_OFERTAS:-}" ;;
+    faith) id="${CHAT_ID_FAITH:-}" ;;
+  esac
+  id=$(echo "$id" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+  if [ -z "$id" ] && [ -n "${CHAT_ID_ALL:-}" ]; then
     id=$(printf '%s\n' "$CHAT_ID_ALL" | grep -iE "^[[:space:]]*(mb\.)?${ch}[[:space:]]*:" | head -1 | sed -E 's/^[^:]*:[[:space:]]*//' | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  fi
-  if [ -z "$id" ]; then
-    case "$ch" in
-      health) id="${CHAT_ID_HEALTH:-}" ;;
-      tech) id="${CHAT_ID_TECH:-}" ;;
-      ofertas) id="${CHAT_ID_OFERTAS:-}" ;;
-      faith) id="${CHAT_ID_FAITH:-}" ;;
-    esac
   fi
   if [ -z "$id" ] && [ -n "${CHAT_IDS:-}" ]; then
     local idx=1
@@ -31,7 +32,7 @@ resolve_chat_id_for_channel() {
   printf '%s' "$id"
 }
 
-# Init / QR: qualquer ID válido para o bot listar canais (prioriza CHAT_ID → CHAT_ID_ALL → HEALTH → 1º CHAT_IDS).
+# Init / QR: qualquer ID válido para o bot listar canais (prioriza CHAT_ID → CHAT_ID_ALL com @ → HEALTH → 1º CHAT_IDS).
 resolve_chat_id_for_init() {
   local id=""
   if [ -n "${CHAT_ID:-}" ]; then

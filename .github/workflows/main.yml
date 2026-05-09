@@ -1,15 +1,12 @@
 # Envia produtos aprovados por canal (slug da categoria) para o WhatsApp.
-# Um único job percorre health → tech → ofertas → faith em sequência,
-# reutilizando a mesma sessão (sem corrida no cache do LocalAuth).
 #
 # Secrets:
-#   API_URL — ex.: https://sua-api.onrender.com/api/products/feed (sem query; o bot usa ?channelSlug= por canal)
-#   CHAT_ID_ALL — opcional: várias linhas "mb.health: 1203...@newsletter" (ou tech, ofertas, faith); tem prioridade por canal
-#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH — fallback por canal
-#   CHAT_IDS — opcional: quatro IDs separados por vírgula na ordem health,tech,ofertas,faith
-#   Canais sem ID ficam de fora (mensagem no log).
+#   API_URL — feed da API (sem query; o bot usa ?channelSlug= por canal)
+#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH — preferencial: ID ...@newsletter por canal
+#   CHAT_ID_ALL — fallback opcional (multilinha mb.health: …). Links só com código 0029… podem falhar; use @newsletter quando possível
+#   CHAT_IDS — fallback: quatro IDs separados por vírgula (health,tech,ofertas,faith)
 #
-# Primeira vez: workflow "Init WhatsApp (escanear QR)".
+# Jobs por canal (matrix) com max-parallel: 1 — uma única sessão LocalAuth; paralelo real quebraria o cache/sessão.
 
 name: WhatsApp Bot (postar ofertas)
 
@@ -21,9 +18,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  send:
+  session-check:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.chk.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: mb-ofertas/whatsapp-channel-bot/data
+          key: whatsapp-session-${{ runner.os }}-v1
+      - id: chk
+        run: |
+          if [ -d mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth ] && [ -n "$(ls -A mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth 2>/dev/null)" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  send-channel:
+    needs: session-check
+    if: needs.session-check.outputs.ok == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        channel: [health, tech, ofertas, faith]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,23 +64,13 @@ jobs:
           cd mb-ofertas/whatsapp-channel-bot
           npm install
 
-      - name: Verificar patch getLastMsgKeyForAction
+      - name: Verificar patch canal / WhatsApp Web
         run: |
           cd mb-ofertas/whatsapp-channel-bot
-          grep -q "getLastMsgKeyForAction" node_modules/whatsapp-web.js/src/util/Injected/Utils.js && echo "Patch do canal aplicado." || echo "::warning::Patch do canal não encontrado em Utils.js"
+          grep -q "getLastMsgKeyForAction" node_modules/whatsapp-web.js/src/util/Injected/Utils.js && echo "Patch newsletter OK."
+          grep -q "roleFromInvite" node_modules/whatsapp-web.js/src/util/Injected/Utils.js && echo "Patch getRoleByIdentifier OK."
 
-      - name: Verificar sessão (rodar Init se não existir)
-        id: session
-        run: |
-          cd mb-ofertas/whatsapp-channel-bot
-          if [ -d data/.wwebjs_auth ] && [ -n "$(ls -A data/.wwebjs_auth 2>/dev/null)" ]; then
-            echo "session_ok=true" >> $GITHUB_OUTPUT
-          else
-            echo "session_ok=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Rodar bot (single-run) por canal
-        if: steps.session.outputs.session_ok == 'true'
+      - name: Rodar bot — canal ${{ matrix.channel }}
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
@@ -71,19 +83,21 @@ jobs:
           set -e
           # shellcheck source=/dev/null
           source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
+          CHAT_ID="$(resolve_chat_id_for_channel "${{ matrix.channel }}")"
+          if [ -z "$CHAT_ID" ]; then
+            echo "::notice::CHAT_ID não configurado para ${{ matrix.channel }} — ignorando."
+            exit 0
+          fi
+          echo "::notice::CHANNEL_SLUG=${{ matrix.channel }} (use secrets CHAT_ID_* com ...@newsletter)"
           cd mb-ofertas/whatsapp-channel-bot
-          for channel in health tech ofertas faith; do
-            CHAT_ID="$(resolve_chat_id_for_channel "$channel")"
-            if [ -z "$CHAT_ID" ]; then
-              echo "::notice::CHAT_ID não configurado para o canal $channel — ignorando (CHAT_ID_ALL / CHAT_ID_* / CHAT_IDS)."
-              continue
-            fi
-            export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true
-            node src/index.js
-          done
+          export CHAT_ID CHANNEL_SLUG="${{ matrix.channel }}" SINGLE_RUN=true GITHUB_ACTIONS=true
+          node src/index.js
 
-      - name: Sessão não encontrada
-        if: steps.session.outputs.session_ok != 'true'
-        run: |
-          echo "::error::Nenhuma sessão do WhatsApp no cache. Rode o workflow **Init WhatsApp (escanear QR)** uma vez, escaneie o QR e depois este job voltará a funcionar."
+  no-session:
+    needs: session-check
+    if: needs.session-check.outputs.ok != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Nenhuma sessão do WhatsApp no cache. Rode **Init WhatsApp (escanear QR)** uma vez."
           exit 1

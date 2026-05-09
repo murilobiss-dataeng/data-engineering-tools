@@ -1,7 +1,5 @@
-# Monorepo data-engineering-tools: prefira `.github/workflows/main.yml` na raiz (cron + push).
-# Este arquivo é workflow_dispatch com os mesmos secrets.
-#
-# Secrets: API_URL, CHAT_ID_ALL (linhas mb.health: id@…), CHAT_ID_HEALTH/TECH/OFERTAS/FAITH, CHAT_IDS (4 IDs por vírgula), CHAT_ID (opcional).
+# workflow_dispatch — mesmo comportamento que `.github/workflows/main.yml` (matrix por canal).
+# Monorepo: paths em mb-ofertas/...
 
 name: WhatsApp Bot (postar ofertas) — mb-ofertas
 
@@ -9,9 +7,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  send:
+  session-check:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.chk.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: mb-ofertas/whatsapp-channel-bot/data
+          key: whatsapp-session-${{ runner.os }}-v1
+      - id: chk
+        run: |
+          if [ -d mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth ] && [ -n "$(ls -A mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth 2>/dev/null)" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  send-channel:
+    needs: session-check
+    if: needs.session-check.outputs.ok == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        channel: [health, tech, ofertas, faith]
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -21,7 +45,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Instalar e rodar por canal
+
+      - name: Instalar dependências do bot
+        run: |
+          cd mb-ofertas/whatsapp-channel-bot
+          npm install
+
+      - name: Rodar bot — ${{ matrix.channel }}
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
@@ -34,14 +64,20 @@ jobs:
           set -e
           # shellcheck source=/dev/null
           source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
+          CHAT_ID="$(resolve_chat_id_for_channel "${{ matrix.channel }}")"
+          if [ -z "$CHAT_ID" ]; then
+            echo "::notice::Sem CHAT_ID para ${{ matrix.channel }} — ignorando."
+            exit 0
+          fi
           cd mb-ofertas/whatsapp-channel-bot
-          npm install
-          for channel in health tech ofertas faith; do
-            CHAT_ID="$(resolve_chat_id_for_channel "$channel")"
-            if [ -z "$CHAT_ID" ]; then
-              echo "::notice::Pulando $channel (sem CHAT_ID em CHAT_ID_ALL / CHAT_ID_* / CHAT_IDS)"
-              continue
-            fi
-            export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true
-            node src/index.js || echo "::warning::Falha no canal $channel"
-          done
+          export CHAT_ID CHANNEL_SLUG="${{ matrix.channel }}" SINGLE_RUN=true GITHUB_ACTIONS=true
+          node src/index.js || echo "::warning::Falha no canal ${{ matrix.channel }}"
+
+  no-session:
+    needs: session-check
+    if: needs.session-check.outputs.ok != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Sem sessão WhatsApp no cache. Rode Init WhatsApp (escanear QR)."
+          exit 1
