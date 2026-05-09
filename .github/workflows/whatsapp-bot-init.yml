@@ -37,10 +37,16 @@ jobs:
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
+          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
+          CHAT_IDS: ${{ secrets.CHAT_IDS }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
         run: |
           set -e
+          # shellcheck source=/dev/null
+          source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
+          export CHAT_ID="$(resolve_chat_id_for_init)"
           cd mb-ofertas/whatsapp-channel-bot
           if [ -d data ]; then
             find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
@@ -115,10 +121,16 @@ jobs:
         env:
           API_URL: ${{ secrets.API_URL }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
+          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
+          CHAT_IDS: ${{ secrets.CHAT_IDS }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
         run: |
           set -e
+          # shellcheck source=/dev/null
+          source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
+          export CHAT_ID="$(resolve_chat_id_for_init)"
           cd mb-ofertas/whatsapp-channel-bot
           BOT_PID="$(cat "$GITHUB_WORKSPACE/.whatsapp_bot_pid")"
           if ! kill -0 "$BOT_PID" 2>/dev/null; then

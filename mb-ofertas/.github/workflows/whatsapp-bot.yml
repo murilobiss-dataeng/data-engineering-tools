@@ -1,6 +1,7 @@
-# Espelho do workflow na raiz do monorepo: use `.github/workflows/main.yml` se o repositório
-# for a pasta `data-engineering-tools`. Este arquivo existe para quem abre só o subpasta mb-ofertas.
-# Ajuste os paths `cd` se a estrutura do seu clone for diferente.
+# Monorepo data-engineering-tools: prefira `.github/workflows/main.yml` na raiz (cron + push).
+# Este arquivo é workflow_dispatch com os mesmos secrets.
+#
+# Secrets: API_URL, CHAT_ID_ALL (linhas mb.health: id@…), CHAT_ID_HEALTH/TECH/OFERTAS/FAITH, CHAT_IDS (4 IDs por vírgula), CHAT_ID (opcional).
 
 name: WhatsApp Bot (postar ofertas) — mb-ofertas
 
@@ -15,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
         with:
-          path: whatsapp-channel-bot/data
+          path: mb-ofertas/whatsapp-channel-bot/data
           key: whatsapp-session-${{ runner.os }}-v1
       - uses: actions/setup-node@v4
         with:
@@ -23,18 +24,22 @@ jobs:
       - name: Instalar e rodar por canal
         env:
           API_URL: ${{ secrets.API_URL }}
+          CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
+          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
+          CHAT_ID_TECH: ${{ secrets.CHAT_ID_TECH }}
+          CHAT_ID_OFERTAS: ${{ secrets.CHAT_ID_OFERTAS }}
+          CHAT_ID_FAITH: ${{ secrets.CHAT_ID_FAITH }}
+          CHAT_IDS: ${{ secrets.CHAT_IDS }}
         run: |
-          cd whatsapp-channel-bot
+          set -e
+          # shellcheck source=/dev/null
+          source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
+          cd mb-ofertas/whatsapp-channel-bot
           npm install
           for channel in health tech ofertas faith; do
-            case "$channel" in
-              health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
-              tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
-              ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
-              faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
-            esac
+            CHAT_ID="$(resolve_chat_id_for_channel "$channel")"
             if [ -z "$CHAT_ID" ]; then
-              echo "Pulando $channel (sem CHAT_ID)"
+              echo "::notice::Pulando $channel (sem CHAT_ID em CHAT_ID_ALL / CHAT_ID_* / CHAT_IDS)"
               continue
             fi
             export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true

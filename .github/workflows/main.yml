@@ -4,8 +4,10 @@
 #
 # Secrets:
 #   API_URL — ex.: https://sua-api.onrender.com/api/products/feed (sem query; o bot usa ?channelSlug= por canal)
-#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH — ID do canal (ex.: 120363405814099508@newsletter)
-#   Canais sem secret ficam de fora (mensagem no log).
+#   CHAT_ID_ALL — opcional: várias linhas "mb.health: 1203...@newsletter" (ou tech, ofertas, faith); tem prioridade por canal
+#   CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH — fallback por canal
+#   CHAT_IDS — opcional: quatro IDs separados por vírgula na ordem health,tech,ofertas,faith
+#   Canais sem ID ficam de fora (mensagem no log).
 #
 # Primeira vez: workflow "Init WhatsApp (escanear QR)".
 
@@ -59,17 +61,21 @@ jobs:
         if: steps.session.outputs.session_ok == 'true'
         env:
           API_URL: ${{ secrets.API_URL }}
+          CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
+          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
+          CHAT_ID_TECH: ${{ secrets.CHAT_ID_TECH }}
+          CHAT_ID_OFERTAS: ${{ secrets.CHAT_ID_OFERTAS }}
+          CHAT_ID_FAITH: ${{ secrets.CHAT_ID_FAITH }}
+          CHAT_IDS: ${{ secrets.CHAT_IDS }}
         run: |
+          set -e
+          # shellcheck source=/dev/null
+          source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
           cd mb-ofertas/whatsapp-channel-bot
           for channel in health tech ofertas faith; do
-            case "$channel" in
-              health) CHAT_ID="${{ secrets.CHAT_ID_HEALTH }}" ;;
-              tech) CHAT_ID="${{ secrets.CHAT_ID_TECH }}" ;;
-              ofertas) CHAT_ID="${{ secrets.CHAT_ID_OFERTAS }}" ;;
-              faith) CHAT_ID="${{ secrets.CHAT_ID_FAITH }}" ;;
-            esac
+            CHAT_ID="$(resolve_chat_id_for_channel "$channel")"
             if [ -z "$CHAT_ID" ]; then
-              echo "::notice::CHAT_ID não configurado para o canal $channel — ignorando."
+              echo "::notice::CHAT_ID não configurado para o canal $channel — ignorando (CHAT_ID_ALL / CHAT_ID_* / CHAT_IDS)."
               continue
             fi
             export CHAT_ID CHANNEL_SLUG="$channel" SINGLE_RUN=true GITHUB_ACTIONS=true
