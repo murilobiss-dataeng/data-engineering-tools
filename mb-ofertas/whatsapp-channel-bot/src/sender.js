@@ -7,6 +7,19 @@ import { loadSentIds, markAsSent, postKey } from "./storage.js";
 import { markPostAsPosted } from "./api.js";
 import { config } from "./config.js";
 
+/** Remove duplicatas na mesma execução (mesma chave = mesmo post). */
+function dedupePostsByKey(posts) {
+  const seen = new Set();
+  const out = [];
+  for (const p of posts) {
+    const k = postKey(p);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(p);
+  }
+  return out;
+}
+
 /** URL da imagem: aceita imageUrl, image_url ou image (formato da API). */
 function getImageUrl(post) {
   const url = post.imageUrl ?? post.image_url ?? post.image ?? "";
@@ -276,12 +289,13 @@ export async function sendPost(client, post) {
  */
 export async function processPosts(client, posts) {
   const delayMs = config.delayBetweenPostsMinutes * 60 * 1000;
+  const queue = dedupePostsByKey(posts);
   let sentCount = 0;
-  for (let i = 0; i < posts.length; i++) {
-    const ok = await sendPost(client, posts[i]);
+  for (let i = 0; i < queue.length; i++) {
+    const ok = await sendPost(client, queue[i]);
     if (ok) {
       sentCount++;
-      if (delayMs > 0 && i < posts.length - 1) {
+      if (delayMs > 0 && i < queue.length - 1) {
         logger.info(`Aguardando ${config.delayBetweenPostsMinutes} min antes do próximo envio...`);
         await new Promise((r) => setTimeout(r, delayMs));
       }

@@ -47,6 +47,8 @@ export type Product = {
   category_id?: string | null;
   category_name?: string | null;
   category_slug?: string | null;
+  /** Cupom salvo (mensagem WhatsApp). */
+  coupon?: string | null;
 };
 
 export type Campaign = {

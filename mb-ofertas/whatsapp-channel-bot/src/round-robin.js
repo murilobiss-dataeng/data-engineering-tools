@@ -10,6 +10,7 @@ import {
   resolveDestinationChatId,
   isNewsletterJidResolved,
 } from "./sender.js";
+import { loadSentIds, postKey } from "./storage.js";
 
 export const ROUND_ROBIN_SLUGS = ["health", "tech", "ofertas", "faith"];
 
@@ -72,6 +73,25 @@ export async function runRoundRobinJob(client) {
     lists[slug] = posts;
     indices[slug] = 0;
     logger.info(`Rodízio: fila ${slug} — ${posts.length} post(s).`);
+  }
+
+  /** Já enviados (disco) + mesma oferta só no 1º canal na ordem health→tech→ofertas→faith. */
+  const dedupeKeys = new Set(loadSentIds(config.dataPath));
+  for (const slug of ROUND_ROBIN_SLUGS) {
+    const raw = lists[slug];
+    if (!Array.isArray(raw)) continue;
+    const next = [];
+    for (const post of raw) {
+      const k = postKey(post);
+      if (dedupeKeys.has(k)) continue;
+      dedupeKeys.add(k);
+      next.push(post);
+    }
+    lists[slug] = next;
+    indices[slug] = 0;
+    if (next.length !== raw.length) {
+      logger.info(`Rodízio: fila ${slug} após deduplicação — ${next.length} post(s) (removidos duplicados ou já enviados).`);
+    }
   }
 
   for (const slug of ROUND_ROBIN_SLUGS) {

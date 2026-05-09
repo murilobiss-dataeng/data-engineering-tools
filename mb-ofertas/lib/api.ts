@@ -51,6 +51,8 @@ export type Product = {
   installment_max_times?: number | null;
   /** Valor de cada parcela. */
   installment_unit_price?: string | null;
+  /** Cupom salvo (aparece na mensagem WhatsApp). */
+  coupon?: string | null;
 };
 
 export type Campaign = {

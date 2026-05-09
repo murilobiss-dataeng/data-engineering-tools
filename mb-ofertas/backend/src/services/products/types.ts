@@ -16,6 +16,8 @@ export type ProductInput = {
   installmentMaxTimes?: number | null;
   /** Valor de cada parcela nessa condição. */
   installmentUnitPrice?: number | null;
+  /** Cupom para exibir na copy (WhatsApp). */
+  coupon?: string | null;
 };
 
 export type ProductCaptureResult = {

@@ -117,6 +117,14 @@ BEGIN
   END IF;
 END $$;
 
+-- Cupom opcional (ex.: para linha CUPOM: na mensagem WhatsApp)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'coupon') THEN
+    ALTER TABLE products ADD COLUMN coupon TEXT;
+  END IF;
+END $$;
+
 -- Canais WhatsApp: phone = número (wa.me) ou channel_link = link do canal público (ex.: mb.OFERTAS)
 CREATE TABLE IF NOT EXISTS whatsapp_channels (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

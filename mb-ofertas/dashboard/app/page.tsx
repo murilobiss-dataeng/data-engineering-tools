@@ -8,20 +8,27 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("pending");
+  const [couponDraft, setCouponDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     Promise.all([
-      api<{ products: Product[] }>(`/products?status=${filter}&limit=100`),
+      api<{ products: Product[] }>("/products?limit=200"),
       api<{ categories: Category[] }>("/categories"),
     ])
       .then(([productsData, categoriesData]) => {
         setProducts(productsData.products);
         setCategories(categoriesData.categories);
+        setCouponDraft((prev) => {
+          const next = { ...prev };
+          for (const p of productsData.products) {
+            if (next[p.id] === undefined && p.coupon) next[p.id] = p.coupon;
+          }
+          return next;
+        });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [filter]);
+  }, []);
 
   async function updateStatus(id: string, status: "approved") {
     try {
@@ -49,9 +56,23 @@ export default function ProductsPage() {
     }
   }
 
-  /** Reprovar = apagar o produto do banco e tirar da lista. */
+  async function saveCoupon(id: string) {
+    const raw = (couponDraft[id] ?? "").trim();
+    try {
+      const updated = await api<Product>(`/products/${id}/coupon`, {
+        method: "PATCH",
+        body: JSON.stringify({ coupon: raw || null }),
+      });
+      setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      setCouponDraft((prev) => ({ ...prev, [id]: updated.coupon ?? "" }));
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar cupom.");
+    }
+  }
+
   async function rejectProduct(id: string) {
-    if (!confirm("Tirar este produto da lista? Ele será apagado do banco.")) return;
+    if (!confirm("Rejeitar e remover esta oferta?")) return;
     try {
       await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -66,23 +87,18 @@ export default function ProductsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Produtos (ofertas)</h2>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm"
-        >
-          <option value="">Todos</option>
-          <option value="pending">Pendentes</option>
-          <option value="approved">Aprovados</option>
-          <option value="rejected">Rejeitados</option>
-        </select>
+        <div>
+          <h2 className="text-xl font-semibold">Produtos (ofertas)</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Todos os itens numa lista. Cupom opcional na mensagem; rejeitar remove do sistema.
+          </p>
+        </div>
       </div>
 
       <ul className="space-y-4">
         {products.length === 0 && (
           <li className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">
-            Nenhum produto encontrado. Rode o pipeline de captura ou cadastre manualmente.
+            Nenhum produto encontrado.
           </li>
         )}
         {products.map((p) => (
@@ -111,35 +127,52 @@ export default function ProductsPage() {
               <p className="mt-1 text-xs text-slate-400">
                 Status: {p.status} {p.category_slug ? `• Categoria: ${p.category_slug}` : ""}
               </p>
+              <select
+                value={p.category_id || ""}
+                onChange={(e) => updateCategory(p.id, e.target.value || null)}
+                className="mt-2 rounded border border-slate-300 px-3 py-1.5 text-sm"
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-2 flex max-w-lg flex-wrap items-center gap-2">
+                <label className="text-xs text-slate-600">Cupom</label>
+                <input
+                  type="text"
+                  className="min-w-[8rem] flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                  placeholder="Opcional"
+                  value={couponDraft[p.id] !== undefined ? couponDraft[p.id] : (p.coupon ?? "")}
+                  onChange={(e) => setCouponDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => saveCoupon(p.id)}
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs hover:bg-slate-50"
+                >
+                  Salvar cupom
+                </button>
+              </div>
             </div>
-            <select
-              value={p.category_id || ""}
-              onChange={(e) => updateCategory(p.id, e.target.value || null)}
-              className="rounded border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              <option value="">Sem categoria</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {p.status === "pending" && (
-                <>
-                  <button
-                    onClick={() => updateStatus(p.id, "approved")}
-                    className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-                  >
-                    Aprovar
-                  </button>
-                  <button
-                    onClick={() => rejectProduct(p.id)}
-                    className="rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-300"
-                  >
-                    Reprovar
-                  </button>
-                </>
+                <button
+                  onClick={() => updateStatus(p.id, "approved")}
+                  className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  Aprovar
+                </button>
+              )}
+              {p.status !== "sent" && (
+                <button
+                  onClick={() => rejectProduct(p.id)}
+                  className="rounded bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                >
+                  Rejeitar
+                </button>
               )}
               <a
                 href={`/produtos/${p.id}`}

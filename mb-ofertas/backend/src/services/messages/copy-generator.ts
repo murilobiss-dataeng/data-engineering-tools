@@ -38,14 +38,27 @@ function appendPriceLines(lines: string[], product: ProductInput): void {
   }
 }
 
+/** Link exibido na mensagem: curto quando a API passa (encurtador /r/...), senão o link de afiliado. */
+function resolveDisplayLink(product: ProductInput, options?: { shortLink?: string }): string {
+  const short = options?.shortLink?.trim();
+  return short || product.affiliateLink;
+}
+
+function appendOfferLinkBlock(lines: string[], link: string): void {
+  lines.push("");
+  lines.push("Oferta por tempo limitado. Aproveite!");
+  lines.push("");
+  lines.push("Acesse na loja:");
+  lines.push(link);
+}
+
 /**
  * Gera mensagem de oferta para WhatsApp com:
  * - Título, preço cheio / à vista / parcelas, link.
  * - Sem emojis para evitar desconfiguração em canais.
  */
 export function generateOfferMessage(product: ProductInput, options?: { shortLink?: string }): string {
-  const useShortLink = process.env.USE_APP_SHORT_LINK === "true" || process.env.USE_APP_SHORT_LINK === "1";
-  const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
+  const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
 
   const hasFull = product.previousPrice != null && product.previousPrice > product.price;
@@ -59,10 +72,11 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
 
   appendPriceLines(lines, product);
 
-  lines.push("");
-  lines.push("Oferta por tempo limitado. Aproveite!");
-  lines.push("");
-  lines.push(link);
+  if (product.coupon?.trim()) {
+    lines.push(`CUPOM: ${product.coupon.trim().toUpperCase()}`);
+  }
+
+  appendOfferLinkBlock(lines, link);
 
   return lines.join("\n");
 }
@@ -82,8 +96,7 @@ export function generatePostContent(
   product: ProductInput,
   options?: { shortLink?: string; coupon?: string }
 ): { text: string; imageUrl: string | null } {
-  const useShortLink = process.env.USE_APP_SHORT_LINK === "true" || process.env.USE_APP_SHORT_LINK === "1";
-  const link = useShortLink && options?.shortLink ? options.shortLink : product.affiliateLink;
+  const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
 
   const hasFullPost = product.previousPrice != null && product.previousPrice > product.price;
@@ -97,14 +110,12 @@ export function generatePostContent(
 
   appendPriceLines(lines, product);
 
-  if (options?.coupon?.trim()) {
-    lines.push(`CUPOM: ${options.coupon.trim().toUpperCase()}`);
+  const couponText = (options?.coupon?.trim() || product.coupon?.trim() || "").trim();
+  if (couponText) {
+    lines.push(`CUPOM: ${couponText.toUpperCase()}`);
   }
 
-  lines.push("");
-  lines.push("Oferta por tempo limitado. Aproveite!");
-  lines.push("");
-  lines.push(link);
+  appendOfferLinkBlock(lines, link);
 
   return { text: lines.join("\n"), imageUrl: product.imageUrl ?? null };
 }

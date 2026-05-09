@@ -2,11 +2,36 @@ import { query } from "../db/client.js";
 import type { ProductInput } from "../services/products/types.js";
 import { roundToTwoDecimals } from "../utils/price.js";
 
+/** Mesmo produto com query string / fragmento diferente (ex.: outro tag=) → mesma chave. */
+export function affiliateLinkBaseForDedupe(affiliateLink: string): string {
+  const s = String(affiliateLink ?? "").trim();
+  if (!s) return "";
+  const qi = s.indexOf("?");
+  const hi = s.indexOf("#");
+  let cut = s.length;
+  if (qi >= 0) cut = Math.min(cut, qi);
+  if (hi >= 0) cut = Math.min(cut, hi);
+  return s.slice(0, cut).replace(/\/$/, "").toLowerCase();
+}
+
 /** Retorna o id do produto se já existir um com o mesmo link de afiliado (evita duplicata). */
 export async function findProductIdByAffiliateLink(affiliateLink: string): Promise<string | null> {
   const res = await query<{ id: string }>(
     `SELECT id FROM products WHERE affiliate_link = $1 LIMIT 1`,
     [affiliateLink]
+  );
+  return res.rows[0]?.id ?? null;
+}
+
+/** Mesmo link ignorando ?query e #fragment (evita duplicata na busca automática). */
+export async function findProductIdByAffiliateNormalized(affiliateLink: string): Promise<string | null> {
+  const base = affiliateLinkBaseForDedupe(affiliateLink);
+  if (!base) return null;
+  const res = await query<{ id: string }>(
+    `SELECT id FROM products
+     WHERE lower(regexp_replace(regexp_replace(trim(affiliate_link), '[?#].*$', ''), '/$', '')) = $1
+     LIMIT 1`,
+    [base]
   );
   return res.rows[0]?.id ?? null;
 }
@@ -28,6 +53,9 @@ export async function insertProduct(
 ): Promise<{ id: string; isNew: boolean }> {
   const existingByLink = await findProductIdByAffiliateLink(input.affiliateLink);
   if (existingByLink) return { id: existingByLink, isNew: false };
+
+  const existingByNorm = await findProductIdByAffiliateNormalized(input.affiliateLink);
+  if (existingByNorm) return { id: existingByNorm, isNew: false };
 
   if (input.externalId && (input.source ?? "amazon")) {
     const existingByExternal = await findProductIdByExternalAndSource(
@@ -89,7 +117,7 @@ export async function listProducts(filters?: {
   const res = await query(
     `SELECT p.id, p.category_id, p.external_id, p.title, p.price, p.previous_price, p.discount_pct,
             p.affiliate_link, p.image_url, p.source, p.status, p.approved_at, p.created_at, p.updated_at, p.installments,
-            p.installment_max_times, p.installment_unit_price,
+            p.installment_max_times, p.installment_unit_price, p.coupon,
             c.name AS category_name, c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
@@ -105,7 +133,7 @@ export async function getProductById(id: string) {
   const res = await query(
     `SELECT p.id, p.category_id, p.external_id, p.title, p.price, p.previous_price, p.discount_pct,
             p.affiliate_link, p.image_url, p.source, p.status, p.approved_at, p.created_at, p.updated_at, p.installments,
-            p.installment_max_times, p.installment_unit_price,
+            p.installment_max_times, p.installment_unit_price, p.coupon,
             c.name AS category_name, c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
@@ -145,7 +173,7 @@ export async function getApprovedProducts(limit = 20, channelSlug?: string | nul
   const slug = channelSlug?.trim() || null;
   const res = await query(
     `SELECT p.id, p.title, p.price, p.previous_price, p.discount_pct, p.affiliate_link, p.image_url, p.installments,
-            p.installment_max_times, p.installment_unit_price,
+            p.installment_max_times, p.installment_unit_price, p.coupon,
             c.slug AS category_slug
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
@@ -175,4 +203,10 @@ export async function expireApprovedOlderThanHours(hours: number): Promise<numbe
     await query(`DELETE FROM products WHERE id = $1`, [row.id]);
   }
   return res.rows.length;
+}
+
+export async function updateProductCoupon(id: string, coupon: string | null): Promise<boolean> {
+  const v = coupon != null && String(coupon).trim() !== "" ? String(coupon).trim() : null;
+  const res = await query(`UPDATE products SET coupon = $1, updated_at = now() WHERE id = $2`, [v, id]);
+  return (res.rowCount ?? 0) > 0;
 }

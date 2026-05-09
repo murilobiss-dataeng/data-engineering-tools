@@ -1,0 +1,29 @@
+# Dispara a mesma ação do painel: POST /api/products/fetch-ofertas (Amazon/ML → produtos pendentes).
+# Configure o secret MB_OFERTAS_API_BASE_URL com a URL pública da API, sem barra final
+# (ex.: https://sua-api.onrender.com). Opcional: MB_OFERTAS_FETCH_CRON em schedule abaixo.
+
+name: MB Ofertas — buscar ofertas (automático)
+
+on:
+  schedule:
+    # A cada 60 minutos (início de cada hora, UTC). Ajuste o fuso no painel do GitHub se precisar.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch-ofertas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Buscar ofertas (fetch-ofertas)
+        env:
+          BASE: ${{ secrets.MB_OFERTAS_API_BASE_URL }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "::error::Defina o secret MB_OFERTAS_API_BASE_URL (ex.: https://sua-api.onrender.com, sem barra no final)."
+            exit 1
+          fi
+          curl -fsS -X POST "${BASE}/api/products/fetch-ofertas" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+          echo "OK: fetch-ofertas concluído."

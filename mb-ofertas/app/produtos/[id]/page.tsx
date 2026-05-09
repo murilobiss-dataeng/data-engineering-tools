@@ -25,6 +25,11 @@ export default function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!product) return;
+    setCoupon(product.coupon ?? "");
+  }, [product]);
+
+  useEffect(() => {
     api<{ categories: Category[] }>("/categories").then((d) => setCategories(d.categories)).catch(console.error);
     api<{ channels: WhatsAppChannel[] }>("/whatsapp/channels").then((d) => {
       setChannels(d.channels);

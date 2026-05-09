@@ -47,8 +47,31 @@ export function markAsSent(dataPath, key) {
 }
 
 /**
- * Gera chave única para um post (evita duplicar por url).
+ * Mesma URL de afiliado com parâmetros diferentes → mesma chave (alinha com o backend na inserção).
+ */
+export function affiliateLinkBaseForDedupe(url) {
+  const s = String(url ?? "").trim();
+  if (!s) return "";
+  const qi = s.indexOf("?");
+  const hi = s.indexOf("#");
+  let cut = s.length;
+  if (qi >= 0) cut = Math.min(cut, qi);
+  if (hi >= 0) cut = Math.min(cut, hi);
+  return s.slice(0, cut).replace(/\/$/, "").toLowerCase();
+}
+
+/**
+ * Chave estável para deduplicar envios: id da API (preferido), senão URL base, senão título+trecho do texto.
  */
 export function postKey(post) {
-  return post.url || `${post.title || ""}_${post.text?.slice(0, 50) || ""}`;
+  const id = post?.id != null && String(post.id).trim() !== "" ? String(post.id).trim() : "";
+  if (id) return `id:${id}`;
+  const u = post.url && String(post.url).trim();
+  if (u) return `u:${affiliateLinkBaseForDedupe(u)}`;
+  const t = (post.title || "").trim();
+  const snippet = String(post.text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  return `t:${t}|${snippet}`;
 }

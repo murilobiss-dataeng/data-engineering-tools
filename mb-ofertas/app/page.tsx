@@ -4,16 +4,10 @@ import { useEffect, useState } from "react";
 import { api, type Product, type Category } from "@/lib/api";
 import { ProductPriceBlock } from "@/components/ProductPriceBlock";
 
-const FILTERS = [
-  { value: "", label: "Todos" },
-  { value: "pending", label: "Pendentes" },
-  { value: "approved", label: "Aprovados" },
-  { value: "rejected", label: "Rejeitados" },
-] as const;
-
 function StatusBadge({ status }: { status: string }) {
   if (status === "approved") return <span className="badge-approved">Aprovado</span>;
   if (status === "rejected") return <span className="badge-rejected">Rejeitado</span>;
+  if (status === "sent") return <span className="rounded bg-stone-200 px-2 py-0.5 text-xs text-stone-700">Enviado</span>;
   return <span className="badge-pending">Pendente</span>;
 }
 
@@ -23,16 +17,15 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("pending");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [couponDraft, setCouponDraft] = useState<Record<string, string>>({});
   const [fetchOfertasLoading, setFetchOfertasLoading] = useState(false);
   const [fetchOfertasResult, setFetchOfertasResult] = useState<FetchOfertasResult | null>(null);
 
   const loadProducts = () => {
     const params = new URLSearchParams();
-    if (filter) params.set("status", filter);
     if (categoryFilter) params.set("categoryId", categoryFilter);
-    params.set("limit", "50");
+    params.set("limit", "100");
     return api<{ products: Product[] }>(`/products?${params.toString()}`)
       .then((data) => {
         const seen = new Set<string>();
@@ -43,6 +36,13 @@ export default function ProductsPage() {
           return true;
         });
         setProducts(unique);
+        setCouponDraft((prev) => {
+          const next = { ...prev };
+          for (const p of unique) {
+            if (next[p.id] === undefined && p.coupon) next[p.id] = p.coupon;
+          }
+          return next;
+        });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -57,7 +57,7 @@ export default function ProductsPage() {
   useEffect(() => {
     setLoading(true);
     loadProducts();
-  }, [filter, categoryFilter]);
+  }, [categoryFilter]);
 
   async function handleFetchOfertas() {
     setFetchOfertasResult(null);
@@ -95,9 +95,9 @@ export default function ProductsPage() {
     }
   }
 
-  /** Reprovar = apagar o produto do banco e tirar da lista. */
+  /** Rejeitar = apagar o produto do banco. */
   async function rejectProduct(id: string) {
-    if (!confirm("Tirar este produto da lista? Ele será apagado do banco.")) return;
+    if (!confirm("Rejeitar e remover esta oferta do sistema?")) return;
     try {
       await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -107,15 +107,18 @@ export default function ProductsPage() {
     }
   }
 
-  /** Excluir oferta aprovada (oferta temporária). */
-  async function excludeOferta(id: string) {
-    if (!confirm("Excluir esta oferta? Ela será removida do banco (oferta temporária).")) return;
+  async function saveCoupon(id: string) {
+    const raw = (couponDraft[id] ?? "").trim();
     try {
-      await api<{ deleted: boolean }>(`/products/${id}`, { method: "DELETE" });
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      const updated = await api<Product>(`/products/${id}/coupon`, {
+        method: "PATCH",
+        body: JSON.stringify({ coupon: raw || null }),
+      });
+      setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      setCouponDraft((prev) => ({ ...prev, [id]: updated.coupon ?? "" }));
     } catch (e) {
       console.error(e);
-      alert("Erro ao excluir oferta.");
+      alert("Erro ao salvar cupom.");
     }
   }
 
@@ -157,7 +160,8 @@ export default function ProductsPage() {
         <div>
           <h1 className="page-title">Produtos (ofertas)</h1>
           <p className="page-subtitle">
-            Cadastre ofertas manualmente ou busque por URL da Amazon/Mercado Livre.
+            Lista única com todos os produtos. Defina um cupom (opcional) ou rejeite a oferta. Cadastre manualmente ou busque por URL
+            da Amazon/Mercado Livre.
           </p>
         </div>
         <a href="/produtos/novo" className="btn-primary">
@@ -192,18 +196,6 @@ export default function ProductsPage() {
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setFilter(value)}
-              className={filter === value ? "tab-active" : "tab"}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-stone-600">Categoria:</label>
           <select
@@ -266,6 +258,7 @@ export default function ProductsPage() {
                 installment_unit_price={p.installment_unit_price}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-stone-500">Status:</span>
                 <StatusBadge status={p.status} />
                 <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                   {p.category_name ?? "Sem categoria"}
@@ -291,8 +284,22 @@ export default function ProductsPage() {
                   ))}
                 </select>
               </div>
+              <div className="mt-3 flex max-w-xl flex-wrap items-center gap-2">
+                <label className="text-xs font-medium text-stone-600">Cupom</label>
+                <input
+                  type="text"
+                  className="min-w-[10rem] flex-1 rounded-lg border border-stone-200 px-2 py-1.5 text-sm text-stone-800"
+                  placeholder="Opcional — aparece na mensagem (WhatsApp)"
+                  value={couponDraft[p.id] !== undefined ? couponDraft[p.id] : (p.coupon ?? "")}
+                  onChange={(e) => setCouponDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                />
+                <button type="button" onClick={() => saveCoupon(p.id)} className="btn-secondary text-sm">
+                  Salvar cupom
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:items-end">
+              <div className="flex flex-wrap justify-end gap-2">
               {p.status === "pending" && (
                 <>
                   <button
@@ -307,22 +314,23 @@ export default function ProductsPage() {
                     onClick={() => rejectProduct(p.id)}
                     className="btn-secondary text-sm"
                   >
-                    Reprovar
+                    Rejeitar
                   </button>
                 </>
               )}
               {p.status === "approved" && (
                 <button
                   type="button"
-                  onClick={() => excludeOferta(p.id)}
+                  onClick={() => rejectProduct(p.id)}
                   className="rounded bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
                 >
-                  Excluir oferta
+                  Rejeitar
                 </button>
               )}
               <a href={`/produtos/${p.id}`} className="btn-secondary text-sm">
                 Ver / Gerar post
               </a>
+              </div>
             </div>
           </li>
         ))}

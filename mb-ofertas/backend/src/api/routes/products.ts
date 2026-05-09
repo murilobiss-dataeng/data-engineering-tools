@@ -58,6 +58,7 @@ function dbRowToProductInput(row: Record<string, unknown>): ProductInput {
         : null,
     installmentUnitPrice:
       row.installment_unit_price != null ? parseFloat(String(row.installment_unit_price)) : null,
+    coupon: row.coupon != null && String(row.coupon).trim() !== "" ? String(row.coupon).trim() : null,
   });
 }
 
@@ -89,18 +90,23 @@ productsRouter.get("/feed", async (req, res) => {
     const rows = await productsRepo.getApprovedProducts(limit, channelSlug);
     // Só incluir produtos com imagem (essencial para engajamento no canal)
     const withImage = rows.filter((p) => p.image_url && p.image_url.trim() !== "");
-    const feed = withImage.map((p) => {
-      const text = generateOfferMessage(dbRowToProductInput(p));
-      const slug = p.category_slug && String(p.category_slug).trim() ? String(p.category_slug).trim() : undefined;
-      return {
-        id: p.id,
-        title: p.title,
-        text,
-        url: p.affiliate_link,
-        imageUrl: p.image_url ?? undefined,
-        ...(slug ? { channelSlug: slug, categorySlug: slug } : {}),
-      };
-    });
+    const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
+    const feed = await Promise.all(
+      withImage.map(async (p) => {
+        const input = dbRowToProductInput(p);
+        const short = await shortLinksRepo.createShortLink(p.affiliate_link, shortLinkBase, p.id);
+        const text = generateOfferMessage(input, { shortLink: short.shortUrl });
+        const slug = p.category_slug && String(p.category_slug).trim() ? String(p.category_slug).trim() : undefined;
+        return {
+          id: p.id,
+          title: p.title,
+          text,
+          url: p.affiliate_link,
+          imageUrl: p.image_url ?? undefined,
+          ...(slug ? { channelSlug: slug, categorySlug: slug } : {}),
+        };
+      })
+    );
     res.setHeader("Cache-Control", "public, max-age=60");
     res.json(feed);
   } catch (err) {
@@ -193,6 +199,27 @@ productsRouter.patch("/:id/category", async (req, res) => {
     const updated = await productsRepo.updateProductCategory(req.params.id, categoryId ?? null);
     if (!updated) return res.status(404).json({ error: "Produto não encontrado" });
     const row = await productsRepo.getProductById(req.params.id);
+    res.json(formatProductRow(row));
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Atualiza o cupom exibido na mensagem (WhatsApp). Body: { coupon: string | null } */
+productsRouter.patch("/:id/coupon", async (req, res) => {
+  try {
+    const id = (req.params.id && String(req.params.id).trim()) || "";
+    if (!id) return res.status(400).json({ error: "id é obrigatório" });
+    const body = (req.body || {}) as { coupon?: string | null };
+    const coupon =
+      body.coupon === null || body.coupon === undefined
+        ? null
+        : typeof body.coupon === "string"
+          ? body.coupon
+          : String(body.coupon);
+    const updated = await productsRepo.updateProductCoupon(id, coupon);
+    if (!updated) return res.status(404).json({ error: "Produto não encontrado" });
+    const row = await productsRepo.getProductById(id);
     res.json(formatProductRow(row));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
