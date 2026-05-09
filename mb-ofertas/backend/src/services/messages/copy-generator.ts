@@ -61,12 +61,6 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
 
-  const hasFull = product.previousPrice != null && product.previousPrice > product.price;
-  if (hasFull && product.discountPct != null && product.discountPct > 0) {
-    lines.push("OFERTA COM DESCONTO");
-    lines.push("");
-  }
-
   lines.push(product.title);
   lines.push("");
 
@@ -98,12 +92,6 @@ export function generatePostContent(
 ): { text: string; imageUrl: string | null } {
   const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
-
-  const hasFullPost = product.previousPrice != null && product.previousPrice > product.price;
-  if (hasFullPost && product.discountPct != null && product.discountPct > 0) {
-    lines.push("OFERTA COM DESCONTO");
-    lines.push("");
-  }
 
   lines.push(product.title);
   lines.push("");
