@@ -92,8 +92,84 @@ function getSendableChatId(chat, rawId) {
 }
 
 /**
+ * Entrega o post a um único destino (sem marcar envio — uso interno ou composição).
+ */
+async function deliverPostToChat(client, post, rawId) {
+  const imageUrl = getImageUrl(post);
+  const body = formatMessage(post);
+
+  try {
+    const chat = await getChatOrChannel(client, rawId);
+    const chatId = getSendableChatId(chat, rawId);
+    if (!chatId) {
+      logger.warn(`Não foi possível resolver canal/chat para ${String(rawId).slice(0, 40)}...`);
+      return false;
+    }
+    if (imageUrl) {
+      let media = null;
+      try {
+        media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
+      } catch (fromUrlErr) {
+        logger.warn("fromUrl falhou, tentando download com axios:", fromUrlErr.message);
+        try {
+          media = await downloadImageAsMedia(imageUrl);
+        } catch (axiosErr) {
+          logger.warn("Falha ao baixar imagem, enviando só texto:", axiosErr.message);
+        }
+      }
+      if (media) {
+        await client.sendMessage(chatId, media, { caption: body });
+      } else {
+        await client.sendMessage(chatId, body);
+      }
+    } else {
+      await client.sendMessage(chatId, body);
+    }
+    const label = chat?.name || chatId;
+    logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);
+    return true;
+  } catch (err) {
+    logger.error(`Erro ao enviar para ${String(rawId).slice(0, 30)}:`, err.message);
+    if (!isInternalChatId(normalizeChatId(rawId))) {
+      logger.error("Canal: use em CHAT_ID o ID (ex.: 120363405814099508@newsletter).");
+    }
+    return false;
+  }
+}
+
+/**
+ * Um destino: marca envio + mark-posted na API (modo rodízio por canal).
+ */
+export async function sendPostToSingleDestination(client, post, rawChatId) {
+  const key = postKey(post);
+  const sentIds = loadSentIds(config.dataPath);
+  if (sentIds.includes(key)) {
+    logger.info(`Post já enviado (ignorado): ${key.slice(0, 60)}...`);
+    return false;
+  }
+
+  const imageUrl = getImageUrl(post);
+  if (config.skipPostsWithoutImage && !imageUrl) {
+    logger.info(`Post sem imagem (ignorado por SKIP_POSTS_WITHOUT_IMAGE): ${(post.title || post.url || "").slice(0, 50)}...`);
+    return false;
+  }
+
+  if (!String(rawChatId || "").trim()) {
+    logger.warn("CHAT_ID vazio para este canal.");
+    return false;
+  }
+
+  const ok = await deliverPostToChat(client, post, rawChatId.trim());
+  if (ok) {
+    markAsSent(config.dataPath, key);
+    await markPostAsPosted(config.markPostedUrl || config.apiUrl, post);
+  }
+  return ok;
+}
+
+/**
  * Envia um post para o destino configurado em CHAT_ID (ex.: 120363405814099508@newsletter).
- * Retorna true se enviou com sucesso.
+ * Retorna true se enviou com sucesso para pelo menos um destino.
  */
 export async function sendPost(client, post) {
   const key = postKey(post);
@@ -109,7 +185,6 @@ export async function sendPost(client, post) {
     return false;
   }
 
-  const body = formatMessage(post);
   const chatIds = config.chatIds;
 
   if (chatIds.length === 0) {
@@ -119,42 +194,8 @@ export async function sendPost(client, post) {
 
   let sent = false;
   for (const rawId of chatIds) {
-    try {
-      const chat = await getChatOrChannel(client, rawId);
-      const chatId = getSendableChatId(chat, rawId);
-      if (!chatId) {
-        logger.warn(`Não foi possível resolver canal/chat para ${rawId.slice(0, 40)}... Use o ID do canal em CHAT_ID (ex.: 120363405814099508@newsletter).`);
-        continue;
-      }
-      if (imageUrl) {
-        let media = null;
-        try {
-          media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
-        } catch (fromUrlErr) {
-          logger.warn("fromUrl falhou, tentando download com axios:", fromUrlErr.message);
-          try {
-            media = await downloadImageAsMedia(imageUrl);
-          } catch (axiosErr) {
-            logger.warn("Falha ao baixar imagem, enviando só texto:", axiosErr.message);
-          }
-        }
-        if (media) {
-          await client.sendMessage(chatId, media, { caption: body });
-        } else {
-          await client.sendMessage(chatId, body);
-        }
-      } else {
-        await client.sendMessage(chatId, body);
-      }
-      const label = chat?.name || chatId;
-      logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);
-      sent = true;
-    } catch (err) {
-      logger.error(`Erro ao enviar para ${rawId}:`, err.message);
-      if (!isInternalChatId(normalizeChatId(rawId))) {
-        logger.error("Canal: use em CHAT_ID o ID (ex.: 120363405814099508@newsletter). Obtenha o ID rodando o bot e vendo 'Canal resolvido pelo link'.");
-      }
-    }
+    const ok = await deliverPostToChat(client, post, rawId);
+    if (ok) sent = true;
   }
 
   if (sent) {

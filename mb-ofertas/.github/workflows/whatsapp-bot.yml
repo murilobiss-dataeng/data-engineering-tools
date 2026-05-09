@@ -1,4 +1,4 @@
-# Monorepo: workflows canônicos estão em `.github/workflows/whatsapp-channel-*.yml` na raiz.
+# Monorepo: use `.github/workflows/main.yml` na raiz do repositório **data-engineering-tools**.
 
 name: WhatsApp Bot — mb-ofertas (use raiz do repo)
 
@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::notice::Abra Actions na raiz **data-engineering-tools**: workflows **WhatsApp — health/tech/ofertas/faith** ou **WhatsApp — todos os canais (manual)**."
+          echo "::notice::Na raiz do repo, rode o workflow **WhatsApp Bot (postar ofertas)** (`.github/workflows/main.yml`)."

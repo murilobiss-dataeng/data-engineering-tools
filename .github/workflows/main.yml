@@ -1,22 +1,20 @@
-# Um workflow por canal — só API_URL + CHAT_ID_HEALTH + CHANNEL_SLUG fixo (sem CHAT_IDS / CHAT_ID_ALL).
-# concurrency: evita dois jobs usando a mesma sessão LocalAuth ao mesmo tempo.
+# Um único job, modo rodízio: em cada rodada envia até 1 post em health → tech → ofertas → faith,
+# depois espera DELAY_BETWEEN_POSTS_MINUTES (padrão 10) antes da próxima rodada (variável ROUND_ROBIN_CHANNELS).
 
-name: WhatsApp — health
+name: WhatsApp Bot (postar ofertas)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
   schedule:
-    # ~10 min; minutos 1,11,21… (outros canais em 3,5,7 para não disputar sessão)
-    - cron: "1,11,21,31,41,51 * * * *"
-
-concurrency:
-  group: whatsapp-bot-session
-  cancel-in-progress: false
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 jobs:
   send:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 360
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +26,7 @@ jobs:
       - name: Verificar sessão WhatsApp
         run: |
           if [ ! -d mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth ] || [ -z "$(ls -A mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth 2>/dev/null)" ]; then
-            echo "::error::Sem sessão no cache. Rode o workflow **Init WhatsApp (escanear QR)**."
+            echo "::error::Sem sessão no cache. Rode **Init WhatsApp (escanear QR)**."
             exit 1
           fi
 
@@ -44,12 +42,15 @@ jobs:
         working-directory: mb-ofertas/whatsapp-channel-bot
         run: grep -q 'getRoleByIdentifier = function' node_modules/whatsapp-web.js/src/util/Injected/Store.js
 
-      - name: Postar feed (health)
+      - name: Rodízio entre canais (1 post por canal por rodada + intervalo)
         working-directory: mb-ofertas/whatsapp-channel-bot
         env:
           API_URL: ${{ secrets.API_URL }}
-          CHAT_ID: ${{ secrets.CHAT_ID_HEALTH }}
-          CHANNEL_SLUG: health
+          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
+          CHAT_ID_TECH: ${{ secrets.CHAT_ID_TECH }}
+          CHAT_ID_OFERTAS: ${{ secrets.CHAT_ID_OFERTAS }}
+          CHAT_ID_FAITH: ${{ secrets.CHAT_ID_FAITH }}
+          ROUND_ROBIN_CHANNELS: "true"
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
         run: node src/index.js

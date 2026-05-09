@@ -9,6 +9,7 @@ import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { fetchPosts } from "./api.js";
 import { processPosts } from "./sender.js";
+import { isRoundRobinMode, runRoundRobinJob } from "./round-robin.js";
 
 const isGHA = process.env.GITHUB_ACTIONS === "true";
 
@@ -162,6 +163,15 @@ function createClient() {
   return c;
 }
 
+async function runScheduledWork() {
+  if (isRoundRobinMode()) {
+    const n = await runRoundRobinJob(client);
+    if (n > 0) logger.info(`${n} envio(s) no rodízio.`);
+    return;
+  }
+  await runJob();
+}
+
 async function runJob() {
   if (!client || !isRunning) {
     logger.warn("Cliente não está pronto. Pulando execução.");
@@ -185,7 +195,12 @@ async function runJob() {
 }
 
 async function start() {
-  logger.info("Iniciando bot. Modo:", config.singleRun ? "single-run (GHA)" : `intervalo ${config.cronIntervalMinutes} min`);
+  const modeLabel = isRoundRobinMode()
+    ? "rodízio (health→tech→ofertas→faith, pausa entre rodadas)"
+    : config.singleRun
+      ? "single-run (GHA)"
+      : `intervalo ${config.cronIntervalMinutes} min`;
+  logger.info("Iniciando bot. Modo:", modeLabel);
   logger.info("API:", config.apiUrl || "(não configurada)", config.channelSlug ? `CHANNEL_SLUG=${config.channelSlug}` : "");
   logger.info("Chats:", config.chatIds.length ? config.chatIds : "(nenhum)");
 
@@ -257,7 +272,7 @@ async function start() {
       }
     }
     if (config.singleRun) {
-      await runJob();
+      await runScheduledWork();
       logger.info("Single-run: envio concluído. Encerrando.");
       try {
         await client.destroy();
@@ -265,11 +280,11 @@ async function start() {
       process.exit(0);
     }
     if (!cronScheduled) {
-      cron.schedule(CRON_EXPR, runJob, { timezone: "America/Sao_Paulo" });
+      cron.schedule(CRON_EXPR, runScheduledWork, { timezone: "America/Sao_Paulo" });
       cronScheduled = true;
       logger.info(`Cron agendado: a cada ${config.cronIntervalMinutes} minuto(s).`);
     }
-    await runJob();
+    await runScheduledWork();
   });
 
   if (!config.singleRun) {
