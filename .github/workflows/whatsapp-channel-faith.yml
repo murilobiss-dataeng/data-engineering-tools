@@ -1,0 +1,51 @@
+name: WhatsApp — faith
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,17,27,37,47,57 * * * *"
+
+concurrency:
+  group: whatsapp-bot-session
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: mb-ofertas/whatsapp-channel-bot/data
+          key: whatsapp-session-${{ runner.os }}-v1
+
+      - name: Verificar sessão WhatsApp
+        run: |
+          if [ ! -d mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth ] || [ -z "$(ls -A mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth 2>/dev/null)" ]; then
+            echo "::error::Sem sessão no cache. Rode o workflow **Init WhatsApp (escanear QR)**."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: npm install (patch whatsapp-web.js)
+        working-directory: mb-ofertas/whatsapp-channel-bot
+        run: npm install
+
+      - name: Verificar patch ChannelUtils
+        working-directory: mb-ofertas/whatsapp-channel-bot
+        run: grep -q 'getRoleByIdentifier = function' node_modules/whatsapp-web.js/src/util/Injected/Store.js
+
+      - name: Postar feed (faith)
+        working-directory: mb-ofertas/whatsapp-channel-bot
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CHAT_ID: ${{ secrets.CHAT_ID_FAITH }}
+          CHANNEL_SLUG: faith
+          SINGLE_RUN: "true"
+          GITHUB_ACTIONS: "true"
+        run: node src/index.js

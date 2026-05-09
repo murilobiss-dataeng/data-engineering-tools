@@ -39,10 +39,14 @@ function buildMarkPostedUrl(feedOrApiUrl) {
  */
 function parseChatIdsFromEnv() {
   const raw = process.env.CHAT_ID || "";
-  return raw
+  const parts = raw
     .split(/[\n,;]+/)
     .map((s) => s.trim().replace(/^["']+|["']+$/g, "").trim())
     .filter(Boolean);
+  /** Preferir IDs internos (@newsletter, @g.us); ignorar só código de convite / URL que normaliza para 0029… */
+  const internal = parts.filter((s) => /@(g\.us|newsletter)\b/i.test(s));
+  if (internal.length > 0) return internal;
+  return parts;
 }
 
 /**

@@ -11,6 +11,22 @@ index f7ed110..18331f8 100644
  
          /**
           * Indicates if it is a Channel
+diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Store.js b/node_modules/whatsapp-web.js/src/util/Injected/Store.js
+index 8f56a56..e45a6a6 100644
+--- a/node_modules/whatsapp-web.js/src/util/Injected/Store.js
++++ b/node_modules/whatsapp-web.js/src/util/Injected/Store.js
+@@ -187,6 +187,11 @@ exports.ExposeStore = () => {
+         countryCodesIso: window.require('WAWebCountriesNativeCountryNames'),
+         currentRegion: window.require('WAWebL10N').getRegion(),
+     };
++    if (typeof window.Store.ChannelUtils.getRoleByIdentifier !== 'function') {
++        window.Store.ChannelUtils.getRoleByIdentifier = function () {
++            return undefined;
++        };
++    }
+     window.Store.SendChannelMessage = {
+         ...window.require('WAWebNewsletterUpdateMsgsRecordsJob'),
+         ...window.require('WAWebMsgDataFromModel'),
 diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 index 4fdc45d..def2346 100644
 --- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
