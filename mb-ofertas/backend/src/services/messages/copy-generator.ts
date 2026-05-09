@@ -4,6 +4,16 @@
  */
 import type { ProductInput } from "../products/types.js";
 
+/** Remove prefixo redundante comum em títulos de loja / copy antiga (mensagem já mostra % OFF). */
+function stripLeadingOfferDiscountLabel(raw: string): string {
+  const t = String(raw ?? "").trim();
+  if (!t) return t;
+  const re =
+    /^\s*\*?\s*OFERTA\s+COM\s+DESCONTO\s*\*?\s*([:\-–—]|\s|\.|!|\*|_)*\s*/i;
+  const next = t.replace(re, "").trim();
+  return next.length > 0 ? next : t;
+}
+
 function formatPrice(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -52,6 +62,12 @@ function appendOfferLinkBlock(lines: string[], link: string): void {
   lines.push(link);
 }
 
+/** Marcação de anúncio no final (texto literal, sem fechar * para não virar negrito no WhatsApp). */
+function appendAdDisclaimer(lines: string[]): void {
+  lines.push("");
+  lines.push("*anuncio");
+}
+
 /**
  * Gera mensagem de oferta para WhatsApp com:
  * - Título, preço cheio / à vista / parcelas, link.
@@ -61,7 +77,7 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
 
-  lines.push(product.title);
+  lines.push(stripLeadingOfferDiscountLabel(product.title));
   lines.push("");
 
   appendPriceLines(lines, product);
@@ -71,6 +87,7 @@ export function generateOfferMessage(product: ProductInput, options?: { shortLin
   }
 
   appendOfferLinkBlock(lines, link);
+  appendAdDisclaimer(lines);
 
   return lines.join("\n");
 }
@@ -93,7 +110,7 @@ export function generatePostContent(
   const link = resolveDisplayLink(product, options);
   const lines: string[] = [];
 
-  lines.push(product.title);
+  lines.push(stripLeadingOfferDiscountLabel(product.title));
   lines.push("");
 
   appendPriceLines(lines, product);
@@ -104,6 +121,7 @@ export function generatePostContent(
   }
 
   appendOfferLinkBlock(lines, link);
+  appendAdDisclaimer(lines);
 
   return { text: lines.join("\n"), imageUrl: product.imageUrl ?? null };
 }
