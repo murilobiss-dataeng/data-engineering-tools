@@ -49,6 +49,30 @@ function normalizeChatId(value) {
   return s;
 }
 
+/** Log seguro (URLs longas não parecem `.../channel/0` por truncagem). */
+function previewChatDest(s) {
+  const t = String(s ?? "");
+  if (t.length <= 72) return t;
+  return `${t.slice(0, 40)}…${t.slice(-28)}`;
+}
+
+/**
+ * Normaliza valor do secret: remove rótulo mb.health:, aspas; extrai 120363...@newsletter
+ * se existir em qualquer linha (evita getChannelByInviteCode quebrado no WA Web).
+ */
+export function resolveDestinationChatId(raw) {
+  let s = String(raw ?? "").trim().replace(/^["']+|["']+$/g, "").trim();
+  if (!s) return "";
+  s = s.replace(/^\s*(?:mb\.)?(?:health|tech|ofertas|faith)\s*:\s*/i, "").trim();
+  const direct = s.match(/\b(\d{10,22}@newsletter)\b/i);
+  if (direct) return direct[1];
+  for (const line of s.split(/[\r\n,;]+/)) {
+    const m = line.trim().match(/\b(\d{10,22}@newsletter)\b/i);
+    if (m) return m[1];
+  }
+  return s.trim();
+}
+
 /** ID serializado para sendMessage (whatsapp-web.js usa string ou objeto com _serialized). */
 function serializeWhatsAppId(chatOrChannel) {
   if (!chatOrChannel) return null;
@@ -95,14 +119,25 @@ function getSendableChatId(chat, rawId) {
  * Entrega o post a um único destino (sem marcar envio — uso interno ou composição).
  */
 async function deliverPostToChat(client, post, rawId) {
+  const dest = resolveDestinationChatId(rawId);
+  if (!dest) {
+    logger.warn("Destino vazio após normalizar CHAT_ID.");
+    return false;
+  }
+  if (/^https?:\/\//i.test(dest) && !/\d{10,}@newsletter/i.test(dest)) {
+    logger.warn(
+      `Destino parece só URL de convite (${previewChatDest(dest)}). Coloque no secret o ID no formato 120363...@newsletter (veja no log do bot: "Canais — use o ID abaixo").`
+    );
+  }
+
   const imageUrl = getImageUrl(post);
   const body = formatMessage(post);
 
   try {
-    const chat = await getChatOrChannel(client, rawId);
-    const chatId = getSendableChatId(chat, rawId);
+    const chat = await getChatOrChannel(client, dest);
+    const chatId = getSendableChatId(chat, dest);
     if (!chatId) {
-      logger.warn(`Não foi possível resolver canal/chat para ${String(rawId).slice(0, 40)}...`);
+      logger.warn(`Não foi possível resolver canal/chat para ${previewChatDest(dest)}`);
       return false;
     }
     if (imageUrl) {
@@ -129,8 +164,8 @@ async function deliverPostToChat(client, post, rawId) {
     logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);
     return true;
   } catch (err) {
-    logger.error(`Erro ao enviar para ${String(rawId).slice(0, 30)}:`, err.message);
-    if (!isInternalChatId(normalizeChatId(rawId))) {
+    logger.error(`Erro ao enviar para ${previewChatDest(dest)}:`, err.message);
+    if (!isInternalChatId(normalizeChatId(dest))) {
       logger.error("Canal: use em CHAT_ID o ID (ex.: 120363405814099508@newsletter).");
     }
     return false;
@@ -159,7 +194,13 @@ export async function sendPostToSingleDestination(client, post, rawChatId) {
     return false;
   }
 
-  const ok = await deliverPostToChat(client, post, rawChatId.trim());
+  const resolved = resolveDestinationChatId(rawChatId);
+  if (!resolved) {
+    logger.warn("CHAT_ID inválido após normalização.");
+    return false;
+  }
+
+  const ok = await deliverPostToChat(client, post, resolved);
   if (ok) {
     markAsSent(config.dataPath, key);
     await markPostAsPosted(config.markPostedUrl || config.apiUrl, post);

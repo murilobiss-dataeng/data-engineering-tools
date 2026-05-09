@@ -5,7 +5,7 @@
 import { logger } from "./logger.js";
 import { config, buildFeedUrl } from "./config.js";
 import { fetchPosts } from "./api.js";
-import { sendPostToSingleDestination } from "./sender.js";
+import { sendPostToSingleDestination, resolveDestinationChatId } from "./sender.js";
 
 export const ROUND_ROBIN_SLUGS = ["health", "tech", "ofertas", "faith"];
 
@@ -50,6 +50,20 @@ export async function runRoundRobinJob(client) {
     lists[slug] = posts;
     indices[slug] = 0;
     logger.info(`Rodízio: fila ${slug} — ${posts.length} post(s).`);
+  }
+
+  for (const slug of ROUND_ROBIN_SLUGS) {
+    const raw = chatIdEnvForSlug(slug);
+    if (!raw) continue;
+    const r = resolveDestinationChatId(raw);
+    const hasNewsletterJid = /\d{10,22}@newsletter$/i.test(r);
+    if (hasNewsletterJid) {
+      logger.info(`Rodízio: canal "${slug}" → ID newsletter (ok para envio).`);
+    } else {
+      logger.warn(
+        `Rodízio: canal "${slug}" — o secret não contém um ID …@newsletter reconhecido. Corrija CHAT_ID_${slug.toUpperCase()} no GitHub (use o ID que o bot lista em "Canais").`
+      );
+    }
   }
 
   const delayMs = config.delayBetweenPostsMinutes * 60 * 1000;
