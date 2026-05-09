@@ -61,16 +61,31 @@ function previewChatDest(s) {
  * se existir em qualquer linha (evita getChannelByInviteCode quebrado no WA Web).
  */
 export function resolveDestinationChatId(raw) {
-  let s = String(raw ?? "").trim().replace(/^["']+|["']+$/g, "").trim();
+  let s = String(raw ?? "")
+    .replace(/\r/g, "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
   if (!s) return "";
+  try {
+    s = s.normalize("NFKC");
+  } catch {
+    /* ignore */
+  }
   s = s.replace(/^\s*(?:mb\.)?(?:health|tech|ofertas|faith)\s*:\s*/i, "").trim();
-  const direct = s.match(/\b(\d{10,22}@newsletter)\b/i);
+  const jidRe = /\b(\d{10,}@newsletter)\b/i;
+  const direct = s.match(jidRe);
   if (direct) return direct[1];
-  for (const line of s.split(/[\r\n,;]+/)) {
-    const m = line.trim().match(/\b(\d{10,22}@newsletter)\b/i);
+  for (const line of s.split(/[\n,;]+/)) {
+    const m = line.trim().match(jidRe);
     if (m) return m[1];
   }
   return s.trim();
+}
+
+/** True quando já é só o JID do canal (…@newsletter), após resolveDestinationChatId. */
+export function isNewsletterJidResolved(s) {
+  return /^\d{10,}@newsletter$/i.test(String(s ?? "").trim());
 }
 
 /** ID serializado para sendMessage (whatsapp-web.js usa string ou objeto com _serialized). */
@@ -124,7 +139,7 @@ async function deliverPostToChat(client, post, rawId) {
     logger.warn("Destino vazio após normalizar CHAT_ID.");
     return false;
   }
-  if (/^https?:\/\//i.test(dest) && !/\d{10,}@newsletter/i.test(dest)) {
+  if (/^https?:\/\//i.test(dest) && !isNewsletterJidResolved(dest)) {
     logger.warn(
       `Destino parece só URL de convite (${previewChatDest(dest)}). Coloque no secret o ID no formato 120363...@newsletter (veja no log do bot: "Canais — use o ID abaixo").`
     );

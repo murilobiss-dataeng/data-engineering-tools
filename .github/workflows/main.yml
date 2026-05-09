@@ -46,6 +46,7 @@ jobs:
         working-directory: mb-ofertas/whatsapp-channel-bot
         env:
           API_URL: ${{ secrets.API_URL }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
           CHAT_ID_TECH: ${{ secrets.CHAT_ID_TECH }}
           CHAT_ID_OFERTAS: ${{ secrets.CHAT_ID_OFERTAS }}

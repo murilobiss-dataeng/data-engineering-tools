@@ -5,18 +5,38 @@
 import { logger } from "./logger.js";
 import { config, buildFeedUrl } from "./config.js";
 import { fetchPosts } from "./api.js";
-import { sendPostToSingleDestination, resolveDestinationChatId } from "./sender.js";
+import {
+  sendPostToSingleDestination,
+  resolveDestinationChatId,
+  isNewsletterJidResolved,
+} from "./sender.js";
 
 export const ROUND_ROBIN_SLUGS = ["health", "tech", "ofertas", "faith"];
 
-function chatIdEnvForSlug(slug) {
-  const map = {
-    health: process.env.CHAT_ID_HEALTH,
-    tech: process.env.CHAT_ID_TECH,
-    ofertas: process.env.CHAT_ID_OFERTAS,
-    faith: process.env.CHAT_ID_FAITH,
-  };
-  return String(map[slug] ?? "").trim();
+function splitChatIdMultiline(raw) {
+  return String(raw ?? "")
+    .replace(/\r/g, "")
+    .split(/[\n,;]+/)
+    .map((s) => s.trim().replace(/^["']+|["']+$/g, "").trim())
+    .filter(Boolean);
+}
+
+/**
+ * Um destino por canal: CHAT_ID_HEALTH / TECH / OFERTAS / FAITH.
+ * Se algum estiver vazio, usa a linha correspondente de CHAT_ID (1ª=health, 2ª=tech, …) — útil quando só existe um secret multilinha no GitHub.
+ */
+export function chatIdEnvForSlug(slug) {
+  const key = `CHAT_ID_${slug.toUpperCase()}`;
+  const specific = String(process.env[key] ?? "")
+    .replace(/\r/g, "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
+  if (specific) return specific;
+  const parts = splitChatIdMultiline(process.env.CHAT_ID || "");
+  const idx = ROUND_ROBIN_SLUGS.indexOf(slug);
+  if (idx >= 0 && idx < parts.length) return parts[idx];
+  return "";
 }
 
 export function isRoundRobinMode() {
@@ -40,7 +60,9 @@ export async function runRoundRobinJob(client) {
   for (const slug of ROUND_ROBIN_SLUGS) {
     const cid = chatIdEnvForSlug(slug);
     if (!cid) {
-      logger.info(`Rodízio: sem CHAT_ID_* para o canal "${slug}" — ignorado.`);
+      logger.info(
+        `Rodízio: sem destino para o canal "${slug}" (CHAT_ID_${slug.toUpperCase()} vazio e sem linha em CHAT_ID) — ignorado.`
+      );
       lists[slug] = [];
       indices[slug] = 0;
       continue;
@@ -53,15 +75,20 @@ export async function runRoundRobinJob(client) {
   }
 
   for (const slug of ROUND_ROBIN_SLUGS) {
+    const key = `CHAT_ID_${slug.toUpperCase()}`;
+    const directSet = Boolean(String(process.env[key] ?? "").replace(/\r/g, "").trim());
     const raw = chatIdEnvForSlug(slug);
-    if (!raw) continue;
-    const r = resolveDestinationChatId(raw);
-    const hasNewsletterJid = /\d{10,22}@newsletter$/i.test(r);
-    if (hasNewsletterJid) {
-      logger.info(`Rodízio: canal "${slug}" → ID newsletter (ok para envio).`);
+    if (!raw) {
+      logger.info(`Rodízio: sem destino para "${slug}" (${key} vazio e sem linha correspondente em CHAT_ID).`);
+      continue;
+    }
+    const src = directSet ? key : "CHAT_ID (ordem: health → tech → ofertas → faith)";
+    const resolved = resolveDestinationChatId(raw);
+    if (isNewsletterJidResolved(resolved)) {
+      logger.info(`Rodízio: canal "${slug}" → ID @newsletter ok (fonte: ${src}).`);
     } else {
       logger.warn(
-        `Rodízio: canal "${slug}" — o secret não contém um ID …@newsletter reconhecido. Corrija CHAT_ID_${slug.toUpperCase()} no GitHub (use o ID que o bot lista em "Canais").`
+        `Rodízio: canal "${slug}" — em ${src} não há um ID …@newsletter reconhecível. No GitHub use os secrets CHAT_ID_HEALTH / TECH / OFERTAS / FAITH ou um secret CHAT_ID com 4 linhas (uma JID por canal, na ordem acima).`
       );
     }
   }
@@ -102,7 +129,7 @@ export async function runRoundRobinJob(client) {
       logger.info(
         `Rodízio: aguardando ${config.delayBetweenPostsMinutes} min antes da próxima rodada...`
       );
-      await new Promise((r) => setTimeout(r, delayMs));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 

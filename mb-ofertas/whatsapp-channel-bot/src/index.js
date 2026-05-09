@@ -202,7 +202,12 @@ async function start() {
       : `intervalo ${config.cronIntervalMinutes} min`;
   logger.info("Iniciando bot. Modo:", modeLabel);
   logger.info("API:", config.apiUrl || "(não configurada)", config.channelSlug ? `CHANNEL_SLUG=${config.channelSlug}` : "");
-  logger.info("Chats:", config.chatIds.length ? config.chatIds : "(nenhum)");
+  if (isRoundRobinMode()) {
+    logger.info(
+      "Rodízio: destinos = CHAT_ID_HEALTH, CHAT_ID_TECH, CHAT_ID_OFERTAS, CHAT_ID_FAITH (secrets do workflow), ou 4 linhas no secret CHAT_ID na mesma ordem."
+    );
+  }
+  logger.info("Chats (modo normal / CHAT_ID):", config.chatIds.length ? config.chatIds : "(nenhum)");
 
   if (isGHA) {
     removeChromiumProfileLocksSync(AUTH_PATH);
