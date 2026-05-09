@@ -147,8 +147,17 @@ async function deliverPostToChat(client, post, rawId) {
 
   const imageUrl = getImageUrl(post);
   const body = formatMessage(post);
+  const newsletterOpts = isNewsletterJidResolved(dest) ? { sendSeen: false } : {};
 
   try {
+    if (isNewsletterJidResolved(dest)) {
+      try {
+        await client.getChatById(dest);
+      } catch (_) {
+        /* pré-carrega metadados no WA Web; falha silenciosa */
+      }
+    }
+
     const chat = await getChatOrChannel(client, dest);
     const chatId = getSendableChatId(chat, dest);
     if (!chatId) {
@@ -168,12 +177,12 @@ async function deliverPostToChat(client, post, rawId) {
         }
       }
       if (media) {
-        await client.sendMessage(chatId, media, { caption: body });
+        await client.sendMessage(chatId, media, { caption: body, ...newsletterOpts });
       } else {
-        await client.sendMessage(chatId, body);
+        await client.sendMessage(chatId, body, newsletterOpts);
       }
     } else {
-      await client.sendMessage(chatId, body);
+      await client.sendMessage(chatId, body, newsletterOpts);
     }
     const label = chat?.name || chatId;
     logger.info(`Enviado para ${label}: ${(post.title || post.url || "").slice(0, 40)}`);

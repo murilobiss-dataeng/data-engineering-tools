@@ -28,7 +28,7 @@ index 8f56a56..e45a6a6 100644
          ...window.require('WAWebNewsletterUpdateMsgsRecordsJob'),
          ...window.require('WAWebMsgDataFromModel'),
 diff --git a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
-index 4fdc45d..def2346 100644
+index 4fdc45d..982b0e1 100644
 --- a/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 +++ b/node_modules/whatsapp-web.js/src/util/Injected/Utils.js
 @@ -2,6 +2,16 @@
@@ -64,7 +64,19 @@ index 4fdc45d..def2346 100644
          let mediaOptions = {};
          if (options.media) {
              mediaOptions =  options.sendMediaAsSticker && !isChannel && !isStatus
-@@ -304,7 +323,7 @@ exports.LoadUtils = () => {
+@@ -266,7 +285,10 @@ exports.LoadUtils = () => {
+         const extraOptions = options.extraOptions || {};
+         delete options.extraOptions;
+ 
+-        const ephemeralFields = window.Store.EphemeralFields.getEphemeralFields(chat);
++        const ephemeralFields =
++            window.Store.EphemeralFields && typeof window.Store.EphemeralFields.getEphemeralFields === 'function'
++                ? window.Store.EphemeralFields.getEphemeralFields(chat)
++                : {};
+ 
+         const message = {
+             ...options,
+@@ -304,7 +326,7 @@ exports.LoadUtils = () => {
              const msgDataFromMsgModel = window.Store.SendChannelMessage.msgDataFromMsgModel(msg);
              const isMedia = Object.keys(mediaOptions).length > 0;
              await window.Store.SendChannelMessage.addNewsletterMsgsRecords([msgDataFromMsgModel]);
@@ -73,21 +85,44 @@ index 4fdc45d..def2346 100644
              chat.t = msg.t;
  
              const sendChannelMsgResponse = await window.Store.SendChannelMessage.sendNewsletterMessageJob({
-@@ -577,6 +596,13 @@ exports.LoadUtils = () => {
-                     await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId);
-                     chat = await window.Store.WAWebNewsletterMetadataCollection.find(chatWid);
+@@ -572,10 +594,32 @@ exports.LoadUtils = () => {
+ 
+         if (isChannel) {
+             try {
+-                chat = window.Store.WAWebNewsletterMetadataCollection.get(chatId);
+-                if (!chat) {
+-                    await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId);
+-                    chat = await window.Store.WAWebNewsletterMetadataCollection.find(chatWid);
++                const Coll = window.Store.WAWebNewsletterMetadataCollection;
++                if (!Coll || typeof Coll.get !== 'function' || typeof Coll.find !== 'function') {
++                    chat = null;
++                } else {
++                    const idStr = typeof chatId === 'string' ? chatId : (chatId && chatId._serialized) || '';
++                    chat = Coll.get(idStr) || null;
++                    if (!chat && chatWid) {
++                        chat = Coll.get(chatWid) || (chatWid._serialized && Coll.get(chatWid._serialized)) || null;
++                    }
++                    if (!chat) {
++                        await window.Store.ChannelUtils.loadNewsletterPreviewChat(idStr || chatId);
++                        chat = await Coll.find(chatWid);
++                    }
++                    if (chat && !chat.newsletterMetadata) {
++                        const NMC = window.Store.NewsletterMetadataCollection || Coll;
++                        try {
++                            await NMC.update(chat.id || chatWid);
++                        } catch (_) {}
++                    }
++                    if (chat && typeof chat.getLastMsgKeyForAction !== 'function') {
++                        const noop = () => null;
++                        chat.getLastMsgKeyForAction = noop;
++                        const proto = Object.getPrototypeOf(chat);
++                        if (proto) proto.getLastMsgKeyForAction = noop;
++                        if (chat.constructor?.prototype) chat.constructor.prototype.getLastMsgKeyForAction = noop;
++                    }
                  }
-+                if (chat && typeof chat.getLastMsgKeyForAction !== 'function') {
-+                    const noop = () => null;
-+                    chat.getLastMsgKeyForAction = noop;
-+                    const proto = Object.getPrototypeOf(chat);
-+                    if (proto) proto.getLastMsgKeyForAction = noop;
-+                    if (chat.constructor?.prototype) chat.constructor.prototype.getLastMsgKeyForAction = noop;
-+                }
              } catch (err) {
                  chat = null;
-             }
-@@ -590,11 +616,17 @@ exports.LoadUtils = () => {
+@@ -590,11 +634,17 @@ exports.LoadUtils = () => {
      };
  
      window.WWebJS.getChannelMetadata = async (inviteCode) => {
@@ -110,7 +145,7 @@ index 4fdc45d..def2346 100644
  
          const picUrl = response.newsletterPictureMetadataMixin?.picture[0]?.queryPictureDirectPathOrEmptyResponseMixinGroup.value.directPath;
  
-@@ -610,7 +642,7 @@ exports.LoadUtils = () => {
+@@ -610,7 +660,7 @@ exports.LoadUtils = () => {
                  updatedAtTs: response.newsletterDescriptionMetadataMixin.descriptionQueryDescriptionResponseMixin.updateTime
              },
              inviteLink: `https://whatsapp.com/channel/${response.newsletterInviteLinkMetadataMixin.inviteCode}`,
