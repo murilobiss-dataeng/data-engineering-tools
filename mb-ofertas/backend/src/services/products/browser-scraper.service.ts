@@ -7,7 +7,10 @@
 import "../../config/playwright-browsers-path.js";
 import { logger } from "../../config/logger.js";
 
-const BROWSER_TIMEOUT_MS = 25_000;
+const BROWSER_TIMEOUT_MS = Math.min(
+  120_000,
+  Math.max(15_000, parseInt(process.env.PLAYWRIGHT_NAVIGATION_TIMEOUT_MS || "45000", 10) || 45_000)
+);
 const WAIT_AFTER_LOAD_MS = 2_000;
 
 /**
@@ -56,6 +59,14 @@ export async function getHtmlWithBrowser(url: string): Promise<string> {
       waitUntil: "domcontentloaded",
       timeout: BROWSER_TIMEOUT_MS,
     });
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    if (/^amazon\.(com|com\.br)$/.test(host)) {
+      await page
+        .waitForSelector("#productTitle, span#productTitle, #productTitle_feature_div, meta[property='og:title']", {
+          timeout: Math.min(12_000, BROWSER_TIMEOUT_MS - 3_000),
+        })
+        .catch(() => {});
+    }
     // Esperar um pouco para JS de preço (ML, Shopee) renderizar
     await new Promise((r) => setTimeout(r, WAIT_AFTER_LOAD_MS));
     const html = await page.content();

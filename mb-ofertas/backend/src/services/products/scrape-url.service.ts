@@ -230,33 +230,132 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
   return { price: finalPrice, listPrice: finalListPrice };
 }
 
-/** Tenta extrair oferta de JSON embutido no HTML (Amazon). */
+/** Detecta @type Product no schema.org (string ou array). */
+function isSchemaProduct(node: { "@type"?: string | string[] }): boolean {
+  const t = node["@type"];
+  if (t === "Product") return true;
+  if (Array.isArray(t)) return t.includes("Product");
+  return false;
+}
+
+/** Tenta extrair Product de todos os blocos application/ld+json (Amazon costuma ter vários scripts). */
 function extractFromJsonLd(html: string): Partial<ScrapedProduct> | null {
-  const ldMatch = html.match(/<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (!ldMatch) return null;
-  try {
-    const data = JSON.parse(ldMatch[1].trim());
-    const product = Array.isArray(data) ? data.find((d: { "@type"?: string }) => d["@type"] === "Product") : data;
-    if (!product || product["@type"] !== "Product") return null;
-    const name = product.name ?? product.title ?? "";
-    const image = Array.isArray(product.image) ? product.image[0] : product.image;
-    const imageUrl = typeof image === "string" ? image : null;
-    let price: number | null = null;
-    let listPrice: number | null = null;
-    const offers = product.offers;
-    if (offers) {
-      const offer = Array.isArray(offers) ? offers[0] : offers;
-      if (offer && offer.price !== undefined) {
-        price = typeof offer.price === "number" ? offer.price : parseFloat(String(offer.price)) || null;
-      }
-      if (offer && offer.priceCurrency === "BRL" && offer.price !== undefined) {
-        price = typeof offer.price === "number" ? offer.price : parseFloat(String(offer.price)) || null;
-      }
+  const scriptRe = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const found: Partial<ScrapedProduct>[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = scriptRe.exec(html)) !== null) {
+    let data: unknown;
+    try {
+      data = JSON.parse(m[1].trim());
+    } catch {
+      continue;
     }
-    return { title: name, imageUrl, price: price ?? 0, previousPrice: listPrice };
-  } catch {
-    return null;
+    const nodes = Array.isArray(data) ? data : [data];
+    for (const raw of nodes) {
+      if (!raw || typeof raw !== "object") continue;
+      const product = raw as {
+        "@type"?: string | string[];
+        name?: string;
+        title?: string;
+        image?: string | string[];
+        offers?: unknown;
+      };
+      if (!isSchemaProduct(product)) continue;
+      const name = String(product.name ?? product.title ?? "").trim();
+      const image = product.image;
+      const imageUrl =
+        typeof image === "string" ? image : Array.isArray(image) && typeof image[0] === "string" ? image[0] : null;
+      let price: number | null = null;
+      let listPrice: number | null = null;
+      const offers = product.offers;
+      if (offers) {
+        const offer = Array.isArray(offers) ? offers[0] : offers;
+        if (offer && typeof offer === "object" && offer !== null && "price" in offer) {
+          const o = offer as { price?: unknown; priceCurrency?: string };
+          if (o.price !== undefined) {
+            price = typeof o.price === "number" ? o.price : parseFloat(String(o.price)) || null;
+          }
+          if (o.priceCurrency === "BRL" && o.price !== undefined) {
+            price = typeof o.price === "number" ? o.price : parseFloat(String(o.price)) || null;
+          }
+        }
+      }
+      found.push({ title: name, imageUrl, price: price ?? 0, previousPrice: listPrice });
+    }
   }
+  if (found.length === 0) return null;
+  found.sort((a, b) => {
+    const score = (p: Partial<ScrapedProduct>) =>
+      (p.title && p.title.length > 5 ? p.title.length : 0) + (p.price && p.price > 0 ? 500 : 0);
+    return score(b) - score(a);
+  });
+  return found[0];
+}
+
+/** og:title genérico da Amazon (sem nome do produto). */
+function isGenericAmazonOgTitle(s: string): boolean {
+  const t = s.trim();
+  if (t.length < 12) return true;
+  return /^Amazon\.com(\.br)?$/i.test(t);
+}
+
+/** Remove sufixo ": Amazon.com.br" do og:title quando o título do produto vem junto. */
+function cleanAmazonOgTitle(raw: string): string {
+  return raw
+    .replace(/\s*[:-]\s*Amazon\.com(\.br)?\s*$/i, "")
+    .replace(/\s*\|\s*Amazon\.com(\.br)?\s*$/i, "")
+    .trim();
+}
+
+/** Último recurso: strings embutidas no HTML/JSON da página Amazon. */
+function extractAmazonTitleFromEmbeddedStrings(html: string): string {
+  const patterns: RegExp[] = [
+    /"productTitle"\s*:\s*"([^"\\]{10,500})"/,
+    /"item_name"\s*:\s*"([^"\\]{10,500})"/,
+  ];
+  for (const re of patterns) {
+    const mm = html.match(re);
+    if (!mm?.[1]) continue;
+    let s = mm[1].replace(/\\"/g, '"').replace(/\\u0026/g, "&").trim();
+    if (s.length < 10) continue;
+    if (/^Amazon\.com/i.test(s)) continue;
+    return s.slice(0, 500);
+  }
+  return "";
+}
+
+/** Título na página Amazon (DOM, og, JSON-LD, regex). */
+function extractAmazonProductTitle($: cheerio.CheerioAPI, html: string, ogTitle: string): string {
+  let title =
+    $("#productTitle").text().trim() ||
+    $("span#productTitle").text().trim() ||
+    $("#productTitle_feature_div #productTitle").text().trim() ||
+    $("#titleSection #productTitle").text().trim() ||
+    $("#title > span").first().text().trim() ||
+    $("#title_feature_div h1").first().text().trim() ||
+    $("#titleSection h1").first().text().trim() ||
+    $('[data-cy="product-title"]').text().trim() ||
+    $("h1.a-size-large.product-title-word-break").text().trim() ||
+    $("h1.a-size-large").first().text().trim() ||
+    $('meta[name="title"]').attr("content")?.trim() ||
+    "";
+
+  const cleanedOg = cleanAmazonOgTitle(ogTitle);
+  if (!title && cleanedOg.length > 10 && !isGenericAmazonOgTitle(cleanedOg)) {
+    title = cleanedOg;
+  }
+
+  if (!title) {
+    const fromLd = extractFromJsonLd(html);
+    const ldTitle = fromLd?.title ? String(fromLd.title).trim() : "";
+    if (ldTitle.length > 5) title = ldTitle;
+  }
+
+  if (!title) {
+    title = extractAmazonTitleFromEmbeddedStrings(html);
+  }
+
+  return title.slice(0, 500);
 }
 
 /** Busca JSON de estado da página (Amazon). priceToPay = preço real de compra (não por litro). */
@@ -833,13 +932,7 @@ export async function scrapeProductFromUrl(
     installments = shopee.installments;
   } else {
     // Amazon: priorizar priceToPay do JSON (preço real de compra, não "por litro")
-    title =
-      $("#productTitle").text().trim() ||
-      $("#title").text().trim() ||
-      ogTitle ||
-      $("h1#title").text().trim() ||
-      "";
-    title = title.slice(0, 500);
+    title = extractAmazonProductTitle($, html, ogTitle);
 
     const fromJson = extractPriceFromPageJson(html);
     if (fromJson) {
