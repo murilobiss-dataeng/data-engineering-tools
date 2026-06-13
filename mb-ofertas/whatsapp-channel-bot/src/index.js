@@ -98,6 +98,17 @@ function createClient() {
   });
 
   c.on("qr", async (qr) => {
+    if (config.sessionRequired && !config.allowQrPairing) {
+      logger.error("Sessão WhatsApp inválida ou expirada.");
+      logger.error(
+        "Este workflow só posta ofertas. Rode **Init WhatsApp (escanear QR)** para parear de novo."
+      );
+      try {
+        await c.destroy();
+      } catch (_) {}
+      process.exit(1);
+    }
+
     qrRefreshCount += 1;
     const payload = typeof qr === "string" ? qr : String(qr ?? "");
     if (!payload) {
@@ -115,9 +126,9 @@ function createClient() {
         "Se o pareamento falhar: apague data/.wwebjs_auth, desvincule aparelhos no telefone e rode o workflow Init de novo."
       );
       if (isGHA) ghaQrInstructionsLogged = true;
-    } else if (qrRefreshCount > 1) {
+    } else if (qrRefreshCount > 1 && (qrRefreshCount === 2 || qrRefreshCount % 5 === 0)) {
       logger.info(
-        `QR renovado (#${qrRefreshCount}) — válido por ~20s. Use o qr.png mais recente (data/qr.png ou artifact desta run).`
+        `QR renovado (#${qrRefreshCount}) — escaneie em até ~20s (use qr.png desta run).`
       );
     }
 
@@ -152,9 +163,14 @@ function createClient() {
 
   c.on("auth_failure", (msg) => {
     logger.error("Falha de autenticação:", msg);
-    logger.error(
-      "Sessão inválida. Apague a pasta data/.wwebjs_auth e rode Init WhatsApp (escanear QR) de novo."
-    );
+    if (config.sessionRequired && !config.allowQrPairing) {
+      logger.error("Rode **Init WhatsApp (escanear QR)** — este workflow não faz pareamento.");
+    } else {
+      logger.error(
+        "Sessão inválida. Apague a pasta data/.wwebjs_auth e rode Init WhatsApp (escanear QR) de novo."
+      );
+    }
+    process.exit(1);
   });
 
   c.on("change_state", (state) => {
@@ -212,7 +228,12 @@ async function start() {
     : config.singleRun
       ? "single-run (GHA)"
       : `intervalo ${config.cronIntervalMinutes} min`;
-  logger.info("Iniciando bot. Modo:", modeLabel);
+  const roleLabel = config.sessionRequired && !config.allowQrPairing
+    ? "postagem (sessão do Init — sem QR)"
+    : config.allowQrPairing
+      ? "pareamento (Init — QR)"
+      : "geral";
+  logger.info("Iniciando bot. Modo:", modeLabel, "|", roleLabel);
   logger.info("API:", config.apiUrl || "(não configurada)", config.channelSlug ? `CHANNEL_SLUG=${config.channelSlug}` : "");
   if (isRoundRobinMode()) {
     logger.info(

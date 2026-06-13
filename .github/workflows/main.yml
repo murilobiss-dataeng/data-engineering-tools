@@ -54,4 +54,5 @@ jobs:
           ROUND_ROBIN_CHANNELS: "true"
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
+          WHATSAPP_SESSION_REQUIRED: "true"
         run: node src/index.js

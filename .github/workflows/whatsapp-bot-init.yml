@@ -42,6 +42,7 @@ jobs:
           CHAT_IDS: ${{ secrets.CHAT_IDS }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
+          WHATSAPP_ALLOW_QR_PAIRING: "true"
         run: |
           set -e
           # shellcheck source=/dev/null
@@ -129,6 +130,24 @@ jobs:
             qr.html
           if-no-files-found: error
 
+      - name: Republicar QR atualizado (aguarde ~25s e baixe de novo)
+        if: success() && steps.qr.outputs.qr_generated == 'true'
+        run: |
+          sleep 25
+          cp mb-ofertas/whatsapp-channel-bot/data/qr.png "$GITHUB_WORKSPACE/qr.png"
+          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><p style="color:#444;font-size:14px">Aparelhos conectados → Conectar um aparelho. <strong>Baixe este artifact de novo</strong> e escaneie em até 60s.</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR WhatsApp"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
+
+      - name: Publicar artifact whatsapp-qr (atualizado)
+        if: success() && steps.qr.outputs.qr_generated == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: whatsapp-qr
+          path: |
+            qr.png
+            qr.html
+          if-no-files-found: error
+          overwrite: true
+
       - name: Aguardar escaneamento (até ~4 min)
         if: success() && steps.qr.outputs.qr_generated == 'true'
         env:
@@ -139,6 +158,7 @@ jobs:
           CHAT_IDS: ${{ secrets.CHAT_IDS }}
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
+          WHATSAPP_ALLOW_QR_PAIRING: "true"
         run: |
           set -e
           # shellcheck source=/dev/null
