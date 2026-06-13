@@ -1,5 +1,4 @@
-# Rode uma vez manualmente para criar a sessão do WhatsApp (escanear QR).
-# Um único par qr.png + qr.html no artifact; espera o PNG estabilizar antes de empacotar (evita QR “antigo”).
+# Pareamento WhatsApp via QR — alvo: concluir em até ~3 minutos.
 
 name: Init WhatsApp (escanear QR)
 
@@ -13,7 +12,7 @@ permissions:
 jobs:
   init:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 3
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +22,11 @@ jobs:
           path: mb-ofertas/whatsapp-channel-bot/data
           key: whatsapp-session-${{ runner.os }}-v1
 
+      - uses: actions/cache@v4
+        with:
+          path: mb-ofertas/whatsapp-channel-bot/node_modules
+          key: npm-whatsapp-bot-${{ hashFiles('mb-ofertas/whatsapp-channel-bot/package-lock.json') }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -30,9 +34,9 @@ jobs:
       - name: Instalar dependências do bot
         run: |
           cd mb-ofertas/whatsapp-channel-bot
-          npm install
+          npm install --prefer-offline --no-audit --no-fund
 
-      - name: Iniciar bot e gerar ficheiros do QR
+      - name: Gerar QR (~1 min)
         id: qr
         env:
           API_URL: ${{ secrets.API_URL }}
@@ -49,76 +53,45 @@ jobs:
           source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
           export CHAT_ID="$(resolve_chat_id_for_init)"
           cd mb-ofertas/whatsapp-channel-bot
-          if [ -d data ]; then
-            find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
-          fi
-          # Força pareamento novo: sessão antiga/corrompida impede QR válido ou faz o scan falhar.
+
+          find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
           rm -rf data/.wwebjs_auth
-
-          pack_artifact_qr() {
-            [ ! -f data/qr.png ] && return 1
-            cp data/qr.png "$GITHUB_WORKSPACE/qr.png"
-            printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><p style="color:#444;font-size:14px">Aparelhos conectados → Conectar um aparelho. Neste zip use só <strong>qr.png</strong> (ou abra <strong>qr.html</strong> na mesma pasta).</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR WhatsApp"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
-          }
-
-          rm -f data/qr-url.txt data/qr-raw.txt data/qr.png
+          rm -f data/qr-url.txt data/qr-raw.txt data/qr.png bot.log
           rm -f "$GITHUB_WORKSPACE/qr.html" "$GITHUB_WORKSPACE/qr.png"
 
           setsid nohup node src/index.js >> bot.log 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/.whatsapp_bot_pid"
           disown || true
 
-          echo "Aguardando primeiro QR (até 2 min)..."
-          for _ in $(seq 1 24); do
-            sleep 5
-            [ -f data/qr.png ] && break
+          echo "Aguardando QR (máx. 50s)..."
+          for _ in $(seq 1 25); do
+            sleep 2
             if [ -f bot.log ] && grep -q "WhatsApp conectado" bot.log 2>/dev/null; then
               echo "already_connected=true" >> "$GITHUB_OUTPUT"
-              echo "Sessão já válida (sem novo QR)."
+              echo "Sessão conectada sem novo QR."
               exit 0
             fi
+            [ -f data/qr.png ] && break
           done
+
           if [ ! -f data/qr.png ]; then
             echo "qr_generated=false" >> "$GITHUB_OUTPUT"
             kill "$(cat "$GITHUB_WORKSPACE/.whatsapp_bot_pid")" 2>/dev/null || true
-            echo "Timeout: QR não foi gerado. Veja bot.log ou rode de novo."
+            echo "::error::QR não gerado em 50s. Veja bot.log."
+            tail -30 bot.log || true
             exit 1
           fi
 
-          echo "Aguardando o PNG estabilizar (3s sem alteração; no máximo ~90s)..."
-          stable=0
-          for _ in $(seq 1 90); do
-            [ ! -f data/qr.png ] && { sleep 1; continue; }
-            h=$(sha256sum data/qr.png | awk '{print $1}')
-            sleep 1
-            h2=$(sha256sum data/qr.png | awk '{print $1}')
-            if [ "$h" = "$h2" ] && [ -n "$h" ]; then
-              stable=$((stable + 1))
-            else
-              stable=0
-            fi
-            if [ "$stable" -ge 3 ]; then
-              break
-            fi
-          done
-
-          pack_artifact_qr
+          sleep 2
+          cp data/qr.png "$GITHUB_WORKSPACE/qr.png"
+          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie agora</h2><p>Aparelhos conectados → Conectar um aparelho. Escaneie em até <strong>60s</strong>.</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
           echo "qr_generated=true" >> "$GITHUB_OUTPUT"
 
-          echo ""
-          echo "URL da run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           {
-            echo "## QR Code (artifact)"
+            echo "## QR Code"
             echo ""
-            echo "Baixe **whatsapp-qr** (zip) em **Artifacts**. Contém só **qr.png** e **qr.html** (mesmo código de barras)."
-            echo "Se o pareamento falhar, rode o workflow de novo."
+            echo "Baixe o artifact **whatsapp-qr** e escaneie em até **60s**."
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Atualizar QR no artifact (versão mais recente)
-        if: success() && steps.qr.outputs.qr_generated == 'true'
-        run: |
-          cp mb-ofertas/whatsapp-channel-bot/data/qr.png "$GITHUB_WORKSPACE/qr.png"
-          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><p style="color:#444;font-size:14px">Aparelhos conectados → Conectar um aparelho. Escaneie em até <strong>60 segundos</strong> após baixar este zip.</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR WhatsApp"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
 
       - name: Publicar artifact whatsapp-qr
         if: success() && steps.qr.outputs.qr_generated == 'true'
@@ -130,55 +103,28 @@ jobs:
             qr.html
           if-no-files-found: error
 
-      - name: Republicar QR atualizado (aguarde ~25s e baixe de novo)
+      - name: Aguardar escaneamento (máx. 90s)
         if: success() && steps.qr.outputs.qr_generated == 'true'
-        run: |
-          sleep 25
-          cp mb-ofertas/whatsapp-channel-bot/data/qr.png "$GITHUB_WORKSPACE/qr.png"
-          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><p style="color:#444;font-size:14px">Aparelhos conectados → Conectar um aparelho. <strong>Baixe este artifact de novo</strong> e escaneie em até 60s.</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR WhatsApp"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
-
-      - name: Publicar artifact whatsapp-qr (atualizado)
-        if: success() && steps.qr.outputs.qr_generated == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: whatsapp-qr
-          path: |
-            qr.png
-            qr.html
-          if-no-files-found: error
-          overwrite: true
-
-      - name: Aguardar escaneamento (até ~4 min)
-        if: success() && steps.qr.outputs.qr_generated == 'true'
-        env:
-          API_URL: ${{ secrets.API_URL }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          CHAT_ID_ALL: ${{ secrets.CHAT_ID_ALL }}
-          CHAT_ID_HEALTH: ${{ secrets.CHAT_ID_HEALTH }}
-          CHAT_IDS: ${{ secrets.CHAT_IDS }}
-          SINGLE_RUN: "true"
-          GITHUB_ACTIONS: "true"
-          WHATSAPP_ALLOW_QR_PAIRING: "true"
         run: |
           set -e
-          # shellcheck source=/dev/null
-          source "$GITHUB_WORKSPACE/.github/scripts/whatsapp-resolve-chat-id.sh"
-          export CHAT_ID="$(resolve_chat_id_for_init)"
           cd mb-ofertas/whatsapp-channel-bot
           BOT_PID="$(cat "$GITHUB_WORKSPACE/.whatsapp_bot_pid")"
           if ! kill -0 "$BOT_PID" 2>/dev/null; then
-            echo "::warning::Bot não está ativo (PID $BOT_PID). Tente escanear com o QR já baixado ou rode o workflow de novo."
+            echo "Bot já encerrou. Sessão no cache."
             exit 0
           fi
-          echo "Aguardando escaneamento (até ~4 min)..."
-          for i in $(seq 1 24); do
+          for _ in $(seq 1 18); do
             if ! kill -0 "$BOT_PID" 2>/dev/null; then
               echo "Bot encerrou. Sessão salva no cache."
               exit 0
             fi
-            if [ $((i % 6)) -eq 0 ]; then
-              echo "⏳ ~$((i / 6)) min / 4 — use o **qr.png** do artifact desta run."
+            if [ -f bot.log ] && grep -q "WhatsApp conectado" bot.log 2>/dev/null; then
+              sleep 3
+              kill "$BOT_PID" 2>/dev/null || true
+              echo "Pareamento OK. Sessão salva no cache."
+              exit 0
             fi
-            sleep 10
+            sleep 5
           done
-          echo "Timeout. Se já escaneou, a sessão pode estar no cache."
+          kill "$BOT_PID" 2>/dev/null || true
+          echo "::warning::Tempo de scan esgotado (90s). Se escaneou, rode postar ofertas para testar."

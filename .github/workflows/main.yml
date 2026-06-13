@@ -23,13 +23,6 @@ jobs:
           path: mb-ofertas/whatsapp-channel-bot/data
           key: whatsapp-session-${{ runner.os }}-v1
 
-      - name: Verificar sessão WhatsApp
-        run: |
-          if [ ! -d mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth ] || [ -z "$(ls -A mb-ofertas/whatsapp-channel-bot/data/.wwebjs_auth 2>/dev/null)" ]; then
-            echo "::error::Sem sessão no cache. Rode **Init WhatsApp (escanear QR)**."
-            exit 1
-          fi
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -54,5 +47,4 @@ jobs:
           ROUND_ROBIN_CHANNELS: "true"
           SINGLE_RUN: "true"
           GITHUB_ACTIONS: "true"
-          WHATSAPP_SESSION_REQUIRED: "true"
         run: node src/index.js

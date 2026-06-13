@@ -81,13 +81,7 @@ export const config = {
   skipPostsWithoutImage: process.env.SKIP_POSTS_WITHOUT_IMAGE !== "false" && process.env.SKIP_POSTS_WITHOUT_IMAGE !== "0",
   /** Pausa em minutos: no modo normal, entre posts do mesmo canal; com ROUND_ROBIN_CHANNELS, entre rodadas (após 1 post por canal). Padrão: 10. */
   delayBetweenPostsMinutes: Math.max(0, parseInt(process.env.DELAY_BETWEEN_POSTS_MINUTES || "10", 10)),
-  /**
-   * Postagem (workflow "postar ofertas"): exige sessão já pareada no Init.
-   * Se a sessão expirou, falha imediatamente — não gera QR neste workflow.
-   */
-  sessionRequired:
-    process.env.WHATSAPP_SESSION_REQUIRED === "true" || process.env.WHATSAPP_SESSION_REQUIRED === "1",
-  /** Init (escanear QR): permite pareamento e renovação do QR. */
+  /** Init (escanear QR): gera e salva QR para pareamento. */
   allowQrPairing:
     process.env.WHATSAPP_ALLOW_QR_PAIRING === "true" || process.env.WHATSAPP_ALLOW_QR_PAIRING === "1",
 };
