@@ -59,11 +59,13 @@ function removeChromiumProfileLocksSync(dir) {
 let client = null;
 let isRunning = false;
 let cronScheduled = false;
-let qrAlreadyShown = false;
-/** No GHA: o WhatsApp renova o QR muitas vezes — só logamos instruções uma vez; os ficheiros continuam a atualizar. */
+/** Contador de renovações do QR (WhatsApp troca a cada ~20s). */
+let qrRefreshCount = 0;
+/** No GHA: instruções longas só uma vez; ficheiros QR atualizam a cada renovação. */
 let ghaQrInstructionsLogged = false;
 
 function createClient() {
+  qrRefreshCount = 0;
   const auth = new LocalAuth({
     clientId: config.authClientId,
     dataPath: AUTH_PATH,
@@ -71,11 +73,18 @@ function createClient() {
 
   const c = new Client({
     authStrategy: auth,
-    authTimeoutMs: 120000,
+    authTimeoutMs: 180000,
     qrMaxRetries: 0,
     takeoverOnConflict: true,
     takeoverTimeoutMs: 10000,
     userAgent: MODERN_CHROME_UA,
+    webVersionCache: {
+      type: "remote",
+      remotePath:
+        process.env.WWEB_VERSION_URL ||
+        "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1037225082-alpha.html",
+      strict: false,
+    },
     puppeteer: {
       headless: true,
       args: [
@@ -89,46 +98,46 @@ function createClient() {
   });
 
   c.on("qr", async (qr) => {
-    // No GHA o WhatsApp renova o QR; gravamos cada versão. Só uma fonte de imagem: o bot (não re-gerar no workflow).
-    if (!isGHA && qrAlreadyShown) return;
-    if (!isGHA) qrAlreadyShown = true;
-
+    qrRefreshCount += 1;
     const payload = typeof qr === "string" ? qr : String(qr ?? "");
     if (!payload) {
       logger.warn("Evento qr sem payload; ignorando.");
       return;
     }
 
-    if (!isGHA || !ghaQrInstructionsLogged) {
+    const showInstructions = !isGHA || !ghaQrInstructionsLogged;
+    if (showInstructions) {
       logger.info("Escaneie o QR em Aparelhos conectados (Linked devices):");
       logger.info(
         "Ligue o bot só a uma conta: use o app WhatsApp normal ou o WhatsApp Business (não misture). Business: app WhatsApp Business, menu, Aparelhos conectados, Conectar um aparelho."
       );
       logger.info(
-        "Se só o Messenger funcionar: apague data/.wwebjs_auth (ou mude AUTH_CLIENT_ID), desvincule aparelhos no telefone e escaneie de novo com o app desejado."
+        "Se o pareamento falhar: apague data/.wwebjs_auth, desvincule aparelhos no telefone e rode o workflow Init de novo."
       );
       if (isGHA) ghaQrInstructionsLogged = true;
+    } else if (qrRefreshCount > 1) {
+      logger.info(
+        `QR renovado (#${qrRefreshCount}) — válido por ~20s. Use o qr.png mais recente (data/qr.png ou artifact desta run).`
+      );
     }
-    if (isGHA) {
-      try {
-        const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
-        const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
-        fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
-        const qrPngPath = path.resolve(config.dataPath, "qr.png");
-        await QRCode.toFile(qrPngPath, payload, QR_IMAGE_OPTS);
-        const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
-        fs.writeFileSync(qrRawPath, payload, "utf-8");
-      } catch (e) {
-        logger.warn("Não foi possível salvar QR:", e.message);
-      }
-    } else {
-      qrcode.generate(payload, { small: true });
+
+    try {
+      const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
       const qrFilePath = path.resolve(config.dataPath, "qr-url.txt");
-      try {
-        const qrDataUrl = await QRCode.toDataURL(payload, QR_IMAGE_OPTS);
-        fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
-        logger.info("QR também salvo em:", qrFilePath);
-      } catch (_) {}
+      fs.writeFileSync(qrFilePath, qrDataUrl, "utf-8");
+      const qrPngPath = path.resolve(config.dataPath, "qr.png");
+      await QRCode.toFile(qrPngPath, payload, QR_IMAGE_OPTS);
+      const qrRawPath = path.resolve(config.dataPath, "qr-raw.txt");
+      fs.writeFileSync(qrRawPath, payload, "utf-8");
+      if (!isGHA) {
+        logger.info("QR salvo em:", qrPngPath, `(renovação #${qrRefreshCount})`);
+      }
+    } catch (e) {
+      logger.warn("Não foi possível salvar QR:", e.message);
+    }
+
+    if (!isGHA && (qrRefreshCount === 1 || qrRefreshCount % 3 === 0)) {
+      qrcode.generate(payload, { small: true });
     }
   });
 
@@ -143,6 +152,9 @@ function createClient() {
 
   c.on("auth_failure", (msg) => {
     logger.error("Falha de autenticação:", msg);
+    logger.error(
+      "Sessão inválida. Apague a pasta data/.wwebjs_auth e rode Init WhatsApp (escanear QR) de novo."
+    );
   });
 
   c.on("change_state", (state) => {

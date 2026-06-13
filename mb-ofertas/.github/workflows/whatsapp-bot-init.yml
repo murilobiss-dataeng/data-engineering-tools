@@ -50,6 +50,7 @@ jobs:
           if [ -d data ]; then
             find data -type f \( -name 'SingletonLock' -o -name 'SingletonCookie' -o -name 'SingletonSocket' \) -delete 2>/dev/null || true
           fi
+          rm -rf data/.wwebjs_auth
 
           pack_artifact_qr() {
             [ ! -f data/qr.png ] && return 1
@@ -68,6 +69,11 @@ jobs:
           for _ in $(seq 1 24); do
             sleep 5
             [ -f data/qr.png ] && break
+            if [ -f bot.log ] && grep -q "WhatsApp conectado" bot.log 2>/dev/null; then
+              echo "already_connected=true" >> "$GITHUB_OUTPUT"
+              echo "Sessão já válida (sem novo QR)."
+              exit 0
+            fi
           done
           if [ ! -f data/qr.png ]; then
             echo "qr_generated=false" >> "$GITHUB_OUTPUT"
@@ -105,8 +111,14 @@ jobs:
             echo "Se o pareamento falhar, rode o workflow de novo."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Atualizar QR no artifact (versão mais recente)
+        if: success() && steps.qr.outputs.qr_generated == 'true'
+        run: |
+          cp mb-ofertas/whatsapp-channel-bot/data/qr.png "$GITHUB_WORKSPACE/qr.png"
+          printf '%s' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR WhatsApp</title></head><body style="margin:20px;font-family:sans-serif"><h2>Escaneie com o WhatsApp</h2><p style="color:#444;font-size:14px">Aparelhos conectados → Conectar um aparelho. Escaneie em até <strong>60 segundos</strong> após baixar este zip.</p><img style="image-rendering:pixelated;image-rendering:crisp-edges" src="qr.png" width="768" height="768" alt="QR WhatsApp"/></body></html>' > "$GITHUB_WORKSPACE/qr.html"
+
       - name: Publicar artifact whatsapp-qr
-        if: success() && hashFiles('qr.png') != ''
+        if: success() && steps.qr.outputs.qr_generated == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: whatsapp-qr
