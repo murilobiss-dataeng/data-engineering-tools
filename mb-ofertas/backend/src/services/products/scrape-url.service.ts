@@ -30,6 +30,8 @@ export type ScrapedProduct = {
   installmentUnitPrice?: number | null;
   /** ID externo (ASIN, MLB..., etc.) para evitar duplicatas. */
   externalId?: string | null;
+  /** Cupom Amazon (código VPC), quando houver. */
+  coupon?: string | null;
   /** Todos os preços encontrados na página, com código da origem (para você indicar qual está correto). */
   priceCandidates?: { source: "amazon" | "mercadolivre" | "shopee"; candidates: PriceCandidate[] };
 };
@@ -158,7 +160,69 @@ function isPerUnitOrPerLiter($: cheerio.CheerioAPI, el: { closest: (s: string) =
   );
 }
 
-/** Tenta extrair preço do HTML (Amazon BR/global). Evita preço "por litro/kg". */
+/** Bloco de cupom VPC — valores ali são desconto do cupom, não o preço do produto. */
+function isAmazonCouponBlock(
+  $: cheerio.CheerioAPI,
+  el: { closest: (s: string) => { length: number; attr: (n: string) => string | undefined; text: () => string }; text: () => string }
+): boolean {
+  const block = el.closest(
+    '[id*="coupon"], [id*="Coupon"], [id*="vpc"], #promoPriceBlockMessage_feature_div, #vpcButton, #applicable_promotion_list_sec, .promoPriceBlockMessage'
+  );
+  if (block.length) return true;
+  const ctx = el.closest(".a-section, .a-box, .a-row").text().toLowerCase();
+  if (ctx.length > 0 && ctx.length < 600) {
+    return /cupom|coupon|economize|de\s*desconto|aplicar\s*cupom|resgatar\s*cupom/i.test(ctx);
+  }
+  return false;
+}
+
+function matchAmazonCouponCode(text: string): string | null {
+  const patterns = [
+    /com\s+o\s+cupom\s+([A-Z0-9]{4,24})/i,
+    /aplique\s+o\s+cupom\s+([A-Z0-9]{4,24})/i,
+    /cupom[:\s]+([A-Z0-9]{4,24})/i,
+    /código[:\s]+([A-Z0-9]{4,24})/i,
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m?.[1]) return m[1].toUpperCase();
+  }
+  return null;
+}
+
+/** Extrai código de cupom Amazon (VPC) do HTML. */
+function extractAmazonCoupon($: cheerio.CheerioAPI, html: string): string | null {
+  const selectors = [
+    '[id*="coupon"]',
+    '[id*="Coupon"]',
+    '[id*="vpc"]',
+    "#promoPriceBlockMessage_feature_div",
+    "#vpcButton",
+    'a[href*="/promotion/psp/"]',
+    "#applicable_promotion_list_sec",
+  ];
+  for (const sel of selectors) {
+    const nodes = $(sel);
+    for (let i = 0; i < nodes.length; i++) {
+      const code = matchAmazonCouponCode($(nodes[i]).text());
+      if (code) return code;
+    }
+  }
+  const withCupom = html.match(/com o cupom\s+([A-Z0-9]{4,24})/i);
+  if (withCupom?.[1]) return withCupom[1].toUpperCase();
+  return null;
+}
+
+/** Lê "amount" de um campo JSON embutido no HTML da Amazon. */
+function extractAmazonJsonAmount(html: string, field: string): number | null {
+  const re = new RegExp(`"${field}"\\s*:\\s*\\{[^}]*"amount"\\s*:\\s*([\\d.]+)`, "i");
+  const m = html.match(re);
+  if (!m) return null;
+  const p = parseFloat(m[1]);
+  return Number.isFinite(p) && p > 0 && p < 1000000 ? p : null;
+}
+
+/** Tenta extrair preço do HTML (Amazon BR/global). Evita preço "por litro/kg" e blocos de cupom. */
 function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice: number | null } {
   let price: number | null = null;
   let listPrice: number | null = null;
@@ -179,7 +243,7 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
   for (const sel of selectors) {
     const el = $(sel).first();
     if (el.length) {
-      if (isPerUnitOrPerLiter($, el)) continue;
+      if (isPerUnitOrPerLiter($, el) || isAmazonCouponBlock($, el)) continue;
       const text = el.text().trim();
       const p = parsePrice(text);
       if (p != null && p > 0 && p < 100000) {
@@ -189,7 +253,7 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
     }
   }
 
-  // Preço de lista (riscado) — evitar blocos "por litro"
+  // Preço de lista (riscado) — evitar blocos "por litro" e cupom
   const listSelectors = [
     ".a-price.a-text-price .a-offscreen",
     "#priceblock_retailprice",
@@ -199,7 +263,7 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
   for (const sel of listSelectors) {
     const el = $(sel).first();
     if (el.length) {
-      if (isPerUnitOrPerLiter($, el)) continue;
+      if (isPerUnitOrPerLiter($, el) || isAmazonCouponBlock($, el)) continue;
       const text = el.text().trim();
       const p = parsePrice(text);
       if (p != null && p > 0 && p < 100000 && (price == null || p > price)) {
@@ -211,22 +275,16 @@ function extractPriceFromHtml($: cheerio.CheerioAPI): { price: number; listPrice
 
   // Fallback: busca por padrão "R$ X,XX" no HTML (evitar valores absurdos tipo 102 quando é "por litro")
   if (price == null) {
-    const body = $.html();
-    const priceMatch = body.match(/R\$\s*[\d.,]+|[\d.,]+\s*R\$|"amount"\s*:\s*([\d.]+)/);
+    const body = $("#corePrice_feature_div, #apex_desktop, #corePriceDisplay_desktop_feature_div").text();
+    const priceMatch = body.match(/R\$\s*[\d.,]+|[\d.,]+\s*R\$/);
     if (priceMatch) {
-      const raw = priceMatch[1] ? priceMatch[1] : priceMatch[0];
-      const p = parsePrice(raw);
+      const p = parsePrice(priceMatch[0]);
       if (p != null && p > 0 && p < 100000) price = p;
     }
   }
 
-  let finalPrice = price ?? 0;
-  let finalListPrice = listPrice;
-  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
-    const tmp = finalPrice;
-    finalPrice = finalListPrice;
-    finalListPrice = tmp;
-  }
+  const finalPrice = price ?? 0;
+  const finalListPrice = listPrice != null && price != null && listPrice > price ? listPrice : null;
   return { price: finalPrice, listPrice: finalListPrice };
 }
 
@@ -358,51 +416,31 @@ function extractAmazonProductTitle($: cheerio.CheerioAPI, html: string, ogTitle:
   return title.slice(0, 500);
 }
 
-/** Busca JSON de estado da página (Amazon). priceToPay = preço real de compra (não por litro). */
+/** Busca JSON de estado da página (Amazon). priceToPay = preço real de compra (não cupom nem "por litro"). */
 function extractPriceFromPageJson(html: string): { price: number; listPrice?: number } | null {
-  // priceToPay = preço que o cliente paga (evita confusão com "por litro")
-  const priceToPayMatch = html.match(/priceToPay["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/);
   let price: number | null = null;
+  for (const field of ["priceToPay", "buyingPrice", "displayPrice", "apexPrice"]) {
+    const p = extractAmazonJsonAmount(html, field);
+    if (p != null) {
+      price = p;
+      break;
+    }
+  }
+
   let listPrice: number | undefined;
-  if (priceToPayMatch) {
-    const p = parseFloat(priceToPayMatch[1]);
-    if (Number.isFinite(p) && p > 0 && p < 1000000) price = p;
-  }
-  if (price == null) {
-    const amountMatch = html.match(/"amount":\s*([\d.]+)/);
-    if (amountMatch) {
-      const p = parseFloat(amountMatch[1]);
-      if (Number.isFinite(p) && p > 0 && p < 1000000) price = p;
+  for (const field of ["basisPrice", "strikePrice", "wasPrice", "listPrice", "regularPrice"]) {
+    const lp = extractAmazonJsonAmount(html, field);
+    if (lp != null && (price == null || lp > price)) {
+      listPrice = lp;
+      break;
     }
   }
-  // Preço de lista: basisPrice, savingsBasis, strikePrice, wasPrice, listPrice, regularPrice
-  const listPatterns = [
-    /basisPrice["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-    /savingsBasis["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-    /"strikePrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-    /"wasPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-    /"listPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-    /"regularPrice"["\s]*:["\s]*\{[^}]*"amount"["\s]*:["\s]*([\d.]+)/,
-  ];
-  for (const re of listPatterns) {
-    const m = html.match(re);
-    if (m) {
-      const lp = parseFloat(m[1]);
-      if (Number.isFinite(lp) && lp > 0 && lp < 1000000 && (price == null || lp > price)) {
-        listPrice = lp;
-        break;
-      }
-    }
-  }
+
   if (price == null) return null;
-  let finalPrice = price;
-  let finalListPrice = listPrice;
-  if (finalListPrice != null && finalListPrice < finalPrice) {
-    const tmp = finalPrice;
-    finalPrice = finalListPrice;
-    finalListPrice = tmp;
-  }
-  return { price: finalPrice, listPrice: finalListPrice };
+  return {
+    price,
+    listPrice: listPrice != null && listPrice > price ? listPrice : undefined,
+  };
 }
 
 /** Extrai texto de parcelamento (ex.: "em 12x de R$ 25,00 sem juros"). */
@@ -439,6 +477,100 @@ function extractInstallmentsML($: cheerio.CheerioAPI): string | null {
     if (m && m[0].length > 5) return m[0].trim();
   }
   return null;
+}
+
+const ML_COUPON_STOP_WORDS = /^(OFF|DESCONTO|CUPOM|ATIVO|NA|LOJA|EXTRA)$/i;
+
+function matchMercadoLivreCouponCode(text: string): string | null {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  const patterns = [
+    /insira\s+o\s+c[oó]digo[:\s]+([A-Z0-9_\-]{3,24})/i,
+    /c[oó]digo\s+do\s+cupom[:\s]+([A-Z0-9_\-]{3,24})/i,
+    /com\s+o\s+cupom[:\s]+([A-Z0-9_\-]{3,24})/i,
+    /use\s+o\s+cupom[:\s]+([A-Z0-9_\-]{3,24})/i,
+    /cupom[:\s]+([A-Z0-9_\-]{4,24})/i,
+    /cupom\s+de\s+desconto[:\s]+([A-Z0-9_\-]{3,24})/i,
+  ];
+  for (const re of patterns) {
+    const m = cleaned.match(re);
+    if (m?.[1] && !ML_COUPON_STOP_WORDS.test(m[1])) return m[1].toUpperCase();
+  }
+  return null;
+}
+
+/** Cupom do Mercado Livre: código do vendedor ou badge de desconto com cupom. */
+function extractMercadoLivreCoupon($: cheerio.CheerioAPI, html: string): string | null {
+  const jsonPatterns = [
+    /"coupon_code"\s*:\s*"([A-Z0-9_\-]{3,24})"/i,
+    /"partial_coupon_code"\s*:\s*"([A-Z0-9_\-]{3,24})/i,
+    /SELLER_COUPON_CAMPAIGN[\s\S]{0,1200}?"coupon_code"\s*:\s*"([A-Z0-9_\-]{3,24})"/i,
+    /SELLER_COUPON_CAMPAIGN[\s\S]{0,1200}?"partial_coupon_code"\s*:\s*"([A-Z0-9_\-]{3,24})"/i,
+    /"type"\s*:\s*"coupon"[\s\S]{0,200}?"code"\s*:\s*"([A-Z0-9_\-]{3,24})"/i,
+    /"code"\s*:\s*"([A-Z0-9_\-]{3,24})"[\s\S]{0,200}?"type"\s*:\s*"coupon"/i,
+  ];
+  for (const re of jsonPatterns) {
+    const m = html.match(re);
+    if (m?.[1] && !ML_COUPON_STOP_WORDS.test(m[1])) return m[1].toUpperCase();
+  }
+
+  const selectors = [
+    ".ui-pdp-promotions",
+    ".ui-pdp-promotions__coupon",
+    ".ui-pdp-promotions__pill",
+    ".ui-pdp-promotions__discount",
+    '[class*="promotions__coupon"]',
+    '[class*="promotion__coupon"]',
+    '[data-testid*="coupon"]',
+    ".andes-money-amount-combo__coupon",
+    ".ui-pdp-benefits",
+    "#benefits",
+  ];
+  for (const sel of selectors) {
+    const nodes = $(sel);
+    for (let i = 0; i < nodes.length; i++) {
+      const text = $(nodes[i]).text().replace(/\s+/g, " ").trim();
+      const code = matchMercadoLivreCouponCode(text);
+      if (code) return code;
+      if (/cupom/i.test(text) && /off|desconto|%/i.test(text) && text.length <= 80) {
+        return text.toUpperCase();
+      }
+    }
+  }
+
+  const wide = html.match(/insira\s+o\s+c[oó]digo[\s\S]{0,60}?([A-Z0-9_\-]{4,24})/i);
+  if (wide?.[1] && !ML_COUPON_STOP_WORDS.test(wide[1])) return wide[1].toUpperCase();
+
+  return null;
+}
+
+/** Cupom/voucher Shopee quando presente na página. */
+function extractShopeeCoupon($: cheerio.CheerioAPI, html: string): string | null {
+  const jsonPatterns = [
+    /"voucher_code"\s*:\s*"([A-Z0-9_\-]{3,32})"/i,
+    /"promotion_code"\s*:\s*"([A-Z0-9_\-]{3,32})"/i,
+    /"coupon_code"\s*:\s*"([A-Z0-9_\-]{3,32})"/i,
+  ];
+  for (const re of jsonPatterns) {
+    const m = html.match(re);
+    if (m?.[1]) return m[1].toUpperCase();
+  }
+  const nodes = $('[class*="voucher"], [class*="coupon"], [class*="promotion"]');
+  for (let i = 0; i < nodes.length; i++) {
+    const text = $(nodes[i]).text().replace(/\s+/g, " ").trim();
+    const code = matchMercadoLivreCouponCode(text) || matchAmazonCouponCode(text);
+    if (code) return code;
+  }
+  return null;
+}
+
+/** Bloco de promoção/cupom ML — valores ali não são o preço principal do produto. */
+function isMercadoLivreCouponBlock($: cheerio.CheerioAPI, el: cheerio.Element): boolean {
+  const block = $(el).closest(
+    '.ui-pdp-promotions, [class*="coupon"], [class*="promotion"], .andes-money-amount-combo__coupon, .ui-pdp-benefits, #benefits'
+  );
+  if (block.length) return true;
+  const text = $(el).closest(".a-section, .ui-pdp-price").text().toLowerCase();
+  return text.length > 0 && text.length < 400 && /cupom|coupon|desconto\s+extra/i.test(text);
 }
 
 /** Rejeita valor que parece ser contagem (opiniões, avaliações) e não preço. */
@@ -534,6 +666,7 @@ function extractMercadoLivreFromHtml(
     for (const sel of mainPriceSelectors) {
       const el = $(sel).first();
       if (el.length) {
+        if (isMercadoLivreCouponBlock($, el.get(0)!)) continue;
         const text = el.text().trim();
         if (/opiniões|avaliações|reviews/i.test(text)) continue;
         const p = parsePrice(text);
@@ -548,7 +681,7 @@ function extractMercadoLivreFromHtml(
     const mainBlock = $(".ui-pdp-price__main-container").first();
     if (mainBlock.length) {
       const text = mainBlock.text().trim();
-      if (!/opiniões|avaliações|reviews/i.test(text)) {
+      if (!/opiniões|avaliações|reviews|cupom/i.test(text)) {
         const p = parsePrice(text);
         if (p != null && p > 0 && p < 1000000 && !mlLooksLikeCount(p, html)) price = p;
       }
@@ -610,9 +743,10 @@ function extractMercadoLivreFromHtml(
     }
   }
 
-  // —— 6) Fallback: R$ X no HTML. Descartar valores que parecem contagem. ——
+  // —— 6) Fallback: R$ X só no bloco principal de preço (evita valor de cupom). ——
   if (price == null) {
-    const reais = html.match(/R\$\s*[\d.,]+/g);
+    const mainText = $(".ui-pdp-price__main-container, .ui-pdp-price").first().text();
+    const reais = mainText.match(/R\$\s*[\d.,]+/g);
     if (reais && reais.length > 0) {
       const values = reais
         .map((r) => parsePrice(r))
@@ -628,13 +762,8 @@ function extractMercadoLivreFromHtml(
     null;
 
   const installments = extractInstallmentsML($);
-  let finalPrice = price ?? 0;
-  let finalListPrice = listPrice;
-  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
-    const swap = finalPrice;
-    finalPrice = finalListPrice;
-    finalListPrice = swap;
-  }
+  const finalPrice = price ?? 0;
+  const finalListPrice = listPrice != null && price != null && listPrice > price ? listPrice : null;
   return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments };
 }
 
@@ -698,12 +827,7 @@ function extractShopeeFromHtml(
     null;
 
   let finalPrice = price ?? 0;
-  let finalListPrice = listPrice;
-  if (finalListPrice != null && finalPrice > 0 && finalListPrice < finalPrice) {
-    const tmp = finalPrice;
-    finalPrice = finalListPrice;
-    finalListPrice = tmp;
-  }
+  const finalListPrice = listPrice != null && price != null && listPrice > price ? listPrice : null;
   return { title, price: finalPrice, listPrice: finalListPrice, imageUrl, installments: null };
 }
 
@@ -743,11 +867,16 @@ function collectAmazonPriceCandidates(html: string, $: cheerio.CheerioAPI): Pric
   ];
   for (const sel of htmlSelectorsPrice) {
     const el = $(sel).first();
-    if (el.length && !isPerUnitOrPerLiter($, el)) {
+    if (el.length && !isPerUnitOrPerLiter($, el) && !isAmazonCouponBlock($, el)) {
       const p = parsePrice(el.text().trim());
       if (p != null && p > 0) add(`amazon_html_${sel.replace(/\s+/g, "_").slice(0, 40)}`, p);
     }
   }
+
+  ["couponDiscount", "vpcDiscount", "promoDiscount", "savingsAmount"].forEach((name) => {
+    const v = extractAmazonJsonAmount(html, name);
+    if (v != null) add(`amazon_json_${name}_ignored`, v);
+  });
 
   return candidates;
 }
@@ -890,6 +1019,7 @@ export async function scrapeProductFromUrl(
   let listPrice: number | null = null;
   let imageUrl: string | null = null;
   let installments: string | null = null;
+  let coupon: string | null = null;
 
   if (isMercadoLivreUrl(normalized)) {
     const ml = extractMercadoLivreFromHtml($, html);
@@ -911,6 +1041,7 @@ export async function scrapeProductFromUrl(
     listPrice = ml.listPrice;
     imageUrl = ml.imageUrl || ogImage || null;
     installments = ml.installments;
+    coupon = extractMercadoLivreCoupon($, html);
     if (price <= 0) {
       const fromLd = extractFromJsonLd(html);
       if (fromLd?.price != null && Number(fromLd.price) > 0) price = Number(fromLd.price);
@@ -930,6 +1061,7 @@ export async function scrapeProductFromUrl(
     listPrice = shopee.listPrice;
     imageUrl = shopee.imageUrl || ogImage || null;
     installments = shopee.installments;
+    coupon = extractShopeeCoupon($, html);
   } else {
     // Amazon: priorizar priceToPay do JSON (preço real de compra, não "por litro")
     title = extractAmazonProductTitle($, html, ogTitle);
@@ -950,6 +1082,7 @@ export async function scrapeProductFromUrl(
     }
     imageUrl = ogImage || $("#landingImage").attr("src") || $("#imgBlkFront").attr("src") || null;
     installments = extractInstallmentsAmazon($, html);
+    coupon = extractAmazonCoupon($, html);
   }
 
   if (!title) throw new Error("Não foi possível obter o título do produto.");
@@ -968,16 +1101,14 @@ export async function scrapeProductFromUrl(
     affiliateLink = ogUrl || normalized;
   }
 
-  // Garantir: price = preço novo (menor), previousPrice = preço cheio (riscado, maior)
+  // Garantir: price = preço à vista (menor), previousPrice = valor original (maior)
   let previousPrice: number | null = null;
   if (listPrice != null && listPrice > price) {
     previousPrice = listPrice;
-  } else if (listPrice != null && listPrice < price && listPrice > 0) {
-    // Estavam trocados: listPrice era o promocional, price era o cheio
-    const salePrice = listPrice;
-    const fullPrice = price;
-    price = salePrice;
-    previousPrice = fullPrice;
+  } else if (listPrice != null && listPrice < price && listPrice > 0 && listPrice / price >= 0.5) {
+    // Preços invertidos (não confundir com valor de desconto de cupom, que é bem menor)
+    previousPrice = price;
+    price = listPrice;
   }
 
   const discountPct =
@@ -988,14 +1119,14 @@ export async function scrapeProductFromUrl(
     const candidates = collectAmazonPriceCandidates(html, $);
     priceCandidates = { source: "amazon", candidates };
     logger.info(
-      { source: "amazon", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice } },
+      { source: "amazon", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice, coupon } },
       "Preços encontrados (Amazon) — use os códigos para indicar qual é preço novo e qual é preço cheio"
     );
   } else if (isMercadoLivreUrl(normalized)) {
     const candidates = collectMLPriceCandidates($, html);
     priceCandidates = { source: "mercadolivre", candidates };
     logger.info(
-      { source: "mercadolivre", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice } },
+      { source: "mercadolivre", url: normalized.slice(0, 60), priceCandidates: candidates, chosen: { price, previousPrice, coupon } },
       "Preços encontrados (Mercado Livre) — use os códigos para indicar qual é preço novo e qual é preço cheio"
     );
   } else if (isShopeeUrl(normalized)) {
@@ -1024,6 +1155,7 @@ export async function scrapeProductFromUrl(
     installmentUnitPrice: instParsed.unitPrice,
     priceCandidates,
     externalId,
+    coupon,
   };
 }
 
@@ -1061,6 +1193,7 @@ export function scrapedToProductInput(scraped: ScrapedProduct, categoryId?: stri
     installmentMaxTimes: scraped.installmentMaxTimes ?? undefined,
     installmentUnitPrice: scraped.installmentUnitPrice ?? undefined,
     externalId: scraped.externalId ?? undefined,
+    coupon: scraped.coupon ?? undefined,
     source: "amazon",
     categoryId,
   };

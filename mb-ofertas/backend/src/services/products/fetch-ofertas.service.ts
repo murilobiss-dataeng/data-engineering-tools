@@ -469,7 +469,13 @@ async function insertScrapedProduct(
   const categoryId = await resolveCategoryId(scraped.title, scraped.discountPct, options.forceCategorySlug);
   if (categoryId) input.categoryId = categoryId;
   input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
-  const { isNew } = await productsRepo.insertProduct(input);
+  const { id, isNew } = await productsRepo.insertProduct(input);
+  if (!isNew && input.coupon) {
+    const row = await productsRepo.getProductById(id);
+    if (row && (row.coupon == null || String(row.coupon).trim() === "")) {
+      await productsRepo.updateProductCoupon(id, input.coupon);
+    }
+  }
   return { isNew, skipped: false };
 }
 

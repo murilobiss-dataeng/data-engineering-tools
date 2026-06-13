@@ -295,6 +295,7 @@ productsRouter.post("/", async (req, res) => {
       externalId: body.externalId,
       source: body.source ?? "manual",
       categoryId,
+      coupon: body.coupon ?? null,
     });
     const row = await productsRepo.getProductById(id);
     res.status(201).json(formatProductRow(row));

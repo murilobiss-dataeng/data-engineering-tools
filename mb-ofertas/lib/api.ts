@@ -114,6 +114,8 @@ export type ScrapedProduct = {
   installments: string | null;
   installmentMaxTimes?: number | null;
   installmentUnitPrice?: number | null;
+  /** Cupom Amazon (código VPC), quando detectado no scrape. */
+  coupon?: string | null;
   /** Preços encontrados na página (origem: amazon | mercadolivre | shopee) para você indicar qual usar. */
   priceCandidates?: {
     source: "amazon" | "mercadolivre" | "shopee";

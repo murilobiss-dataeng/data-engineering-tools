@@ -69,8 +69,8 @@ export async function insertProduct(
     `INSERT INTO products (
       category_id, external_id, title, price, previous_price, discount_pct,
       affiliate_link, image_url, source, status, installments,
-      installment_max_times, installment_unit_price
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12)
+      installment_max_times, installment_unit_price, coupon
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13)
     RETURNING id`,
     [
       input.categoryId ?? null,
@@ -85,6 +85,7 @@ export async function insertProduct(
       input.installments ?? null,
       input.installmentMaxTimes != null && input.installmentMaxTimes > 0 ? Math.floor(Number(input.installmentMaxTimes)) : null,
       input.installmentUnitPrice != null ? roundToTwoDecimals(Number(input.installmentUnitPrice)) : null,
+      input.coupon != null && String(input.coupon).trim() !== "" ? String(input.coupon).trim() : null,
     ]
   );
   return { id: res.rows[0].id, isNew: true };

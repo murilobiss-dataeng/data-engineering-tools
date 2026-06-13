@@ -42,6 +42,7 @@ export default function GerarOfertaPage() {
         body: JSON.stringify({ url: url.trim() }),
       });
       setProduct(data);
+      setCoupon(data.coupon?.trim() || "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao buscar oferta. Verifique a URL e tente de novo.");
     } finally {
@@ -107,6 +108,7 @@ export default function GerarOfertaPage() {
           installmentMaxTimes: product.installmentMaxTimes ?? undefined,
           installmentUnitPrice: product.installmentUnitPrice ?? undefined,
           source: getSourceFromAffiliateLink(product.affiliateLink),
+          coupon: coupon.trim() || product.coupon?.trim() || undefined,
         }),
       });
       router.push(`/produtos/${saved.id}`);
