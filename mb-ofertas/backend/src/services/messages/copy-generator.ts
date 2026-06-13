@@ -3,6 +3,7 @@
  * Usa apenas texto/ASCII para evitar emojis desconfigurados em alguns canais.
  */
 import type { ProductInput } from "../products/types.js";
+import { parseInstallmentParts } from "../../utils/installments.js";
 
 /** Remove prefixo redundante comum em títulos de loja / copy antiga (mensagem já mostra % OFF). */
 function stripLeadingOfferDiscountLabel(raw: string): string {
@@ -21,11 +22,11 @@ function formatPrice(value: number): string {
   }).format(value);
 }
 
-/** Bloco de preços: cheio (se houver), valor à vista, valor parcelado (até Nx ou texto da loja). */
+/** Bloco de preços: valor original (riscado), à vista, parcelamento resumido. */
 function appendPriceLines(lines: string[], product: ProductInput): void {
   const hasFull = product.previousPrice != null && product.previousPrice > product.price;
   if (hasFull) {
-    lines.push(`Preço cheio: ${formatPrice(product.previousPrice!)}`);
+    lines.push(`Valor Original: ~${formatPrice(product.previousPrice!)}~`);
   }
   lines.push(`Valor à vista: ${formatPrice(product.price)}`);
 
@@ -35,12 +36,16 @@ function appendPriceLines(lines: string[], product: ProductInput): void {
     product.installmentUnitPrice != null &&
     product.installmentUnitPrice > 0;
 
-  if (structured) {
-    lines.push(
-      `Valor parcelado: até ${product.installmentMaxTimes}x de ${formatPrice(product.installmentUnitPrice!)}`
-    );
+  const parsed = parseInstallmentParts(product.installments);
+  const maxTimes =
+    structured && product.installmentMaxTimes
+      ? product.installmentMaxTimes
+      : parsed.maxTimes;
+
+  if (maxTimes != null && maxTimes > 0) {
+    lines.push(`Parcelamento em até ${maxTimes}x`);
   } else if (product.installments?.trim()) {
-    lines.push(`Valor parcelado: ${product.installments.trim()}`);
+    lines.push(`Parcelamento: ${product.installments.trim()}`);
   }
 
   if (hasFull && product.discountPct != null && product.discountPct > 0) {
@@ -70,7 +75,7 @@ function appendAdDisclaimer(lines: string[]): void {
 
 /**
  * Gera mensagem de oferta para WhatsApp com:
- * - Título, preço cheio / à vista / parcelas, link.
+ * - Título, valor original / à vista / parcelas, link.
  * - Sem emojis para evitar desconfiguração em canais.
  */
 export function generateOfferMessage(product: ProductInput, options?: { shortLink?: string }): string {

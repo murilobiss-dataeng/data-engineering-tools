@@ -2,7 +2,14 @@
   "urls": [
     "https://www.amazon.com.br/deals",
     "https://www.mercadolivre.com.br/ofertas",
-    "https://shopee.com.br/flash-sale"
+    "https://shopee.com.br/flash-sale",
+    "https://lista.mercadolivre.com.br/biblia",
+    "https://lista.mercadolivre.com.br/livro-evangelico",
+    "https://lista.mercadolivre.com.br/devocional",
+    "https://lista.mercadolivre.com.br/terco",
+    "https://www.amazon.com.br/s?k=biblia+sagrada",
+    "https://www.amazon.com.br/s?k=livro+cristao",
+    "https://shopee.com.br/search?keyword=biblia"
   ],
-  "comment": "Listagens (ofertas/busca). Antes URLs Amazon eram ignoradas sem AMAZON_DEALS_PROXY_URL — agora todas são tentadas; Amazon pode precisar de proxy ou USE_BROWSER_SCRAPER no servidor. Shopee também usa busca via API (SHOPEE_SEARCH_ENABLED) além destas URLs."
+  "comment": "Ofertas gerais + catálogo religioso (faith). Faith também usa FAITH_CATALOG_URLS e busca Shopee por keywords religiosas (não só promoções)."
 }

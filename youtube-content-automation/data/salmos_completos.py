@@ -1868,6 +1868,287 @@ Ele atendeu a oração do desamparado, e não desprezou a sua oração.
 Mas tu és o mesmo, e os teus anos nunca terão fim.""",
         "cry",
     ),
+
+    # =========================================================================
+    # SALMOS FALTANTES (105–115, 119 resumido, 129, 135–137, 140–143)
+    # =========================================================================
+    (
+        "Salmo 105",
+        """Dai graças ao Senhor, invocai o seu nome; fazei conhecidos os seus feitos entre os povos.
+Cantai-lhe, cantai-lhe salmos; falai de todas as suas maravilhas.
+Gloriai-vos no seu santo nome; alegre-se o coração daqueles que buscam ao Senhor.
+Buscai ao Senhor e a sua força; buscai a sua face continuamente.
+Lembrai-vos das maravilhas que fez, dos seus prodígios e dos juízos da sua boca.
+Ele é o Senhor nosso Deus; os seus juízos estão em toda a terra.
+Ele se lembrou perpetuamente da sua aliança, da palavra que mandou, até milhares de gerações.
+Ele confirmou a Jacó por decreto, e a Israel por concerto eterno.
+Louvai ao Senhor.""",
+        "gratitude",
+    ),
+    (
+        "Salmo 106",
+        """Louvai ao Senhor. Dai graças ao Senhor, porque ele é bom; porque a sua benignidade dura para sempre.
+Quem pode contar as obras poderosas do Senhor? Quem anunciará todos os seus louvores?
+Bem-aventurados os que guardam o juízo, e praticam a justiça em todos os tempos.
+Lembrai-vos de mim, Senhor, segundo a tua boa vontade para com o teu povo.
+Visita-me com a tua salvação, para que eu veja a prosperidade dos teus escolhidos.
+Nós pecamos como nossos pais; cometemos iniquidade, procedemos impiamente.
+Mas ele, pela sua misericórdia, os redimiu e os tirou do abismo.
+Salvou-os por amor do seu nome, para fazer notória a sua força.
+Bendito seja o Senhor Deus de Israel, de eternidade a eternidade; e todo o povo diga: Amém.""",
+        "repentance",
+    ),
+    (
+        "Salmo 107",
+        """Dai graças ao Senhor, porque ele é bom; porque a sua benignidade dura para sempre.
+Assim digam os remidos do Senhor, os que ele remiu da mão do inimigo.
+E os congregou de entre as terras, do oriente e do ocidente, do norte e do sul.
+Andaram desgarrados pelo deserto, por caminhos solitários; não acharam cidade em que habitassem.
+Então clamaram ao Senhor na sua angústia, e ele os livrou das suas tribulações.
+E os conduziu pelo caminho direito, para irem à cidade em que habitassem.
+Oh, que homens rendam graças ao Senhor pela sua bondade, e pelas suas maravilhas para com os filhos dos homens!
+Porque ele satisfaz a alma vazia, e enche de bens a alma faminta.""",
+        "hope",
+    ),
+    (
+        "Salmo 108",
+        """Preparado está o meu coração, ó Deus; cantarei e salmodiarei com toda a minha alma.
+Desperta, saltério e harpa; eu mesmo despertarei ao romper da alva.
+Louvar-te-ei entre os povos, Senhor, e a ti cantarei salmos entre as nações.
+Porque a tua benignidade se eleva acima dos céus, e a tua verdade ultrapassa as mais altas nuvens.
+Sê exaltado, ó Deus, sobre os céus, e a tua glória sobre toda a terra.
+Para que os teus amados sejam livres, salva-nos com a tua destra, e ouve-nos.
+Em Deus faremos proezas, porque ele é que pisará os nossos inimigos.""",
+        "praise",
+    ),
+    (
+        "Salmo 109",
+        """Ó Deus do meu louvor, não te cales;
+Pois a boca do ímpio e a boca fraudulenta estão abertas contra mim.
+Em lugar de me amarem, me caluniam; mas eu oro.
+Retribuíram-me o mal pelo bem, e o ódio pelo meu amor.
+Levanta-te, Senhor Deus, e levanta a tua mão; não te esqueças dos necessitados.
+Mas tu, ó Senhor, estás no trono; julga os povos com equidade.
+Eu louvarei muito ao Senhor com a minha boca; louvá-lo-ei entre a multidão.
+Porque à direita do pobre se porá para o livrar dos que o julgam.""",
+        "cry",
+    ),
+    (
+        "Salmo 110",
+        """Disse o Senhor ao meu Senhor: Assenta-te à minha mão direita, até que ponha os teus inimigos por escabelo dos teus pés.
+O Senhor enviará de Sião o cetro da tua força; domina no meio dos teus inimigos.
+O teu povo se apresentará voluntariamente no dia do teu poder.
+Jurou o Senhor, e não se arrependerá: Tu és sacerdote para sempre, segundo a ordem de Melquisedeque.
+O Senhor está à tua mão direita; quebrantará reis no dia da sua ira.
+Ele julgará entre as nações; encherá tudo de cadáveres; quebrantará as cabeças de muitos países.""",
+        "strength",
+    ),
+    (
+        "Salmo 111",
+        """Louvarei ao Senhor de todo o meu coração, no conselho dos justos e na congregação.
+Grandes são as obras do Senhor, procuradas por todos os que nelas se comprazem.
+Gloriosa e majestosa é a sua obra, e a sua justiça permanece para sempre.
+Ele fez memoráveis as suas maravilhas; piedoso e misericordioso é o Senhor.
+Deu mantimento aos que o temem; lembrar-se-á sempre da sua aliança.
+O temor do Senhor é o princípio da sabedoria; bom entendimento têm todos os que lhe obedecem.
+O seu louvor permanece para sempre.""",
+        "praise",
+    ),
+    (
+        "Salmo 112",
+        """Louvai ao Senhor. Bem-aventurado o homem que teme ao Senhor, que em seus mandamentos tem grande prazer.
+A sua descendência será poderosa na terra; a geração dos justos será abençoada.
+Prosperidade e riquezas haverá na sua casa, e a sua justiça permanece para sempre.
+Até nas trevas se levanta luz aos justos; ele é piedoso, misericordioso e justo.
+O homem bom é compassivo e empresta; disporá as suas coisas com juízo.
+Por isso não será abalado; o justo ficará em memória eterna.
+Não temerá maus rumores; o seu coração está firme, confiando no Senhor.
+Distribui, dá aos pobres; a sua justiça permanece para sempre; o seu poder será exaltado com honra.""",
+        "wisdom",
+    ),
+    (
+        "Salmo 113",
+        """Louvai ao Senhor. Louvai, servos do Senhor, louvai o nome do Senhor.
+Seja bendito o nome do Senhor, desde agora e para sempre.
+Desde o nascimento do sol até ao seu ocaso, seja louvado o nome do Senhor.
+O Senhor está exaltado acima de todas as nações, e a sua glória acima dos céus.
+Quem é como o Senhor nosso Deus, que habita nas alturas,
+E se inclina para ver o que está nos céus e na terra?
+Ele levanta o pobre do pó, e do monturo ergue o necessitado,
+Para o fazer assentar com os príncipes, sim, com os príncipes do seu povo.
+Ele faz com que a mulher estéril habite em família, e seja alegre mãe de filhos. Louvai ao Senhor.""",
+        "praise",
+    ),
+    (
+        "Salmo 114",
+        """Quando Israel saiu do Egito, e a casa de Jacó de um povo de língua estranha,
+Judá foi o seu santuário, e Israel o seu domínio.
+O mar viu isto, e fugiu; o Jordão tornou atrás.
+Os montes saltaram como carneiros, e os outeiros como cordeiros do rebanho.
+Que tiveste, ó mar, que fugiste, e tu, ó Jordão, que tornaste atrás?
+Treme, terra, diante da face do Senhor, diante da face do Deus de Jacó,
+O qual converteu o rochedo em lago de águas, e o seixo em manancial.""",
+        "praise",
+    ),
+    (
+        "Salmo 115",
+        """Não a nós, ó Senhor, não a nós, mas ao teu nome dá glória, por amor da tua benignidade e da tua verdade.
+Por que diriam os gentios: Onde está o seu Deus?
+Mas o nosso Deus está nos céus; tudo o que lhe aprouve fez.
+Os ídolos deles são prata e ouro, obra das mãos dos homens.
+Têm boca, mas não falam; têm olhos, mas não vêem.
+Têm ouvidos, mas não ouvem; têm nariz, mas não cheiram.
+Têm mãos, mas não apalpam; têm pés, mas não andam; nem som algum sai da sua garganta.
+Semelhantes a eles sejam os que os fazem, e todos os que neles confiam.
+Israel confia no Senhor; ele é o seu auxílio e o seu escudo.
+A casa de Arão confia no Senhor; ele é o seu auxílio e o seu escudo.
+Os que temem ao Senhor confiam no Senhor; ele é o seu auxílio e o seu escudo.
+O Senhor se lembrou de nós; ele nos abençoará; abençoará a casa de Israel; abençoará a casa de Arão.
+Abençoará os que temem ao Senhor, tanto pequenos como grandes.
+O Senhor vos aumentará cada vez mais, a vós e a vossos filhos.
+Bendito sejais vós do Senhor, que fez o céu e a terra.
+Os céus são os céus do Senhor, mas a terra a deu aos filhos dos homens.
+Não é dos mortos que louvam ao Senhor, nem dos que descem ao silêncio.
+Mas nós bendiremos ao Senhor, desde agora e para sempre. Louvai ao Senhor.""",
+        "praise",
+    ),
+    (
+        "Salmo 119",
+        """Bem-aventurados os que trilham caminhos retos, que andam na lei do Senhor.
+Bem-aventurados os que guardam os seus testemunhos, e o buscam de todo o coração.
+Como purificas o caminho do jovem? Observando-o conforme a tua palavra.
+Escondi a tua palavra no meu coração, para não pecar contra ti.
+Abençoado és tu, ó Senhor; ensina-me os teus estatutos.
+A tua palavra é lâmpada para os meus pés e luz para o meu caminho.
+A tua justiça é justiça eterna, e a tua lei é a verdade.
+A minha alma desfalece de saudade dos teus juízos em todo o tempo.
+A tua benignidade, Senhor, me conforta segundo a tua palavra ao teu servo.
+A tua palavra é muito pura, e o teu servo a ama.
+Ensina-me, Senhor, o caminho dos teus estatutos, e guardá-lo-ei até ao fim.
+Dá-me entendimento, e guardarei a tua lei, e a observarei de todo o meu coração.
+Inclina o meu coração aos teus testemunhos, e não à cobiça.
+Desvia os meus olhos de contemplarem a vaidade, e vivifica-me no teu caminho.
+Confirma a tua promessa ao teu servo, que se inclina ao teu temor.
+Afasta de mim o opróbrio, pois os teus juízos são bons.
+Eis que tenho amado os teus preceitos; vivifica-me, Senhor, segundo a tua benignidade.""",
+        "wisdom",
+    ),
+    (
+        "Salmo 129",
+        """Muitas vezes me angustiaram desde a minha mocidade, diga agora Israel.
+Muitas vezes me angustiaram desde a minha mocidade, todavia não prevaleceram contra mim.
+Os lavradores lavraram sobre as minhas costas; compridos fizeram os seus sulcos.
+O Senhor é justo; cortou as cordas dos ímpios.
+Sejam confundidos e tornem atrás todos os que odeiam a Sião.
+Sejam como a erva dos telhados, que se seca antes que a arranquem.
+Com a qual o segador não enche a mão, nem o que ata os feixes enche o braço.
+Nem tampouco os que passam dizem: A bênção do Senhor seja sobre vós; nós vos abençoamos em nome do Senhor.""",
+        "strength",
+    ),
+    (
+        "Salmo 135",
+        """Louvai ao Senhor. Louvai o nome do Senhor; louvai-o, servos do Senhor.
+Vós que assistis na casa do Senhor, nos átrios da casa do nosso Deus.
+Louvai ao Senhor, porque o Senhor é bom; cantai louvores ao seu nome, porque é agradável.
+Porque o Senhor escolheu para si a Jacó, e a Israel para seu tesouro peculiar.
+Porque eu sei que o Senhor é grande e que o nosso Deus está acima de todos os deuses.
+Tudo o que o Senhor quis, fez, nos céus e na terra, nos mares e em todos os abismos.
+Ele faz sair os vapores do extremo da terra; faz os relâmpagos para a chuva; tira os ventos dos seus tesouros.
+O nome do Senhor é para sempre; a sua memória, de geração em geração.
+Bendito seja o Senhor de Sião, que habita em Jerusalém. Louvai ao Senhor.""",
+        "praise",
+    ),
+    (
+        "Salmo 136",
+        """Dai graças ao Senhor, porque ele é bom; porque a sua benignidade dura para sempre.
+Dai graças ao Deus dos deuses; porque a sua benignidade dura para sempre.
+Dai graças ao Senhor dos senhores; porque a sua benignidade dura para sempre.
+Àquele que só faz maravilhas; porque a sua benignidade dura para sempre.
+Àquele que por entendimento fez os céus; porque a sua benignidade dura para sempre.
+Àquele que estendeu a terra sobre as águas; porque a sua benignidade dura para sempre.
+Àquele que fez os grandes luminares; porque a sua benignidade dura para sempre.
+O sol para governar de dia; porque a sua benignidade dura para sempre.
+A lua e as estrelas para presidirem à noite; porque a sua benignidade dura para sempre.
+Àquele que feriu o Egito nos seus primogênitos; porque a sua benignidade dura para sempre.
+E tirou a Israel do meio deles; porque a sua benignidade dura para sempre.
+Com mão forte e com braço estendido; porque a sua benignidade dura para sempre.
+Àquele que dividiu o Mar Vermelho em duas partes; porque a sua benignidade dura para sempre.
+E fez passar a Israel pelo meio dele; porque a sua benignidade dura para sempre.
+Mas derrubou a Faraó com o seu exército no Mar Vermelho; porque a sua benignidade dura para sempre.
+Àquele que guiou o seu povo pelo deserto; porque a sua benignidade dura para sempre.
+Àquele que feriu os grandes reis; porque a sua benignidade dura para sempre.
+E deu a terra deles em herança; porque a sua benignidade dura para sempre.
+Em herança a Israel, seu servo; porque a sua benignidade dura para sempre.
+Que se lembrou de nós em nosso abatimento; porque a sua benignidade dura para sempre.
+E nos remiu dos nossos inimigos; porque a sua benignidade dura para sempre.
+Que dá mantimento a toda a carne; porque a sua benignidade dura para sempre.
+Dai graças ao Deus dos céus; porque a sua benignidade dura para sempre.""",
+        "gratitude",
+    ),
+    (
+        "Salmo 137",
+        """Junto aos rios da Babilônia nos assentamos e choramos, lembrando-nos de Sião.
+Nos salgueiros, que há no meio dela, penduramos as nossas harpas.
+Porquanto aqueles que nos levaram cativos nos pediam uma canção.
+Como cantaremos o cântico do Senhor em terra estranha?
+Se eu me esquecer de ti, ó Jerusalém, esqueça-se a minha destra da sua destreza.
+Se me não lembrar de ti, apegue-se-me a língua ao paladar, se não preferir Jerusalém à minha maior alegria.
+Lembra-te, Senhor, dos filhos de Edom no dia de Jerusalém, que diziam: Arrasai-a, arrasai-a, até aos seus alicerces.
+Filha da Babilônia, que vais ser destruída, bem-aventurado aquele que te retribuir o pago que nos fizeste.
+Bem-aventurado aquele que pegar nos teus filhos e der com eles nas pedras.""",
+        "cry",
+    ),
+    (
+        "Salmo 140",
+        """Livra-me, ó Senhor, do homem mau; guarda-me do homem violento.
+Os quais maquinam males no coração; todo o dia congregam guerras.
+Aguçam a língua como a serpente; veneno de áspides está debaixo dos seus lábios.
+Guarda-me, Senhor, das mãos do ímpio; guarda-me do homem violento.
+Os soberbos armaram laços e cordas; estenderam a minha vereda um laço; puseram-me tropeços.
+Eu disse ao Senhor: Tu és o meu Deus; ouve, Senhor, a voz das minhas súplicas.
+Ó Senhor Deus, força da minha salvação, tu cobriste a minha cabeça no dia da batalha.
+Não concedas, Senhor, aos ímpios os seus desejos; não deixes que se exaltem.
+Quanto aos que me cercam, cubra-os a malícia dos seus lábios.
+Sei que o Senhor tomará a causa do aflito e o direito do necessitado.
+Certamente os justos louvarão o teu nome; os retos habitarão na tua presença.""",
+        "protection",
+    ),
+    (
+        "Salmo 141",
+        """Senhor, a ti clamo; apressa-te em me acudir; dá ouvidos à minha voz, quando te invoco.
+Suba a minha oração perante a tua face como incenso, e seja o levantar das minhas mãos como o sacrifício da tarde.
+Põe, ó Senhor, uma guarda à minha boca; guarda a porta dos meus lábios.
+Não inclines o meu coração a coisas más, a praticar obras más com os homens que praticam a iniquidade.
+Fira-me o justo, será isso uma benignidade; e repreenda-me, será como óleo sobre a minha cabeça, que a minha cabeça não o recusará.
+A minha oração é para ti, Senhor, em tempo aceitável; ó Deus, na multidão da tua benignidade, ouve-me, na verdade da tua salvação.""",
+        "cry",
+    ),
+    (
+        "Salmo 142",
+        """Com a minha voz clamo ao Senhor; com a minha voz ao Senhor suplico.
+Derramo perante ele a minha queixa; diante dele exponho a minha tribulação.
+Quando dentro de mim esmorece o meu espírito, então tu conheces a minha vereda.
+Olha para a minha direita, e vê; pois não há quem me conheça; refúgio me falta; ninguém cuida da minha alma.
+A ti, ó Senhor, clamo; eu disse: Tu és o meu refúgio e a minha porção na terra dos viventes.
+Atende ao meu clamor, porque estou muito abatido; livra-me dos meus perseguidores, porque são mais fortes do que eu.
+Tira a minha alma da prisão, para que louve o teu nome; os justos me rodearão, pois me fizeste bem.""",
+        "hope",
+    ),
+    (
+        "Salmo 143",
+        """Ouve, Senhor, a minha oração; inclina os ouvidos às minhas súplicas; escuta-me segundo a tua verdade, e segundo a tua justiça.
+E não entres em juízo com o teu servo, porque à tua vista não se achará justo nenhum vivente.
+Pois o inimigo perseguiu a minha alma; abateu-me até ao chão; fez-me habitar na escuridão, como os que morreram há muito.
+E meu espírito dentro de mim se angustia; o meu coração dentro de mim se desola.
+Lembro-me dos dias antigos; considero todos os teus feitos; medito na obra das tuas mãos.
+Estendo para ti as minhas mãos; a minha alma tem sede de ti, como terra seca.
+Ouve-me depressa, Senhor; o meu espírito desfalece; não escondas de mim a tua face, para que não seja semelhante aos que descem à cova.
+Faze-me ouvir a tua benignidade pela manhã, pois em ti confio; faze-me saber o caminho que devo seguir, porque a ti levanto a minha alma.
+Livra-me, Senhor, dos meus inimigos; em ti me refugio.
+Ensina-me a fazer a tua vontade, pois tu és o meu Deus; guie-me o teu bom Espírito por terra plana.
+Vivifica-me, Senhor, por amor do teu nome; por amor da tua justiça, tira a minha alma da angústia.""",
+        "cry",
+    ),
 ]
 
 # Mapeamento de mood para paleta visual

@@ -195,6 +195,20 @@ export async function getApprovedProducts(limit = 20, channelSlug?: string | nul
   return res.rows;
 }
 
+/** Conta produtos na fila (pending/approved) por canal, com imagem (prontos para postar). */
+export async function countPendingByChannel(channelSlug: string): Promise<number> {
+  const res = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count
+     FROM products p
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE p.status IN ('pending', 'approved')
+     AND c.slug = $1
+     AND p.image_url IS NOT NULL AND trim(p.image_url) <> ''`,
+    [channelSlug]
+  );
+  return parseInt(res.rows[0]?.count ?? "0", 10) || 0;
+}
+
 /**
  * Ofertas aprovadas há mais de X horas sem uso: marca como rejeitadas (mantém linha para dedupe).
  */

@@ -64,7 +64,7 @@ export function ProductPriceBlock({
     <div className="space-y-1.5 text-sm">
       {hasFull && (
         <p>
-          <span className="text-stone-500">Preço cheio: </span>
+          <span className="text-stone-500">Valor Original: </span>
           <span className="text-stone-400 line-through">R$ {formatPriceTwoDecimals(prev)}</span>
         </p>
       )}
@@ -79,10 +79,13 @@ export function ProductPriceBlock({
         )}
       </p>
       {hasParcel && (
-        <p className="text-stone-800">
-          <span className="text-stone-600">Parcelado: </span>
-          até <strong>{maxTimes}x</strong> de <strong>R$ {formatPriceTwoDecimals(unit)}</strong>
-        </p>
+        <>
+          <p className="text-stone-700">Parcelamento em até {maxTimes}x</p>
+          <p className="text-stone-800">
+            <span className="text-stone-600">Parcelado: </span>
+            até <strong>{maxTimes}x</strong> de <strong>R$ {formatPriceTwoDecimals(unit)}</strong>
+          </p>
+        </>
       )}
       {!hasParcel && installments?.trim() && (
         <p className="text-stone-600">

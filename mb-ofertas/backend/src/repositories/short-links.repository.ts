@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { query } from "../db/client.js";
 
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 5;
 const CODE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function generateCode(): string {

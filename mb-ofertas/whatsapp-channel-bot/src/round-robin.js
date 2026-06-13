@@ -4,7 +4,7 @@
  */
 import { logger } from "./logger.js";
 import { config, buildFeedUrl } from "./config.js";
-import { fetchPosts } from "./api.js";
+import { fetchPosts, triggerRefetchIfLow } from "./api.js";
 import {
   sendPostToSingleDestination,
   resolveDestinationChatId,
@@ -69,7 +69,15 @@ export async function runRoundRobinJob(client) {
       continue;
     }
     const feedUrl = buildFeedUrl(config.apiUrl, slug);
-    const posts = await fetchPosts(feedUrl, apiOptions);
+    let posts = await fetchPosts(feedUrl, apiOptions);
+    if (posts.length < 10) {
+      const refetched = await triggerRefetchIfLow(config.apiUrl, slug, posts.length, 10);
+      if (refetched) {
+        logger.info(`Rodízio: aguardando 30s após refetch do canal "${slug}"...`);
+        await new Promise((r) => setTimeout(r, 30000));
+        posts = await fetchPosts(feedUrl, apiOptions);
+      }
+    }
     lists[slug] = posts;
     indices[slug] = 0;
     logger.info(`Rodízio: fila ${slug} — ${posts.length} post(s).`);

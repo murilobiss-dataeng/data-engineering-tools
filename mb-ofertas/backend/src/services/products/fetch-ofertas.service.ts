@@ -14,7 +14,50 @@ import { appendLog } from "../../config/log-buffer.js";
 
 const DEFAULT_DELAY_MS = 2500;
 const DEFAULT_MAX_PER_LISTING = 100;
-const SHOPEE_SEARCH_LIMIT_PER_KEYWORD = 10;
+/** URLs de catálogo religioso (não são páginas de ofertas — busca/lista de produtos). */
+export function getFaithCatalogUrls(): string[] {
+  const env = process.env.FAITH_CATALOG_URLS;
+  if (env) {
+    return env
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter((u) => u.startsWith("http"));
+  }
+  return [
+    "https://lista.mercadolivre.com.br/biblia",
+    "https://lista.mercadolivre.com.br/livro-evangelico",
+    "https://lista.mercadolivre.com.br/livro-cristao",
+    "https://lista.mercadolivre.com.br/devocional",
+    "https://lista.mercadolivre.com.br/terco",
+    "https://lista.mercadolivre.com.br/crucifixo",
+    "https://lista.mercadolivre.com.br/quadro-biblico",
+    "https://lista.mercadolivre.com.br/camiseta-gospel",
+    "https://lista.mercadolivre.com.br/musica-gospel",
+    "https://lista.mercadolivre.com.br/imagem-de-santo",
+    "https://www.amazon.com.br/s?k=biblia+sagrada",
+    "https://www.amazon.com.br/s?k=livro+cristao",
+    "https://www.amazon.com.br/s?k=devocional+cristao",
+    "https://www.amazon.com.br/s?k=terco+catolico",
+    "https://www.amazon.com.br/s?k=crucifixo+parede",
+    "https://shopee.com.br/search?keyword=biblia",
+    "https://shopee.com.br/search?keyword=devocional",
+    "https://shopee.com.br/search?keyword=terco",
+    "https://shopee.com.br/search?keyword=crucifixo",
+    "https://shopee.com.br/search?keyword=livro+cristao",
+  ];
+}
+
+/** Mínimo de produtos na fila por canal antes de acionar busca extra. */
+export const MIN_QUEUE_PER_CHANNEL = Number(process.env.MIN_QUEUE_PER_CHANNEL) || 30;
+
+const SHOPEE_SEARCH_LIMIT_PER_KEYWORD = 15;
+/** Quantas keywords Shopee sortear por grupo (faith usa mais para encher o canal). */
+const SHOPEE_KEYWORDS_PER_GROUP: Record<string, number> = {
+  faith: 12,
+  health: 4,
+  tech: 4,
+  ofertas: 3,
+};
 
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -321,10 +364,17 @@ function buildShopeeProductUrl(shopId: number | string, itemId: number | string)
   return `https://shopee.com.br/product/${shopId}/${itemId}`;
 }
 
-async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string[]> {
+async function fetchShopeeProductsFromApi(
+  maxPerListing: number,
+  options?: { groups?: string[]; forceCategorySlug?: string }
+): Promise<string[]> {
   const keywords: string[] = [];
-  for (const group of Object.values(SHOPEE_KEYWORD_GROUPS)) {
-    keywords.push(...getRandomItems(group, Math.min(2, group.length)));
+  const groups = options?.groups ?? Object.keys(SHOPEE_KEYWORD_GROUPS);
+  for (const groupKey of groups) {
+    const group = SHOPEE_KEYWORD_GROUPS[groupKey];
+    if (!group) continue;
+    const pick = SHOPEE_KEYWORDS_PER_GROUP[groupKey] ?? 3;
+    keywords.push(...getRandomItems(group, Math.min(pick, group.length)));
   }
 
   const seen = new Set<string>();
@@ -396,14 +446,150 @@ async function fetchShopeeProductsFromApi(maxPerListing: number): Promise<string
   return urls;
 }
 
+type InsertScrapeOptions = {
+  forceCategorySlug?: string;
+  source?: "amazon" | "mercadolivre" | "shopee";
+};
+
+async function resolveCategoryId(title: string, discountPct: number | null | undefined, forceSlug?: string): Promise<string | null> {
+  const slug = forceSlug ?? inferCategorySlugFromTitle(title, { discountPct });
+  const category = await categoriesRepo.getCategoryBySlug(slug);
+  return category?.id ?? null;
+}
+
+async function insertScrapedProduct(
+  scraped: Awaited<ReturnType<typeof scrapeProductFromUrlWithFallback>>,
+  options: InsertScrapeOptions = {}
+): Promise<{ isNew: boolean; skipped: boolean }> {
+  if (isGenericProductTitle(scraped.title)) {
+    return { isNew: false, skipped: true };
+  }
+  const source = options.source ?? getSource(scraped.rawUrl);
+  const input = { ...scrapedToProductInput(scraped), source };
+  const categoryId = await resolveCategoryId(scraped.title, scraped.discountPct, options.forceCategorySlug);
+  if (categoryId) input.categoryId = categoryId;
+  input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
+  const { isNew } = await productsRepo.insertProduct(input);
+  return { isNew, skipped: false };
+}
+
+async function scrapeUrlsBatch(
+  urls: string[],
+  opts: { maxPerListing: number; delayMs: number; forceCategorySlug?: string }
+): Promise<{ inserted: number; failed: number }> {
+  let inserted = 0;
+  let failed = 0;
+  const faithCatalogSet = new Set(getFaithCatalogUrls().map((u) => u.split("?")[0]));
+
+  for (const url of urls) {
+    try {
+      const forceFaith = opts.forceCategorySlug === "faith" || faithCatalogSet.has(url.split("?")[0]);
+      if (looksLikeListingPage(url)) {
+        const productUrls = await extractProductUrlsFromListing(url);
+        const toFetch = productUrls.slice(0, opts.maxPerListing);
+        for (const productUrl of toFetch) {
+          try {
+            const scraped = await scrapeProductFromUrlWithFallback(productUrl);
+            const { isNew, skipped } = await insertScrapedProduct(scraped, {
+              forceCategorySlug: forceFaith ? "faith" : opts.forceCategorySlug,
+            });
+            if (!skipped && isNew) inserted++;
+            if (!skipped) {
+              logger.info(
+                { title: scraped.title.slice(0, 40), isNew, forceFaith },
+                isNew ? "Inserted" : "Skip duplicate"
+              );
+            }
+          } catch (e) {
+            failed++;
+            const msg = e instanceof Error ? e.message : String(e);
+            logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou");
+            appendLog("warn", `[Scrape] ${productUrl} → ${msg}`);
+          }
+          await sleep(opts.delayMs);
+        }
+      } else {
+        const scraped = await scrapeProductFromUrlWithFallback(url);
+        const { isNew, skipped } = await insertScrapedProduct(scraped, {
+          forceCategorySlug: forceFaith ? "faith" : opts.forceCategorySlug,
+        });
+        if (!skipped && isNew) inserted++;
+        if (!skipped) {
+          logger.info({ title: scraped.title.slice(0, 40), isNew }, isNew ? "Inserted" : "Skip duplicate");
+        }
+      }
+    } catch (e) {
+      failed++;
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn({ err: e, url }, "Skip URL");
+      appendLog("warn", `[Listagem] ${url} → ${msg}`);
+    }
+    await sleep(opts.delayMs);
+  }
+  return { inserted, failed };
+}
+
+/** Repõe filas baixas buscando catálogo (faith) ou ofertas gerais. */
+export async function ensureChannelQueues(delayMs = DEFAULT_DELAY_MS): Promise<{ refetched: string[] }> {
+  const channels = ["health", "tech", "ofertas", "faith"] as const;
+  const refetched: string[] = [];
+
+  for (const slug of channels) {
+    const count = await productsRepo.countPendingByChannel(slug);
+    if (count >= MIN_QUEUE_PER_CHANNEL) continue;
+
+    logger.info({ slug, count, min: MIN_QUEUE_PER_CHANNEL }, "Fila baixa — buscando mais produtos");
+
+    if (slug === "faith") {
+      const faithUrls = getFaithCatalogUrls();
+      const r = await scrapeUrlsBatch(faithUrls, {
+        maxPerListing: 60,
+        delayMs,
+        forceCategorySlug: "faith",
+      });
+      logger.info({ slug, inserted: r.inserted }, "Faith catalog refill");
+      refetched.push(slug);
+
+      const shopeeEnabled = process.env.SHOPEE_SEARCH_ENABLED !== "false" && process.env.SHOPEE_SEARCH_ENABLED !== "0";
+      if (shopeeEnabled) {
+        try {
+          const shopeeUrls = await fetchShopeeProductsFromApi(80, { groups: ["faith"] });
+          for (const productUrl of shopeeUrls.slice(0, 80)) {
+            try {
+              const scraped = await scrapeProductFromUrlWithFallback(productUrl);
+              const { isNew, skipped } = await insertScrapedProduct(scraped, {
+                forceCategorySlug: "faith",
+                source: "shopee",
+              });
+              if (!skipped && isNew) r.inserted++;
+            } catch {
+              /* ignore individual failures */
+            }
+            await sleep(delayMs);
+          }
+        } catch (e) {
+          logger.warn({ err: e }, "Faith Shopee refill failed");
+        }
+      }
+    } else {
+      const defaults = getDefaultListingUrls();
+      const r = await scrapeUrlsBatch(defaults, { maxPerListing: 40, delayMs });
+      logger.info({ slug, inserted: r.inserted }, "General catalog refill");
+      refetched.push(slug);
+    }
+  }
+  return { refetched };
+}
+
 /**
  * Busca ofertas nas URLs configuradas (ou nas urls passadas), scrape e insere no banco.
- * Pode ser chamado pelo script CLI ou pelo endpoint da API (UI).
+ * Inclui catálogo religioso (faith) além das páginas de ofertas.
  */
 export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promise<FetchOfertasResult> {
   const configUrls = options.urls?.length ? options.urls : loadUrlsFromConfig();
   const rawUrls = configUrls.length > 0 ? configUrls : getDefaultListingUrls();
-  const urls = rawUrls;
+  const faithUrls = getFaithCatalogUrls();
+  const urls = [...new Set([...rawUrls, ...faithUrls])];
 
   logger.info(
     {
@@ -430,101 +616,47 @@ export async function runFetchOfertas(options: FetchOfertasOptions = {}): Promis
     return { inserted: 0, failed: 0, totalUrls: 0 };
   }
 
-  let inserted = 0;
-  let failed = 0;
-
-  for (const url of urls) {
-    try {
-      if (looksLikeListingPage(url)) {
-        const productUrls = await extractProductUrlsFromListing(url);
-        const toFetch = productUrls.slice(0, maxPerListing);
-        for (const productUrl of toFetch) {
-          try {
-            const scraped = await scrapeProductFromUrlWithFallback(productUrl);
-            if (isGenericProductTitle(scraped.title)) {
-              logger.info({ url: productUrl, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
-              continue;
-            }
-            const source = getSource(scraped.rawUrl);
-            const input = { ...scrapedToProductInput(scraped), source };
-            const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
-            const category = await categoriesRepo.getCategoryBySlug(categorySlug);
-            if (category) input.categoryId = category.id;
-            input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
-            const { isNew } = await productsRepo.insertProduct(input);
-            if (isNew) inserted++;
-            logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
-          } catch (e) {
-            failed++;
-            const msg = e instanceof Error ? e.message : String(e);
-            logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (ML/Amazon/Shopee)");
-            appendLog("warn", `[ML/Amazon/Shopee] ${productUrl} → ${msg}`);
-          }
-          await sleep(delayMs);
-        }
-      } else {
-        const scraped = await scrapeProductFromUrlWithFallback(url);
-        if (isGenericProductTitle(scraped.title)) {
-          logger.info({ url, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
-        } else {
-          const source = getSource(scraped.rawUrl);
-          const input = { ...scrapedToProductInput(scraped), source };
-          const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
-          const category = await categoriesRepo.getCategoryBySlug(categorySlug);
-          if (category) input.categoryId = category.id;
-          input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
-          const { isNew } = await productsRepo.insertProduct(input);
-          if (isNew) inserted++;
-          logger.info({ title: scraped.title.slice(0, 40), source, isNew }, isNew ? "Inserted" : "Skip duplicate");
-        }
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      logger.warn({ err: e, url }, "Skip URL");
-      appendLog("warn", `[Listagem] ${url} → ${msg}`);
-      failed++;
-    }
-    await sleep(delayMs);
-  }
+  const batch = await scrapeUrlsBatch(urls, { maxPerListing, delayMs });
+  let inserted = batch.inserted;
+  let failed = batch.failed;
 
   // Shopee: busca automática via API (pode retornar 403 em datacenter). Desative com SHOPEE_SEARCH_ENABLED=false.
   const shopeeEnabled = process.env.SHOPEE_SEARCH_ENABLED !== "false" && process.env.SHOPEE_SEARCH_ENABLED !== "0";
   if (shopeeEnabled) {
-  try {
-    const shopeeUrls = await fetchShopeeProductsFromApi(maxPerListing);
-    const toFetch = shopeeUrls.slice(0, maxPerListing);
-    for (const productUrl of toFetch) {
-      try {
-        const scraped = await scrapeProductFromUrlWithFallback(productUrl);
-        if (isGenericProductTitle(scraped.title)) {
-          logger.info({ url: productUrl, title: scraped.title.slice(0, 30) }, "Skip: título genérico (não é produto)");
-          continue;
+    try {
+      const shopeeUrls = await fetchShopeeProductsFromApi(maxPerListing * 2);
+      const toFetch = shopeeUrls.slice(0, maxPerListing * 2);
+      for (const productUrl of toFetch) {
+        try {
+          const scraped = await scrapeProductFromUrlWithFallback(productUrl);
+          const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
+          const { isNew, skipped } = await insertScrapedProduct(scraped, {
+            forceCategorySlug: categorySlug === "faith" ? "faith" : undefined,
+            source: "shopee",
+          });
+          if (!skipped && isNew) inserted++;
+          if (!skipped) {
+            logger.info(
+              { title: scraped.title.slice(0, 40), source: "shopee", isNew },
+              isNew ? "Inserted (Shopee API)" : "Skip duplicate (Shopee API)"
+            );
+          }
+        } catch (e) {
+          failed++;
+          const msg = e instanceof Error ? e.message : String(e);
+          logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (Shopee API)");
+          appendLog("warn", `[Shopee API produto] ${productUrl} → ${msg}`);
         }
-        const input = { ...scrapedToProductInput(scraped), source: "shopee" as const };
-        const categorySlug = inferCategorySlugFromTitle(scraped.title, { discountPct: scraped.discountPct });
-        const category = await categoriesRepo.getCategoryBySlug(categorySlug);
-        if (category) input.categoryId = category.id;
-        input.externalId = (scraped as { externalId?: string }).externalId ?? input.externalId;
-        const { isNew } = await productsRepo.insertProduct(input);
-        if (isNew) inserted++;
-        logger.info(
-          { title: scraped.title.slice(0, 40), source: "shopee", isNew },
-          isNew ? "Inserted (Shopee API)" : "Skip duplicate (Shopee API)"
-        );
-      } catch (e) {
-        failed++;
-        const msg = e instanceof Error ? e.message : String(e);
-        logger.warn({ err: e, url: productUrl, message: msg }, "Produto falhou (Shopee API)");
-        appendLog("warn", `[Shopee API produto] ${productUrl} → ${msg}`);
+        await sleep(delayMs);
       }
-      await sleep(delayMs);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn({ err: e, message: msg }, "Shopee API fetch block failed");
+      appendLog("warn", `[Shopee API bloco] ${msg}`);
     }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    logger.warn({ err: e, message: msg }, "Shopee API fetch block failed");
-    appendLog("warn", `[Shopee API bloco] ${msg}`);
   }
-  }
+
+  await ensureChannelQueues(delayMs);
 
   return { inserted, failed, totalUrls: urls.length };
 }

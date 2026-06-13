@@ -1,17 +1,33 @@
 import axios from "axios";
 import { logger } from "./logger.js";
 
+/** Base para links curtos (/r/CODE). Prioridade: SHORT_LINK_BASE_URL > origem da API_URL. */
+function resolveShortLinkBase(apiUrl) {
+  const explicit = (process.env.SHORT_LINK_BASE_URL || "").trim().replace(/\/$/, "");
+  if (explicit) return explicit;
+  if (!apiUrl) return "";
+  try {
+    const u = new URL(apiUrl);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Busca posts na API do site.
  * Espera array: [{ title, text, url, imageUrl? }]
  * Timeout maior e retry para cold start da API (ex.: Render).
  */
 export async function fetchPosts(apiUrl, options = {}) {
-  const { timeout = 45000, retries = 1 } = options;
+  const { timeout = 45000, retries = 1, shortLinkBase } = options;
   if (!apiUrl) {
     logger.warn("API_URL não configurada.");
     return [];
   }
+  const linkBase = shortLinkBase || resolveShortLinkBase(apiUrl);
+  const headers = { Accept: "application/json" };
+  if (linkBase) headers["X-Short-Link-Base"] = linkBase;
   let lastErr = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -21,7 +37,7 @@ export async function fetchPosts(apiUrl, options = {}) {
       }
       const { data } = await axios.get(apiUrl, {
         timeout,
-        headers: { Accept: "application/json" },
+        headers,
         validateStatus: (status) => status >= 200 && status < 300,
       });
       const list = Array.isArray(data) ? data : [];
@@ -72,6 +88,34 @@ export async function markPostAsPosted(apiUrl, post) {
     return false;
   } catch (err) {
     logger.warn("mark-posted falhou:", err.message);
+    return false;
+  }
+}
+
+/**
+ * Dispara busca de produtos na API quando a fila do canal está baixa.
+ */
+export async function triggerRefetchIfLow(apiUrl, channelSlug, currentCount, minCount = 10) {
+  if (!apiUrl || currentCount >= minCount) return false;
+  let fetchUrl = apiUrl;
+  try {
+    const u = new URL(apiUrl);
+    u.pathname = u.pathname.replace(/\/feed\/?$/, "/fetch-ofertas");
+    u.search = "";
+    fetchUrl = u.toString();
+  } catch {
+    fetchUrl = apiUrl.replace(/\/feed\/?(\?.*)?$/i, "/fetch-ofertas");
+  }
+  try {
+    logger.info(`Fila "${channelSlug}" baixa (${currentCount} < ${minCount}). Disparando fetch-ofertas...`);
+    await axios.post(
+      fetchUrl,
+      {},
+      { timeout: 120000, headers: { "Content-Type": "application/json" }, validateStatus: () => true }
+    );
+    return true;
+  } catch (err) {
+    logger.warn("Refetch automático falhou:", err.message);
     return false;
   }
 }

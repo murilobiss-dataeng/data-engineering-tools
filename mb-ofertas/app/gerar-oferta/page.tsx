@@ -214,7 +214,7 @@ export default function GerarOfertaPage() {
                     />
                   </div>
                   <div>
-                    <label className="input-label">Preço cheio (R$) — opcional</label>
+                    <label className="input-label">Valor Original (R$) — opcional</label>
                     <input
                       type="number"
                       step="0.01"

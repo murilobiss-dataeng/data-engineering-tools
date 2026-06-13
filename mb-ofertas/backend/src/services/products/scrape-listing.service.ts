@@ -61,7 +61,7 @@ function normalizeUrl(href: string, baseUrl: string): string | null {
     // Mercado Livre: só aceitar páginas de produto (www ou produto), nunca click/tracking
     if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
       if (ML_NON_PRODUCT_HOSTS.test(host)) return null;
-      const isProductHost = host === "mercadolivre.com.br" || host === "mercadolibre.com.br" || host === "produto.mercadolivre.com.br" || host === "produto.mercadolibre.com.br" || /^(listado|item)\.(mercadolivre|mercadolibre)\.com\.br$/.test(host);
+      const isProductHost = host === "mercadolivre.com.br" || host === "mercadolibre.com.br" || host === "produto.mercadolivre.com.br" || host === "produto.mercadolibre.com.br" || host.startsWith("lista.") || /^(listado|item)\.(mercadolivre|mercadolibre)\.com\.br$/.test(host);
       if (!isProductHost) return null;
       if (/\/p\/[A-Z0-9]+/.test(path)) return u.origin + path.split("?")[0];
       if (/\/MLB\d+/.test(path) && path.length < 200) return u.origin + path.split("?")[0];
@@ -160,9 +160,15 @@ export function looksLikeListingPage(url: string): boolean {
     if (host.includes("amazon")) {
       return path.includes("/deals") || path.includes("/s?") || path.includes("/b/") || path.includes("/gp/offer-listing");
     }
-    // ML: /ofertas, /lista, busca
+    // ML: /ofertas, /lista, busca, subdomínio lista.*
     if (host.includes("mercadolivre") || host.includes("mercadolibre")) {
-      return path.includes("/ofertas") || path.includes("/lista") || path.includes("/busca") || path === "/";
+      return (
+        path.includes("/ofertas") ||
+        path.includes("/lista") ||
+        path.includes("/busca") ||
+        host.startsWith("lista.") ||
+        path === "/"
+      );
     }
     // Shopee: flash sale, categorias, busca
     if (host.includes("shopee")) {

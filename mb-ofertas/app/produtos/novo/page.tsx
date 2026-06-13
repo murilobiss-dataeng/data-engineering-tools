@@ -123,7 +123,7 @@ export default function NovoProdutoPage() {
           </div>
           <div>
             <label htmlFor="previousPrice" className="input-label">
-              Preço cheio (R$) — opcional
+              Valor Original (R$) — opcional
             </label>
             <input
               id="previousPrice"

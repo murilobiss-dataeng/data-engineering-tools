@@ -6,8 +6,8 @@ name: MB Ofertas — buscar ofertas (automático)
 
 on:
   schedule:
-    # A cada 60 minutos (início de cada hora, UTC). Ajuste o fuso no painel do GitHub se precisar.
-    - cron: "0 * * * *"
+    # A cada 30 minutos (UTC). Faith e demais canais precisam de fila > ritmo de postagem.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 jobs:

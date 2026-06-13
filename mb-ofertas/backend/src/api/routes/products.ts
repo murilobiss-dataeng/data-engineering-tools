@@ -85,13 +85,15 @@ productsRouter.get("/", async (req, res) => {
  */
 productsRouter.get("/feed", async (req, res) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const limit = Math.min(Number(req.query.limit) || 150, 300);
     const rawSlug = (req.query.channelSlug || req.query.categorySlug || "") as string;
     const channelSlug = String(rawSlug).trim() || null;
     const rows = await productsRepo.getApprovedProducts(limit, channelSlug);
     // Só incluir produtos com imagem (essencial para engajamento no canal)
     const withImage = rows.filter((p) => p.image_url && p.image_url.trim() !== "");
-    const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
+    const headerBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim();
+    const requestBase = `${req.protocol}://${req.get("host") || ""}`.replace(/\/$/, "");
+    const shortLinkBase = headerBase || process.env.SHORT_LINK_BASE_URL?.trim() || requestBase || undefined;
     const feed = await Promise.all(
       withImage.map(async (p) => {
         const input = dbRowToProductInput(p);

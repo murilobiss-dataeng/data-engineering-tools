@@ -8,10 +8,10 @@ export function buildFeedUrl(apiUrl, channelSlug) {
   const base = (apiUrl || "").trim();
   if (!base) return "";
   const slug = (channelSlug || "").trim();
-  if (!slug) return base;
   try {
     const u = new URL(base);
-    u.searchParams.set("channelSlug", slug);
+    if (slug) u.searchParams.set("channelSlug", slug);
+    u.searchParams.set("limit", "150");
     return u.toString();
   } catch {
     return base;
