@@ -564,12 +564,16 @@ function extractShopeeCoupon($: cheerio.CheerioAPI, html: string): string | null
 }
 
 /** Bloco de promoção/cupom ML — valores ali não são o preço principal do produto. */
-function isMercadoLivreCouponBlock($: cheerio.CheerioAPI, el: cheerio.Element): boolean {
-  const block = $(el).closest(
+function isMercadoLivreCouponBlock(
+  $: cheerio.CheerioAPI,
+  el: { length: number; closest: (s: string) => { length: number; text: () => string } }
+): boolean {
+  if (!el.length) return false;
+  const block = el.closest(
     '.ui-pdp-promotions, [class*="coupon"], [class*="promotion"], .andes-money-amount-combo__coupon, .ui-pdp-benefits, #benefits'
   );
   if (block.length) return true;
-  const text = $(el).closest(".a-section, .ui-pdp-price").text().toLowerCase();
+  const text = el.closest(".a-section, .ui-pdp-price").text().toLowerCase();
   return text.length > 0 && text.length < 400 && /cupom|coupon|desconto\s+extra/i.test(text);
 }
 
@@ -666,7 +670,7 @@ function extractMercadoLivreFromHtml(
     for (const sel of mainPriceSelectors) {
       const el = $(sel).first();
       if (el.length) {
-        if (isMercadoLivreCouponBlock($, el.get(0)!)) continue;
+        if (isMercadoLivreCouponBlock($, el)) continue;
         const text = el.text().trim();
         if (/opiniões|avaliações|reviews/i.test(text)) continue;
         const p = parsePrice(text);
