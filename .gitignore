@@ -478,3 +478,9 @@ credentials.json
 !youtube-content-automation/stores/salmo_dia/lib/
 !youtube-content-automation/stores/salmo_dia/lib/**
 !youtube-content-automation/stores/salmo_dia/**/*.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
