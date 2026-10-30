@@ -1,0 +1,14 @@
+# Exemplo de agenda para programar vários canais e datas.
+# Copie para agenda.yaml e edite. Depois rode: python main.py agenda.yaml
+# YouTube: token por canal em config/<canal>/youtube_token.json (ex.: config/salmo_dia/)
+
+posts:
+  - channel: salmo_dia
+    date: 15/02/2026
+    time: "09:00"
+  - channel: salmo_dia
+    date: 16/02/2026
+    time: "09:00"
+  - channel: salmo_dia
+    date: 17/02/2026
+    time: "09:00"

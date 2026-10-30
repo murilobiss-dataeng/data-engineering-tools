@@ -16,12 +16,9 @@ function getShortLinkBaseUrl(): string {
 }
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const base = getShortLinkBaseUrl();
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...(options?.headers as Record<string, string>) };
-  if (base) headers["X-Short-Link-Base"] = base;
   const res = await fetch(`${API_URL}/api${path}`, {
     ...options,
-    headers,
+    headers: { "Content-Type": "application/json", ...(options?.headers as Record<string, string>) },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

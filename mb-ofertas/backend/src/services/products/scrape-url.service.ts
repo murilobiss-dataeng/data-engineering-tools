@@ -416,31 +416,125 @@ function extractAmazonProductTitle($: cheerio.CheerioAPI, html: string, ogTitle:
   return title.slice(0, 500);
 }
 
-/** Busca JSON de estado da página (Amazon). priceToPay = preço real de compra (não cupom nem "por litro"). */
+/** Busca JSON de estado da página (Amazon). Só priceToPay (preço exibido) + basisPrice (valor original). */
 function extractPriceFromPageJson(html: string): { price: number; listPrice?: number } | null {
-  let price: number | null = null;
-  for (const field of ["priceToPay", "buyingPrice", "displayPrice", "apexPrice"]) {
-    const p = extractAmazonJsonAmount(html, field);
-    if (p != null) {
-      price = p;
-      break;
-    }
-  }
+  const price = extractAmazonJsonAmount(html, "priceToPay");
+  if (price == null) return null;
 
   let listPrice: number | undefined;
   for (const field of ["basisPrice", "strikePrice", "wasPrice", "listPrice", "regularPrice"]) {
     const lp = extractAmazonJsonAmount(html, field);
-    if (lp != null && (price == null || lp > price)) {
+    if (lp != null && lp > price) {
       listPrice = lp;
       break;
     }
   }
 
-  if (price == null) return null;
-  return {
-    price,
-    listPrice: listPrice != null && listPrice > price ? listPrice : undefined,
-  };
+  return { price, listPrice };
+}
+
+/** Valor de desconto do cupom VPC (não é o preço do produto). */
+function extractAmazonCouponSavingsAmount($: cheerio.CheerioAPI, html: string): number | null {
+  const blocks = [
+    $("#vpcButton"),
+    $("#promoPriceBlockMessage_feature_div"),
+    $('[id*="coupon"]'),
+    $('[id*="Coupon"]'),
+  ];
+  for (const block of blocks) {
+    if (!block.length) continue;
+    const text = block.text();
+    const m =
+      text.match(/(?:economize|desconto\s+de|cupom\s+de)\s*R\$\s*([\d.,]+)/i) ||
+      text.match(/R\$\s*([\d.,]+)\s*(?:de\s+desconto|off)/i);
+    if (m?.[1]) {
+      const p = parsePrice(m[1]);
+      if (p != null && p > 0 && p < 100000) return p;
+    }
+  }
+  const htmlM = html.match(/(?:economize|couponDiscount|vpcDiscount)[^R$]{0,40}R\$\s*([\d.,]+)/i);
+  if (htmlM?.[1]) {
+    const p = parsePrice(htmlM[1]);
+    if (p != null && p > 0 && p < 100000) return p;
+  }
+  return null;
+}
+
+/** Preço Amazon: HTML do bloco principal primeiro; evita confundir desconto de cupom com preço. */
+function extractAmazonPrices(
+  $: cheerio.CheerioAPI,
+  html: string
+): { price: number; listPrice: number | null } {
+  const couponSaving = extractAmazonCouponSavingsAmount($, html);
+  const saleCandidates: number[] = [];
+
+  const saleSelectors = [
+    ".priceToPay .a-offscreen",
+    "#corePrice_feature_div .a-offscreen",
+    "#corePriceDisplay_desktop_feature_div .a-offscreen",
+    "#apex_desktop .priceToPay .a-offscreen",
+    "#priceblock_dealprice",
+    "#priceblock_saleprice",
+    "#priceblock_ourprice",
+    '[data-a-color="price"] .a-offscreen',
+  ];
+  for (const sel of saleSelectors) {
+    const el = $(sel).first();
+    if (!el.length || isPerUnitOrPerLiter($, el) || isAmazonCouponBlock($, el)) continue;
+    const p = parsePrice(el.text().trim());
+    if (p != null && p > 0 && p < 100000) saleCandidates.push(p);
+  }
+
+  const listSelectors = [
+    ".basisPrice .a-offscreen",
+    ".a-price.a-text-price .a-offscreen",
+    "#priceblock_retailprice",
+    ".a-text-price.a-offscreen",
+  ];
+  let listPrice: number | null = null;
+  for (const sel of listSelectors) {
+    const el = $(sel).first();
+    if (!el.length || isPerUnitOrPerLiter($, el) || isAmazonCouponBlock($, el)) continue;
+    const p = parsePrice(el.text().trim());
+    if (p != null && p > 0 && p < 100000) {
+      listPrice = p;
+      break;
+    }
+  }
+
+  let price: number | null = null;
+  const uniqueSales = [...new Set(saleCandidates)];
+  if (uniqueSales.length > 0) {
+    const filtered =
+      couponSaving != null
+        ? uniqueSales.filter((v) => Math.abs(v - couponSaving) > 0.02)
+        : uniqueSales;
+    const pool = filtered.length > 0 ? filtered : uniqueSales;
+    price = Math.max(...pool);
+  }
+
+  if (price == null) {
+    const fromJson = extractPriceFromPageJson(html);
+    if (fromJson?.price) {
+      price = fromJson.price;
+      if (listPrice == null && fromJson.listPrice) listPrice = fromJson.listPrice;
+    }
+  }
+
+  if (price != null && couponSaving != null && Math.abs(price - couponSaving) < 0.02) {
+    const coreText = $("#corePrice_feature_div, #corePriceDisplay_desktop_feature_div").text();
+    const reais = coreText.match(/R\$\s*[\d.,]+/g);
+    if (reais) {
+      const values = reais
+        .map((r) => parsePrice(r))
+        .filter((p): p is number => p != null && p > 0 && Math.abs(p - couponSaving) > 0.02);
+      if (values.length > 0) price = Math.max(...values);
+    }
+  }
+
+  if (listPrice != null && price != null && listPrice <= price) listPrice = null;
+
+  return { price: price ?? 0, listPrice };
 }
 
 /** Extrai texto de parcelamento (ex.: "em 12x de R$ 25,00 sem juros"). */
@@ -601,6 +695,37 @@ function extractMercadoLivreFromHtml(
 
   let price: number | null = null;
   let listPrice: number | null = null;
+
+  const normalizeMlMoney = (raw: number): number => {
+    if (raw > 10000 && raw < 100000000) return raw / 100;
+    return raw;
+  };
+
+  // —— 0) Meta / estado embutido (páginas renderizadas com JS) ——
+  const metaAmount =
+    $('meta[property="product:price:amount"]').attr("content") ??
+    $('meta[property="og:product:price:amount"]').attr("content");
+  if (metaAmount) {
+    const p = parseFloat(metaAmount.replace(",", "."));
+    if (Number.isFinite(p) && p > 0 && p < 10000000) price = p;
+  }
+  const brlPatterns = [
+    /"price"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*"currency_id"\s*:\s*"BRL"/,
+    /"currency_id"\s*:\s*"BRL"[\s\S]{0,80}?"price"\s*:\s*(\d+(?:\.\d+)?)/,
+    /"raw_price"\s*:\s*(\d+(?:\.\d+)?)/,
+    /"sale_price"\s*:\s*(\d+(?:\.\d+)?)/,
+  ];
+  if (price == null) {
+    for (const re of brlPatterns) {
+      const m = html.match(re);
+      if (!m?.[1]) continue;
+      let p = normalizeMlMoney(parseFloat(m[1]));
+      if (p > 0 && p < 10000000 && !mlLooksLikeCount(p, html)) {
+        price = p;
+        break;
+      }
+    }
+  }
 
   // —— 1) JSON no contexto de preço do produto: "price" + "original_price" (estrutura comum do ML) ——
   const priceThenOrig = html.match(/"price"\s*:\s*([\d.]+)[\s\S]{0,300}?"original_price"\s*:\s*([\d.]+)/);
@@ -1070,16 +1195,9 @@ export async function scrapeProductFromUrl(
     // Amazon: priorizar priceToPay do JSON (preço real de compra, não "por litro")
     title = extractAmazonProductTitle($, html, ogTitle);
 
-    const fromJson = extractPriceFromPageJson(html);
-    if (fromJson) {
-      price = fromJson.price;
-      listPrice = fromJson.listPrice ?? listPrice;
-    }
-    if (price <= 0) {
-      const result = extractPriceFromHtml($);
-      price = result.price;
-      listPrice = result.listPrice ?? listPrice;
-    }
+    const fromJson = extractAmazonPrices($, html);
+    price = fromJson.price;
+    listPrice = fromJson.listPrice ?? listPrice;
     if (price <= 0) {
       const fromLd = extractFromJsonLd(html);
       if (fromLd?.price) price = fromLd.price as number;

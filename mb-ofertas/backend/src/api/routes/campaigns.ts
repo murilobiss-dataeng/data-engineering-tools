@@ -1,7 +1,6 @@
 import { Router } from "express";
 import * as campaignsRepo from "../../repositories/campaigns.repository.js";
 import * as productsRepo from "../../repositories/products.repository.js";
-import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { getCampaignWhatsAppMessage } from "../../services/campaigns/campaign-whatsapp-message.service.js";
 import { generateOfferMessage } from "../../services/messages/copy-generator.js";
 import { addSendJob } from "../../workers/queues.js";
@@ -116,7 +115,6 @@ campaignsRouter.post("/:id/send-now", async (req, res) => {
     const messageIds: string[] = [];
 
     for (const product of products) {
-      const short = await shortLinksRepo.createShortLink(product.affiliate_link, undefined, product.id);
       const body = generateOfferMessage({
         title: product.title,
         price: parseFloat(product.price),
@@ -124,7 +122,7 @@ campaignsRouter.post("/:id/send-now", async (req, res) => {
         discountPct: product.discount_pct ? parseFloat(product.discount_pct) : null,
         affiliateLink: product.affiliate_link,
         imageUrl: product.image_url,
-      }, { shortLink: short.shortUrl });
+      });
 
       for (const phone of recipientPhones) {
         const messageId = await campaignsRepo.insertMessage({

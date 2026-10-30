@@ -1,6 +1,5 @@
 import * as campaignsRepo from "../../repositories/campaigns.repository.js";
 import * as productsRepo from "../../repositories/products.repository.js";
-import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { generateOfferMessage } from "../messages/copy-generator.js";
 import type { ProductInput } from "../products/types.js";
 
@@ -45,8 +44,7 @@ export async function getCampaignWhatsAppMessage(
         row.installment_unit_price != null ? parseFloat(String(row.installment_unit_price)) : null,
     };
     p = normalizeProductPrices(p);
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, options?.shortLinkBaseUrl, row.id);
-    lines.push(generateOfferMessage(p, { shortLink: short.shortUrl }));
+    lines.push(generateOfferMessage(p));
   }
   return lines.join("\n\n——\n\n");
 }

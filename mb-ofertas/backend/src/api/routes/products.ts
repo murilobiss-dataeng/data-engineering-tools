@@ -1,7 +1,6 @@
 import { Router } from "express";
 import * as productsRepo from "../../repositories/products.repository.js";
 import * as categoriesRepo from "../../repositories/categories.repository.js";
-import * as shortLinksRepo from "../../repositories/short-links.repository.js";
 import { captureAmazonDeals } from "../../services/products/amazon.service.js";
 import { scrapeProductFromUrlWithFallback } from "../../services/products/scrape-url.service.js";
 import { runFetchOfertas } from "../../services/products/fetch-ofertas.service.js";
@@ -91,14 +90,10 @@ productsRouter.get("/feed", async (req, res) => {
     const rows = await productsRepo.getApprovedProducts(limit, channelSlug);
     // Só incluir produtos com imagem (essencial para engajamento no canal)
     const withImage = rows.filter((p) => p.image_url && p.image_url.trim() !== "");
-    const headerBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim();
-    const requestBase = `${req.protocol}://${req.get("host") || ""}`.replace(/\/$/, "");
-    const shortLinkBase = headerBase || process.env.SHORT_LINK_BASE_URL?.trim() || requestBase || undefined;
     const feed = await Promise.all(
       withImage.map(async (p) => {
         const input = dbRowToProductInput(p);
-        const short = await shortLinksRepo.createShortLink(p.affiliate_link, shortLinkBase, p.id);
-        const text = generateOfferMessage(input, { shortLink: short.shortUrl });
+        const text = generateOfferMessage(input);
         const slug = p.category_slug && String(p.category_slug).trim() ? String(p.category_slug).trim() : undefined;
         return {
           id: p.id,
@@ -309,9 +304,7 @@ productsRouter.get("/:id/preview-message", async (req, res) => {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
     const product = dbRowToProductInput(row);
-    const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase, row.id);
-    const message = generateOfferMessage(product, { shortLink: short.shortUrl });
+    const message = generateOfferMessage(product);
     res.json({ message });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -324,10 +317,8 @@ productsRouter.get("/:id/post-content", async (req, res) => {
     const row = await productsRepo.getProductById(req.params.id);
     if (!row) return res.status(404).json({ error: "Produto não encontrado" });
     const product = dbRowToProductInput(row);
-    const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const short = await shortLinksRepo.createShortLink(row.affiliate_link, shortLinkBase, row.id);
     const coupon = (req.query.coupon as string)?.trim() || undefined;
-    const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
+    const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -395,11 +386,8 @@ productsRouter.post("/post-content", async (req, res) => {
       installmentUnitPrice: instUnit,
     };
     product = normalizeProductPrices(product);
-    const shortLinkBase = (req.get("X-Short-Link-Base") || req.get("x-short-link-base") || "").trim() || undefined;
-    const pid = typeof b.productId === "string" && b.productId.trim() ? b.productId.trim() : null;
-    const short = await shortLinksRepo.createShortLink(b.affiliateLink, shortLinkBase, pid);
     const coupon = b.coupon?.trim() || undefined;
-    const { text, imageUrl } = generatePostContent(product, { coupon, shortLink: short.shortUrl });
+    const { text, imageUrl } = generatePostContent(product, { coupon });
     res.json({ text, imageUrl });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

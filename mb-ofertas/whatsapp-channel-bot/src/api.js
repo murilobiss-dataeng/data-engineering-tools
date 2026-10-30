@@ -25,9 +25,7 @@ export async function fetchPosts(apiUrl, options = {}) {
     logger.warn("API_URL não configurada.");
     return [];
   }
-  const linkBase = shortLinkBase || resolveShortLinkBase(apiUrl);
   const headers = { Accept: "application/json" };
-  if (linkBase) headers["X-Short-Link-Base"] = linkBase;
   let lastErr = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {

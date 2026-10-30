@@ -62,13 +62,23 @@ export async function getHtmlWithBrowser(url: string): Promise<string> {
     const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
     if (/^amazon\.(com|com\.br)$/.test(host)) {
       await page
-        .waitForSelector("#productTitle, span#productTitle, #productTitle_feature_div, meta[property='og:title']", {
-          timeout: Math.min(12_000, BROWSER_TIMEOUT_MS - 3_000),
-        })
+        .waitForSelector(
+          "#productTitle, span#productTitle, .priceToPay, #corePrice_feature_div, meta[property='og:title']",
+          { timeout: Math.min(15_000, BROWSER_TIMEOUT_MS - 5_000) }
+        )
         .catch(() => {});
     }
-    // Esperar um pouco para JS de preço (ML, Shopee) renderizar
-    await new Promise((r) => setTimeout(r, WAIT_AFTER_LOAD_MS));
+    if (/mercadolivre|mercadolibre/.test(host)) {
+      await page
+        .waitForSelector(
+          '.ui-pdp-price, .andes-money-amount__fraction, meta[property="product:price:amount"]',
+          { timeout: Math.min(15_000, BROWSER_TIMEOUT_MS - 5_000) }
+        )
+        .catch(() => {});
+      await new Promise((r) => setTimeout(r, 3500));
+    } else {
+      await new Promise((r) => setTimeout(r, WAIT_AFTER_LOAD_MS));
+    }
     const html = await page.content();
     return html;
   } finally {

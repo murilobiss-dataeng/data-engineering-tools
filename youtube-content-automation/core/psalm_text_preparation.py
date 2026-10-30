@@ -162,6 +162,9 @@ def balance_segments(segments: List[str]) -> List[str]:
             merged[-1] = (merged[-1] + " " + seg).strip()
         elif merged and wc < PREP_MIN_WORDS and _word_count(merged[-1]) + wc <= PREP_MAX_WORDS:
             merged[-1] = (merged[-1] + " " + seg).strip()
+        elif merged and wc < PREP_MIN_SEGMENT_WORDS:
+            # Cauda curta (ex.: "nisso pensai.") — fundir mesmo se o anterior estiver no limite
+            merged[-1] = (merged[-1] + " " + seg).strip()
         else:
             merged.append(seg)
     return merged

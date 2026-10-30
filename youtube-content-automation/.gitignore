@@ -6,37 +6,45 @@ __pycache__/
 .Python
 env/
 venv/
-config/
-core/
 .venv/
 ENV/
 
-# Outputs
+# Outputs & media gerados (não versionar)
 outputs/
+stores/salmo_dia/.next/
+stores/salmo_dia/node_modules/
 *.mp4
 *.mp3
 *.wav
+*.webm
 
-# Environment
+# Environment / secrets
 .env
 *.env
 !.env.example
+!config/*.env.example
+credentials.pickle
+**/credentials.pickle
+token.json
+**/token.json
+client_secret*.json
+*.pickle
 
-# IDE
+# IDE / OS
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Fonts (downloaded automatically)
+# Fonts baixadas automaticamente
 assets/fonts/*.ttf
+!assets/fonts/.gitkeep
 
-# Temp files
+# Temp / MoviePy leftovers
 *.tmp
 *.temp
 *TEMP*
+*_MPY_*

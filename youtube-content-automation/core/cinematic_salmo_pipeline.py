@@ -6,7 +6,7 @@ Foco: retenção e impacto imediato.
 - 4 frames: Hook (3s) → Continuação (4s) → Conclusão (4s) → Referência (2–3s)
 - Duração total alvo: 25–35s (YouTube Shorts)
 - Backgrounds EXCLUSIVAMENTE da pasta assets/
-- Narração: exclusivamente edge-tts (pt-BR-ThalitaMultilingualNeural)
+- Narração: exclusivamente edge-tts (pt-BR-FranciscaNeural, com fallback PT-BR)
 """
 
 import os
@@ -700,28 +700,126 @@ def render_retention_frame(
 # 2. NARRAÇÃO – EXCLUSIVAMENTE EDGE-TTS
 # =============================================================================
 
-# Voz obrigatória: pt-BR-ThalitaMultilingualNeural (sem fallback, sem substituição)
-EDGE_TTS_VOICE = "pt-BR-ThalitaMultilingualNeural"
+# PT-BR puro (Francisca é mais estável que ThalitaMultilingual, que falha em trechos curtos)
+EDGE_TTS_VOICE = "pt-BR-FranciscaNeural"
+EDGE_TTS_FALLBACK_VOICES = (
+    "pt-BR-FranciscaNeural",
+    "pt-BR-AntonioNeural",
+    "pt-BR-ThalitaMultilingualNeural",
+)
+EDGE_TTS_MAX_RETRIES = 3
+EDGE_TTS_RETRY_BASE_SEC = 0.8
+
+
+def _tts_speakable(text: str) -> bool:
+    """True se o texto tem conteúdo falável (letra/dígito), não só pontuação."""
+    import re
+    return bool(re.search(r"[A-Za-zÀ-ÿ0-9]", text or ""))
+
+
+def _sanitize_tts_text(text: str) -> str:
+    """Normaliza texto para edge-tts: espaços, reticências e travessões problemáticos."""
+    import re
+    t = (text or "").strip()
+    if not t:
+        return ""
+    t = re.sub(r"[\s\n\r]+", " ", t)
+    # "..." e "—" sozinhos / no início costumam gerar NoAudioReceived
+    t = re.sub(r"^\s*[.…—–\-]+\s*", "", t)
+    t = re.sub(r"\s*[.…—–\-]+\s*$", lambda m: "." if "." in m.group(0) or "…" in m.group(0) else "", t)
+    t = t.replace("…", "...")
+    t = re.sub(r"\s+([.,;:!?])", r"\1", t)
+    t = t.strip()
+    if t and t[-1] not in ".!?;:":
+        t += "."
+    return t
+
+
+def _merge_tiny_tts_segments(
+    segments: List[str],
+    min_words: int = 4,
+    max_words: int = 18,
+) -> List[str]:
+    """Fundir blocos muito curtos — trechos de 1–3 palavras falham com frequência no edge-tts."""
+    out: List[str] = []
+    for seg in segments:
+        s = (seg or "").strip()
+        if not s or not _tts_speakable(s):
+            continue
+        n = len(s.split())
+        if out:
+            prev_n = len(out[-1].split())
+            # Funde se o atual é curto e o resultado não explode o bloco visual
+            if n < min_words and prev_n + n <= max_words:
+                out[-1] = (out[-1].rstrip() + " " + s).strip()
+                continue
+            # Ou se o anterior ainda está abaixo do mínimo
+            if prev_n < min_words and prev_n + n <= max_words:
+                out[-1] = (out[-1].rstrip() + " " + s).strip()
+                continue
+        out.append(s)
+    if len(out) >= 2 and len(out[-1].split()) < min_words:
+        out[-2] = (out[-2].rstrip() + " " + out[-1]).strip()
+        out.pop()
+    return out
 
 
 def generate_voice(text: str, output_path: str) -> str:
     """
-    Gera narração com edge-tts exclusivamente.
-    Voz: pt-BR-ThalitaMultilingualNeural. Áudio salvo em MP3.
-    Sem fallback: se edge-tts falhar, lança exceção.
+    Gera narração com edge-tts (PT-BR).
+    Retry + vozes de fallback para NoAudioReceived / falhas intermitentes da API.
     """
     import asyncio
     import edge_tts
 
-    async def _synthesize() -> None:
-        communicate = edge_tts.Communicate(text.strip(), EDGE_TTS_VOICE)
+    clean = _sanitize_tts_text(text)
+    if not clean or not _tts_speakable(clean):
+        raise ValueError(f"Texto sem conteúdo falável para TTS: {text!r}")
+
+    voices: List[str] = []
+    for v in (EDGE_TTS_VOICE, *EDGE_TTS_FALLBACK_VOICES):
+        if v not in voices:
+            voices.append(v)
+
+    async def _synthesize_once(voice: str) -> None:
+        if os.path.isfile(output_path):
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
+        communicate = edge_tts.Communicate(clean, voice)
         await communicate.save(output_path)
+        if not os.path.isfile(output_path) or os.path.getsize(output_path) < 64:
+            raise RuntimeError("NoAudioReceived: arquivo de áudio vazio ou ausente")
+
+    async def _synthesize_with_retries() -> str:
+        last_err: Optional[BaseException] = None
+        for voice in voices:
+            for attempt in range(1, EDGE_TTS_MAX_RETRIES + 1):
+                try:
+                    await _synthesize_once(voice)
+                    return voice
+                except Exception as e:
+                    last_err = e
+                    wait = EDGE_TTS_RETRY_BASE_SEC * (2 ** (attempt - 1))
+                    logger.warning(
+                        "edge-tts falhou (%s, tentativa %d/%d, voz=%s): %s — retry em %.1fs",
+                        type(e).__name__,
+                        attempt,
+                        EDGE_TTS_MAX_RETRIES,
+                        voice,
+                        e,
+                        wait,
+                    )
+                    await asyncio.sleep(wait)
+        assert last_err is not None
+        raise last_err
 
     logger.info("[2/6] Gerando voz (edge-tts – %s)...", EDGE_TTS_VOICE)
     t0 = time.monotonic()
     os.makedirs(os.path.dirname(output_path) or "outputs", exist_ok=True)
     try:
-        asyncio.run(_synthesize())
+        used_voice = asyncio.run(_synthesize_with_retries())
     except Exception as e:
         logger.exception("edge-tts falhou: %s", e)
         err_msg = str(e)
@@ -733,7 +831,13 @@ def generate_voice(text: str, output_path: str) -> str:
         raise RuntimeError(f"edge-tts falhou: {e}") from e
     size_kb = os.path.getsize(output_path) // 1024
     elapsed = time.monotonic() - t0
-    logger.info("[2/6] Narração edge-tts concluída: %s (%d KB) em %.1fs", output_path, size_kb, elapsed)
+    logger.info(
+        "[2/6] Narração edge-tts concluída: %s (%d KB) em %.1fs [voz=%s]",
+        output_path,
+        size_kb,
+        elapsed,
+        used_voice,
+    )
     return output_path
 
 
@@ -756,13 +860,19 @@ def _generate_voice_from_segments(
     paths: List[str] = []
     used_segments: List[str] = []
     try:
-        for i, text in enumerate(segments):
-            if not (text or "").strip():
+        merged = _merge_tiny_tts_segments(segments)
+        for i, text in enumerate(merged):
+            clean = _sanitize_tts_text(text)
+            if not clean or not _tts_speakable(clean):
+                logger.warning("Segmento TTS ignorado (sem fala): %r", text)
                 continue
+            if paths:
+                # Evita NoAudioReceived por rajadas na API da Microsoft
+                time.sleep(0.35)
             p = os.path.join(tmp_dir, f"seg_{i:04d}.mp3")
-            generate_voice(text.strip(), p)
+            generate_voice(clean, p)
             paths.append(p)
-            used_segments.append(text.strip())
+            used_segments.append(clean)
         if not paths:
             raise RuntimeError("Nenhum segmento de áudio gerado.")
         combined = AudioSegment.empty()
@@ -785,7 +895,13 @@ def _generate_voice_from_segments(
                     os.remove(p)
             except OSError:
                 pass
+        # Limpar leftovers (ex.: MP3 vazio de falha parcial)
         try:
+            for name in os.listdir(tmp_dir):
+                try:
+                    os.remove(os.path.join(tmp_dir, name))
+                except OSError:
+                    pass
             os.rmdir(tmp_dir)
         except OSError:
             pass

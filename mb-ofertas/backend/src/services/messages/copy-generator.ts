@@ -53,10 +53,9 @@ function appendPriceLines(lines: string[], product: ProductInput): void {
   }
 }
 
-/** Link exibido na mensagem: curto quando a API passa (encurtador /r/...), senão o link de afiliado. */
-function resolveDisplayLink(product: ProductInput, options?: { shortLink?: string }): string {
-  const short = options?.shortLink?.trim();
-  return short || product.affiliateLink;
+/** Link exibido na mensagem: sempre o link de afiliado da loja (sem encurtador /r/). */
+function resolveDisplayLink(product: ProductInput, _options?: { shortLink?: string }): string {
+  return product.affiliateLink;
 }
 
 function appendOfferLinkBlock(lines: string[], link: string): void {

@@ -1,0 +1,7 @@
+# Exemplo: uma linha por post (canal  data  hora)
+# Copie para agenda.txt e edite. Depois: python main.py agenda.txt
+# YouTube: use token do canal em config/<canal>/youtube_token.json (ex.: config/salmo_dia/)
+
+salmo_dia  15/02/2026  09:00
+salmo_dia  16/02/2026  09:00
+salmo_dia  17/02/2026  09:00
